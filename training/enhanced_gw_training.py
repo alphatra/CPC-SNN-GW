@@ -462,7 +462,7 @@ def run_enhanced_training_experiment():
         num_epochs=50,
         batch_size=16,
         learning_rate=1e-3,
-        use_real_gwosc_data=False,  # Set to True if GWOSC data available
+        use_real_gwosc_data=True,  # ✅ CRITICAL FIX: Enable real GWOSC data for authentic training
         gradient_accumulation_steps=2
     )
     

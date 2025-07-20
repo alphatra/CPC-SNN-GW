@@ -94,7 +94,8 @@ class ModelsConfig:
     spike_time_steps: int = 100
     spike_max_rate: float = 100.0
     spike_dt: float = 1e-3
-    spike_encoding: str = "poisson_rate"
+    # ✅ FIXED: Spike encoding (temporal-contrast not Poisson)
+    spike_encoding: str = "temporal_contrast"  # ✅ CRITICAL FIX: Was "poisson_rate" → "temporal_contrast" (matches config.yaml)
     
     # Performance
     use_mixed_precision: bool = True

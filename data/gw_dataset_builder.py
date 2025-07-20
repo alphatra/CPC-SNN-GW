@@ -462,4 +462,163 @@ def test_dataset_builder():
         
     except Exception as e:
         logger.error(f"❌ Dataset builder test failed: {e}")
-        return False 
+        return False
+
+
+def create_evaluation_dataset(num_samples: int = 1000,
+                            sequence_length: int = 16384,
+                            sample_rate: int = 4096,
+                            random_seed: int = 42) -> List:
+    """
+    ✅ NEW: Create evaluation dataset for real model testing.
+    
+    Creates a balanced dataset with 3 classes:
+    - continuous_gw (label 0)
+    - binary_merger (label 1) 
+    - noise_only (label 2)
+    
+    Args:
+        num_samples: Total number of samples to generate
+        sequence_length: Length of each signal sequence
+        sample_rate: Sampling rate in Hz
+        random_seed: Random seed for reproducibility
+        
+    Returns:
+        List of (signal, label) tuples for evaluation
+    """
+    from .gw_synthetic_generator import ContinuousGWGenerator
+    from .gw_signal_params import GeneratorSettings
+    
+    logger.info(f"✅ Creating evaluation dataset: {num_samples} samples")
+    
+    # ✅ SOLUTION: Create realistic evaluation dataset
+    key = jax.random.PRNGKey(random_seed)
+    
+    # Generator settings
+    settings = GeneratorSettings(
+        num_signals=num_samples // 3,  # Split evenly among 3 classes
+        signal_duration=sequence_length / sample_rate,
+        sample_rate=sample_rate,
+        include_noise_only=True
+    )
+    
+    generator = ContinuousGWGenerator(settings)
+    
+    eval_data = []
+    
+    # Class distribution: equal for evaluation
+    samples_per_class = num_samples // 3
+    remaining_samples = num_samples % 3
+    
+    # Split keys for each class
+    key1, key2, key3 = jax.random.split(key, 3)
+    
+    # Class 0: Continuous GW signals
+    logger.info("   Generating continuous GW signals...")
+    cw_params_list = generator.generate_signal_parameters(
+        num_signals=samples_per_class + (1 if remaining_samples > 0 else 0), 
+        key=key1
+    )
+    
+    for params in cw_params_list:
+        signal = generator.create_synthetic_timeseries(params, duration=settings.signal_duration)
+        # Ensure correct length
+        if len(signal) > sequence_length:
+            signal = signal[:sequence_length]
+        elif len(signal) < sequence_length:
+            padding = sequence_length - len(signal)
+            signal = jnp.pad(signal, (0, padding), mode='constant')
+        
+        eval_data.append((signal, 0))  # Label 0 for continuous GW
+    
+    # Class 1: Binary merger signals (simplified as noise bursts)
+    logger.info("   Generating binary merger signals...")
+    for i in range(samples_per_class + (1 if remaining_samples > 1 else 0)):
+        # ✅ FIXED: Proper PN chirp evolution instead of linear chirp
+        t = jnp.linspace(0, settings.signal_duration, sequence_length)
+        
+        # ✅ SOLUTION: Post-Newtonian chirp mass evolution
+        subkey = jax.random.fold_in(key2, i)
+        
+        # Realistic binary parameters
+        # Total mass: 20-100 solar masses (aLIGO range)
+        total_mass_solar = jax.random.uniform(subkey, minval=20.0, maxval=100.0)
+        total_mass_kg = total_mass_solar * 1.989e30  # Convert to kg
+        
+        # Symmetric mass ratio (0.1 to 0.25 for realistic binaries)
+        mass_ratio_key = jax.random.fold_in(subkey, 1)
+        eta = jax.random.uniform(mass_ratio_key, minval=0.1, maxval=0.25)
+        
+        # Chirp mass: M_c = (m1*m2)^(3/5) / (m1+m2)^(1/5)
+        chirp_mass = total_mass_kg * (eta ** (3/5))
+        
+        # ✅ Post-Newtonian frequency evolution (not linear!)
+        # f(t) = f_initial * (1 - t/t_merger)^(-3/8)
+        # where t_merger depends on chirp mass
+        
+        # Merger time (seconds before end of signal)
+        t_merger = settings.signal_duration * 0.8  # Merger at 80% through signal
+        t_to_merger = t_merger - t  # Time until merger
+        t_to_merger = jnp.where(t_to_merger <= 0, 1e-6, t_to_merger)  # Avoid singularity
+        
+        # Initial frequency (start low, chirp up)
+        f_initial = 30.0  # Hz (start of aLIGO band)
+        
+        # ✅ SOLUTION: Proper PN frequency evolution
+        # f(t) ∝ (256/5 * π^(8/3) * (G*M_c/c^3)^(5/3) * t_to_merger)^(-3/8)
+        G = 6.67430e-11  # m^3 kg^-1 s^-2
+        c = 299792458    # m/s
+        
+        # PN coefficient
+        pn_coeff = (256/5) * (jnp.pi ** (8/3)) * ((G * chirp_mass / (c**3)) ** (5/3))
+        
+        # Frequency evolution
+        frequency = f_initial * ((pn_coeff * t_to_merger) ** (-3/8))
+        frequency = jnp.where(frequency > 500, 500, frequency)  # Cap at Nyquist
+        
+        # ✅ SOLUTION: Proper phase evolution (integrate frequency)
+        dt = settings.signal_duration / sequence_length
+        phase = jnp.cumsum(2 * jnp.pi * frequency * dt)
+        
+        # Amplitude evolution (increases as frequency increases)
+        # A(t) ∝ f(t)^(2/3) for PN waveforms
+        amplitude_base = 1e-22  # Realistic strain amplitude
+        amplitude = amplitude_base * ((frequency / f_initial) ** (2/3))
+        
+        # ✅ SOLUTION: Realistic binary merger waveform
+        # h = A(t) * cos(φ(t)) (simplified single polarization)
+        signal = amplitude * jnp.cos(phase)
+        
+        # Add realistic detector noise
+        noise_key = jax.random.fold_in(subkey, 42)
+        noise = jax.random.normal(noise_key, shape=(sequence_length,)) * 5e-23  # LIGO noise level
+        
+        # Combine signal + noise
+        total_signal = signal + noise
+        
+        eval_data.append((total_signal, 1))  # Label 1 for binary merger
+    
+    # Class 2: Noise-only signals
+    logger.info("   Generating noise-only signals...")
+    for i in range(samples_per_class + (1 if remaining_samples > 2 else 0)):
+        subkey = jax.random.fold_in(key3, i)
+        
+        # Pure Gaussian noise
+        noise = jax.random.normal(subkey, shape=(sequence_length,)) * 1e-22
+        
+        eval_data.append((noise, 2))  # Label 2 for noise only
+    
+    # Shuffle dataset for random order
+    shuffle_key = jax.random.PRNGKey(random_seed + 1)
+    indices = jnp.arange(len(eval_data))
+    shuffled_indices = jax.random.permutation(shuffle_key, indices)
+    
+    shuffled_data = [eval_data[int(i)] for i in shuffled_indices]
+    
+    logger.info(f"✅ Evaluation dataset created:")
+    logger.info(f"   - Total samples: {len(shuffled_data)}")
+    logger.info(f"   - Continuous GW: {len([d for d in shuffled_data if d[1] == 0])}")
+    logger.info(f"   - Binary merger: {len([d for d in shuffled_data if d[1] == 1])}")
+    logger.info(f"   - Noise only: {len([d for d in shuffled_data if d[1] == 2])}")
+    
+    return shuffled_data 

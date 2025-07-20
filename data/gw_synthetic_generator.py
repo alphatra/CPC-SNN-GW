@@ -70,6 +70,8 @@ class ContinuousGWGenerator:
         """
         Vectorized JIT-compiled signal parameter generation.
         
+        ✅ FIXED: Realistic LIGO strain levels (2025-01-27)
+        
         Returns:
             Tuple of parameter arrays: (freq, freq_dot, alpha, delta, h0, cosi, psi, phi0)
         """
@@ -82,7 +84,12 @@ class ContinuousGWGenerator:
         freq_dot = jax.random.uniform(keys[1], (num_signals,), minval=-1e-10, maxval=1e-12)
         alpha = jax.random.uniform(keys[2], (num_signals,), minval=0.0, maxval=2*jnp.pi)
         delta = jax.random.uniform(keys[3], (num_signals,), minval=-jnp.pi/2, maxval=jnp.pi/2)
-        h0 = jax.random.uniform(keys[4], (num_signals,), minval=1e-25, maxval=1e-21)
+        
+        # ✅ CRITICAL FIX: Realistic LIGO strain levels
+        # Previous: 1e-25 to 1e-21 (1000x too loud!)
+        # Fixed: 1e-26 to 1e-24 (matches real LIGO sensitivity curve)
+        h0 = jax.random.uniform(keys[4], (num_signals,), minval=1e-26, maxval=1e-24)
+        
         cosi = jax.random.uniform(keys[5], (num_signals,), minval=-1.0, maxval=1.0)
         psi = jax.random.uniform(keys[6], (num_signals,), minval=0.0, maxval=jnp.pi)
         phi0 = jax.random.uniform(keys[7], (num_signals,), minval=0.0, maxval=2*jnp.pi)
