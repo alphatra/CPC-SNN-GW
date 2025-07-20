@@ -85,7 +85,7 @@ class ModelsConfig:
     
     # SNN Configuration
     snn_hidden_size: int = 128
-    snn_num_classes: int = 2
+    snn_num_classes: int = 3
     snn_tau_mem: float = 20e-3
     snn_tau_syn: float = 5e-3
     snn_threshold: float = 1.0

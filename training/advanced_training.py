@@ -6,7 +6,7 @@ Advanced Training: Enhanced Techniques for High Performance
 State-of-the-art training techniques for 85%+ accuracy:
 - Attention-enhanced CPC encoder
 - Deep multi-layer SNN architectures  
-- Focal loss for class imbalance
+- Focal loss for class imbalance  
 - Advanced data augmentation (mixup)
 - Cosine annealing and warmup schedules
 - Production-ready implementation
@@ -91,12 +91,12 @@ class AttentionCPCEncoder(nn.Module):
         
         # Multi-head self-attention
         attention_out = nn.MultiHeadDotProductAttention(
-            num_heads=self.num_attention_heads,
+                num_heads=self.num_attention_heads,
             dropout_rate=self.dropout_rate,
-            deterministic=not train
+                deterministic=not train
         )(x, x)
-        
-        # Residual connection
+            
+            # Residual connection
         x = x + attention_out
         x = nn.LayerNorm()(x)
         
@@ -122,7 +122,7 @@ class DeepSNN(nn.Module):
             # Create SNN classifier for this layer
             snn_layer = SNNClassifier(
                 hidden_size=hidden_size,
-                num_classes=hidden_size  # Output size for intermediate layers
+                num_classes=3  # Standard 3-class GW detection
             )
             x = snn_layer(x)
             
@@ -179,7 +179,7 @@ def mixup_data(x: jnp.ndarray, y: jnp.ndarray, alpha: float = 0.2,
     """
     if key is None:
         key = jax.random.PRNGKey(int(time.time()))
-    
+        
     batch_size = x.shape[0]
     
     # Sample lambda from Beta distribution
@@ -230,12 +230,12 @@ class AdvancedGWTrainer(TrainerBase):
                     self.cpc_encoder = CPCEncoder(
                         latent_dim=self.config.cpc_latent_dim
                     )
-                
+        
                 self.spike_bridge = SpikeBridge(
                     encoding_strategy=self.config.spike_encoding,
                     time_steps=self.config.spike_time_steps
                 )
-                
+        
                 self.snn_classifier = DeepSNN(
                     hidden_sizes=self.config.snn_hidden_sizes,
                     num_classes=3  # noise, continuous_gw, binary_gw
@@ -249,10 +249,10 @@ class AdvancedGWTrainer(TrainerBase):
                 # Advanced spike encoding
                 key = self.make_rng('spike_bridge') if train else jax.random.PRNGKey(42)
                 spikes = self.spike_bridge(latents, key)
-                
+        
                 # Deep SNN classification
                 logits = self.snn_classifier(spikes, train=train)
-                
+        
                 return logits
         
         # Bind config to model

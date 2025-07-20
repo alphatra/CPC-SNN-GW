@@ -84,7 +84,7 @@ class SNNConfig:
     tau_mem: float = 0.020  # seconds
     tau_syn: float = 0.005  # seconds
     threshold: float = 1.0
-    num_classes: int = 2
+    num_classes: int = 3
 
 
 @dataclass

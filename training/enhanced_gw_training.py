@@ -48,7 +48,7 @@ class EnhancedGWConfig(TrainingConfig):
     
     # Mixed dataset composition
     num_continuous_signals: int = 200
-    num_binary_signals: int = 200  
+    num_binary_signals: int = 200
     num_noise_samples: int = 400
     
     # Training enhancements
@@ -58,7 +58,7 @@ class EnhancedGWConfig(TrainingConfig):
     # Evaluation
     eval_split: float = 0.2
     compute_detailed_metrics: bool = True
-
+    
 
 class EnhancedGWTrainer(TrainerBase):
     """
@@ -139,7 +139,7 @@ class EnhancedGWTrainer(TrainerBase):
             params=params,
             tx=optimizer
         )
-    
+        
     def generate_mixed_dataset(self, key: jnp.ndarray) -> Dict:
         """Generate mixed dataset with continuous, binary, and noise signals."""
         logger.info("Generating mixed GW dataset...")
@@ -417,8 +417,8 @@ class EnhancedGWTrainer(TrainerBase):
             
             batch = (eval_data[start_idx:end_idx], eval_labels[start_idx:end_idx])
             eval_metrics = self.eval_step(self.train_state, batch)
-            
-            # Get predictions
+        
+        # Get predictions
             logits = self.train_state.apply_fn(
                 self.train_state.params, eval_data[start_idx:end_idx], train=False,
                 rngs={'spike_bridge': jax.random.PRNGKey(42)}

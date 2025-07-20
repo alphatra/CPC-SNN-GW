@@ -105,7 +105,7 @@ class BatchedSNNValidator:
     Computes F1, AUROC, confusion matrix on GPU/TPU without host sync.
     """
     
-    def __init__(self, num_classes: int = 2):
+    def __init__(self, num_classes: int = 3):
         self.num_classes = num_classes
     
     def compute_metrics(self, logits: jnp.ndarray, labels: jnp.ndarray) -> Dict[str, jnp.ndarray]:

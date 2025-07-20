@@ -33,7 +33,7 @@ class SNNConfig:
     """Configuration for SNN classifier."""
     # Architecture
     hidden_size: int = 128
-    num_classes: int = 2
+    num_classes: int = 3  # NOISE=0, CONTINUOUS_GW=1, BINARY_MERGER=2
     num_layers: int = 2
     
     # LIF parameters
@@ -321,7 +321,7 @@ def create_snn_config(
     )
 
 
-def create_snn_classifier(hidden_size: int = 128, num_classes: int = 2) -> SNNClassifier:
+def create_snn_classifier(hidden_size: int = 128, num_classes: int = 3) -> SNNClassifier:
     """Create standard SNN classifier for backward compatibility."""
     return SNNClassifier(hidden_size=hidden_size, num_classes=num_classes)
 
