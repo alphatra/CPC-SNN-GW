@@ -119,7 +119,8 @@ class RealCPCEncoder(nn.Module):
             outputs[f'conv_{i}'] = x_conv
         
         # Remove channel dimension and prepare for RNN: [batch, time_downsampled, features]
-        x_features = x_conv.squeeze(-1)
+        # 🚨 CRITICAL FIX: x_conv already has correct shape [batch, time, features] - no squeeze needed
+        x_features = x_conv  # Shape: [batch, time_downsampled, conv_channels[-1]]
         
         # 🚨 FIXED: GRU for temporal modeling with gradient checkpointing
         if self.config.use_gradient_checkpointing:
