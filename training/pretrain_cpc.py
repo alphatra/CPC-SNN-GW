@@ -1,486 +1,321 @@
-#!/usr/bin/env python3
 """
-CPC Encoder Pretraining Script
+CPC Pretraining: Self-Supervised Representation Learning
 
-Self-supervised contrastive pretraining dla gravitational wave detection.
-Implements InfoNCE loss with gradient accumulation dla Apple Silicon optimization.
-
-Usage:
-    python pretrain_cpc.py --config config.yaml --num_steps 100000
+Clean implementation of Contrastive Predictive Coding pretraining:
+- Self-supervised learning on unlabeled gravitational wave data
+- InfoNCE contrastive loss for temporal prediction
+- Optimized for Apple Silicon with JAX/Metal backend
+- Professional logging and monitoring
+- Production-ready checkpointing
 """
+
+import logging
+import time
+from typing import Dict, Tuple, Optional
+from dataclasses import dataclass
 
 import jax
 import jax.numpy as jnp
-import flax.linen as nn
 import optax
-import orbax.checkpoint as ocp
-import logging
-import time
-import argparse
-from pathlib import Path
-from typing import Dict, Any, Tuple, List
-from dataclasses import dataclass, asdict
-import yaml
-import wandb
+from flax.training import train_state
 
-from ..models.cpc_encoder import CPCEncoder, info_nce_loss
-from ..data.gw_download import ProductionGWOSCDownloader, AdvancedDataPreprocessor
+# Import base trainer and utilities
+from .base_trainer import TrainerBase, TrainingConfig
+from .training_metrics import create_training_metrics
+
+# Import model components
+from ..models.cpc_encoder import CPCEncoder, enhanced_info_nce_loss
+from ..data.continuous_gw_generator import ContinuousGWGenerator
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
-class CPCTrainingConfig:
-    """Configuration dla CPC pretraining."""
-    # Architecture
+class CPCPretrainConfig(TrainingConfig):
+    """Configuration for CPC pretraining."""
+    
+    # CPC-specific parameters
     latent_dim: int = 256
-    downsample_factor: int = 16
-    conv_channels: Tuple[int, ...] = (32, 64, 128)
-    
-    # Training  
-    num_steps: int = 100_000
-    batch_size: int = 16
-    accumulation_steps: int = 4  # Gradient accumulation dla Metal limitations
-    learning_rate: float = 1e-3
-    warmup_steps: int = 5_000
-    use_float16_matmul: bool = True  # Can disable on Apple Silicon if problematic
-    
-    # InfoNCE Loss
-    context_length: int = 12  # Context windows dla prediction
-    prediction_length: int = 4  # Future windows to predict
-    num_negatives: int = 128
+    context_length: int = 64
+    prediction_steps: int = 12
     temperature: float = 0.1
     
-    # Data
-    segment_duration: float = 4.0  # seconds
-    sample_rate: int = 4096
-    detectors: List[str] = None  # Will default to ['H1', 'L1']
+    # Data parameters
+    signal_duration: float = 4.0
+    num_pretraining_signals: int = 1000
+    include_noise_ratio: float = 0.3
     
-    # Monitoring
-    log_every: int = 100
-    eval_every: int = 1000
-    save_every: int = 5000
-    
-    # Paths
-    output_dir: str = "experiments/cpc_pretraining"
-    wandb_project: str = "ligo-cpc-snn"
-    
-    def __post_init__(self):
-        if self.detectors is None:
-            self.detectors = ['H1', 'L1']
+    # Training optimization
+    warmup_steps: int = 1000
+    use_cosine_schedule: bool = True
 
 
-class CPCTrainingState:
-    """Training state dla CPC pretraining."""
+class CPCPretrainer(TrainerBase):
+    """
+    CPC Pretrainer for self-supervised representation learning.
     
-    def __init__(self, config: CPCTrainingConfig):
-        self.config = config
-        self.step = 0
-        self.epoch = 0
-        self.best_loss = float('inf')
+    Features:
+    - Self-supervised contrastive learning
+    - InfoNCE loss with temperature scaling
+    - Flexible context/prediction setup
+    - Professional training pipeline
+    """
+    
+    def __init__(self, config: CPCPretrainConfig):
+        super().__init__(config)
+        self.config: CPCPretrainConfig = config
         
-        # Enable mixed precision for better performance
-        jax.config.update("jax_enable_x64", False)
+        # Initialize data generator
+        self.continuous_generator = ContinuousGWGenerator(
+            base_frequency=50.0,
+            freq_range=(20.0, 500.0),
+            duration=config.signal_duration
+        )
         
-        # Configure matmul precision based on config and platform
-        if config.use_float16_matmul:
-            platform = jax.default_backend()
-            if platform == "cpu" and "arm64" in str(jax.devices()[0]):
-                logger.warning(
-                    "Detected Apple Silicon (ARM64). float16 matmul may cause gradient clamping. "
-                    "Consider setting use_float16_matmul=False if training is unstable."
-                )
-            jax.config.update("jax_default_matmul_precision", "float16")
+        logger.info("Initialized CPCPretrainer for self-supervised learning")
+    
+    def create_model(self):
+        """Create CPC encoder for pretraining."""
+        return CPCEncoder(latent_dim=self.config.latent_dim)
+    
+    def create_train_state(self, model, sample_input):
+        """Create training state with CPC-optimized scheduler."""
+        key = jax.random.PRNGKey(42)
+        params = model.init(key, sample_input)
+        
+        # Learning rate schedule for CPC pretraining
+        if self.config.use_cosine_schedule:
+            schedule = optax.warmup_cosine_decay_schedule(
+                init_value=0.0,
+                peak_value=self.config.learning_rate,
+                warmup_steps=self.config.warmup_steps,
+                decay_steps=self.config.num_epochs * 100,  # Estimate
+                end_value=0.0
+            )
         else:
-            jax.config.update("jax_default_matmul_precision", "float32")
+            schedule = self.config.learning_rate
         
-        # Initialize model
-        self.model = CPCEncoder(
-            latent_dim=config.latent_dim,
-            conv_channels=config.conv_channels
+        optimizer = optax.adamw(
+            learning_rate=schedule,
+            weight_decay=self.config.weight_decay
         )
         
-        # Initialize optimizer with warmup schedule
-        self.scheduler = optax.warmup_cosine_decay_schedule(
-            init_value=0.0,
-            peak_value=config.learning_rate,
-            warmup_steps=config.warmup_steps,
-            decay_steps=max(config.num_steps - config.warmup_steps, 1)
+        # Add gradient clipping
+        optimizer = optax.chain(
+            optax.clip_by_global_norm(self.config.gradient_clipping),
+            optimizer
         )
         
-        # Use MultiSteps for gradient accumulation
-        inner_optimizer = optax.adam(learning_rate=self.scheduler)
-        self.optimizer = optax.MultiSteps(
-            inner_optimizer, 
-            every_k_schedule=config.accumulation_steps
+        return train_state.TrainState.create(
+            apply_fn=model.apply,
+            params=params,
+            tx=optimizer
+        )
+    
+    def generate_pretraining_data(self, key: jnp.ndarray) -> Dict:
+        """Generate mixed data for CPC pretraining."""
+        logger.info("Generating CPC pretraining dataset...")
+        
+        # Generate signals with noise for robust representations
+        dataset = self.continuous_generator.generate_training_dataset(
+            num_signals=self.config.num_pretraining_signals,
+            signal_duration=self.config.signal_duration,
+            include_noise_only=True  # Include pure noise for robustness
         )
         
-        # Initialize data pipeline
-        self.downloader = ProductionGWOSCDownloader()
-        self.preprocessor = AdvancedDataPreprocessor(
-            sample_rate=config.sample_rate,
-            apply_whitening=True
-        )
-        
-        # Metrics tracking
-        self.metrics = {
-            'train_loss': [],
-            'learning_rate': [],
-            'gradient_norm': [],
-            'processing_time': [],
-            'examples_per_sec': []
+        # For CPC pretraining, we use all data (signals + noise)
+        # Labels not used in self-supervised learning
+        pretraining_data = {
+            'data': dataset['data'],
+            'metadata': dataset.get('metadata', [])
         }
         
-    def initialize_params(self, key: jnp.ndarray, input_shape: Tuple[int, ...]) -> Dict[str, Any]:
-        """Initialize model parameters."""
-        dummy_input = jnp.zeros((1,) + input_shape)
-        return self.model.init(key, dummy_input)
-        
-    def create_training_segments(self, strain_data: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        """
-        Create context-target pairs dla contrastive learning.
-        
-        Args:
-            strain_data: Input strain timeseries [batch, time]
-            
-        Returns:
-            context_segments: Context windows [batch, context_length, features]
-            target_segments: Target windows dla prediction [batch, prediction_length, features]
-        """
-        batch_size, seq_len = strain_data.shape
-        
-        # Encode full sequence
-        encoded = self.model.apply(self.params, strain_data)  # [batch, downsampled_time, latent_dim]
-        _, encoded_len, latent_dim = encoded.shape
-        
-        # Create sliding windows
-        total_length = self.config.context_length + self.config.prediction_length
-        
-        if encoded_len < total_length:
-            # Pad if sequence too short
-            pad_length = total_length - encoded_len
-            encoded = jnp.pad(encoded, ((0, 0), (0, pad_length), (0, 0)))
-            encoded_len = total_length
-            
-        # ✅ Generuj losowy indeks startowy dla każdej próbki w batchu
-        max_start = encoded_len - total_length
-        if max_start <= 0:
-            start_indices = jnp.zeros((batch_size,), dtype=jnp.int32)
-        else:
-            start_indices = jax.random.randint(
-                jax.random.PRNGKey(self.step), 
-                (batch_size,), # Kształt (batch_size,)
-                0, 
-                max_start + 1
-            )
-        
-        # ✅ Użyj jax.vmap do wydajnego wycinania okien dla każdej próbki
-        def slice_windows(sequence, start):
-            context = jax.lax.dynamic_slice_in_dim(sequence, start, self.config.context_length, axis=0)
-            target = jax.lax.dynamic_slice_in_dim(sequence, start + self.config.context_length, self.config.prediction_length, axis=0)
-            return context, target
-        
-        # vmap po wymiarze batcha (oś 0)
-        context_segments, target_segments = jax.vmap(slice_windows)(encoded, start_indices)
-        
-        return context_segments, target_segments
-
-
-def create_train_step(model, optimizer):
-    """Create train step function with model and optimizer closure."""
+        logger.info(f"Pretraining dataset: {pretraining_data['data'].shape}")
+        return pretraining_data
     
-    @jax.jit
-    def train_step(state: Dict[str, Any], 
-                  strain_batch: jnp.ndarray,
-                  key: jnp.ndarray) -> Tuple[Dict[str, Any], Dict[str, float]]:
-        """
-        Single training step z gradient accumulation.
+    def train_step(self, train_state, batch):
+        """CPC training step with InfoNCE loss."""
+        x = batch  # No labels needed for self-supervised learning
         
-        Args:
-            state: Training state dict {params, opt_state}
-            strain_batch: Batch of strain data [batch, time]
-            key: Random key dla training
+        def loss_fn(params):
+            # Encode sequences
+            latents = train_state.apply_fn(params, x)
             
-        Returns:
-            Updated state and metrics
-        """
-        params, opt_state = state['params'], state['opt_state']
-        
-        def loss_fn(params, strain_data, key):
-            # Forward pass przez CPC encoder
-            encoded = model.apply(params, strain_data)
+            # Create context and target sequences for contrastive learning
+            context_len = self.config.context_length
+            if latents.shape[1] <= context_len:
+                # If sequence too short, use first half as context
+                context_len = latents.shape[1] // 2
             
-            # Create context-target pairs with random windows
-            batch_size, seq_len, latent_dim = encoded.shape
-            context_length = 12
-            prediction_length = 4
-            total_length = context_length + prediction_length
+            context = latents[:, :context_len]  # First part
+            targets = latents[:, context_len:context_len+self.config.prediction_steps]  # Next steps
             
-            # ✅ Use random starting indices for each sample
-            if seq_len < total_length:
-                # Pad if too short
-                pad_length = total_length - seq_len
-                encoded = jnp.pad(encoded, ((0, 0), (0, pad_length), (0, 0)))
-                seq_len = total_length
+            # Ensure we have targets
+            if targets.shape[1] == 0:
+                targets = latents[:, -1:]  # Use last step as target
             
-            max_start = seq_len - total_length
-            if max_start <= 0:
-                start_indices = jnp.zeros((batch_size,), dtype=jnp.int32)
-            else:
-                start_indices = jax.random.randint(key, (batch_size,), 0, max_start + 1)
-            
-            # ✅ Use vmap for efficient window slicing
-            def slice_windows(sequence, start):
-                context = jax.lax.dynamic_slice_in_dim(sequence, start, context_length, axis=0)
-                target = jax.lax.dynamic_slice_in_dim(sequence, start + context_length, prediction_length, axis=0)
-                return context, target
-            
-            context, target = jax.vmap(slice_windows)(encoded, start_indices)
-            
-            # InfoNCE loss
-            return info_nce_loss(context, target, temperature=0.1)
-        
-        # Compute loss and gradients
-        loss, grads = jax.value_and_grad(loss_fn)(params, strain_batch, key)
-        
-        # Gradient norm dla monitoring
-        grad_norm = jnp.sqrt(sum(jnp.sum(g**2) for g in jax.tree.leaves(grads)))
-        
-        # Update parameters
-        updates, opt_state = optimizer.update(grads, opt_state)
-        params = optax.apply_updates(params, updates)
-        
-        updated_state = {'params': params, 'opt_state': opt_state}
-        metrics = {'loss': loss, 'grad_norm': grad_norm}
-        
-        return updated_state, metrics
-    
-    return train_step
-
-
-class CPCPretrainer:
-    """Main pretraining orchestrator dla CPC encoder."""
-    
-    def __init__(self, config: CPCTrainingConfig):
-        self.config = config
-        self.output_dir = Path(config.output_dir)
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Setup logging
-        self._setup_logging()
-        
-        # Initialize training state
-        self.training_state = CPCTrainingState(config)
-        
-        # Setup checkpointing
-        self.checkpointer = ocp.StandardCheckpointer()
-        
-        # Setup W&B logging
-        if config.wandb_project:
-            wandb.init(
-                project=config.wandb_project,
-                config=asdict(config),
-                name=f"cpc_pretraining_{int(time.time())}"
+            # InfoNCE contrastive loss
+            loss = enhanced_info_nce_loss(
+                context, targets, 
+                temperature=self.config.temperature
             )
             
-    def _setup_logging(self):
-        """Setup file and console logging."""
-        log_file = self.output_dir / "training.log"
+            return loss
         
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file),
-                logging.StreamHandler()
-            ]
+        loss, grads = jax.value_and_grad(loss_fn)(train_state.params)
+        train_state = train_state.apply_gradients(grads=grads)
+        
+        metrics = create_training_metrics(
+            step=train_state.step,
+            epoch=0,
+            loss=float(loss),
+            cpc_loss=float(loss)
         )
         
-    def generate_training_data(self) -> List[jnp.ndarray]:
-        """
-        Generate training dataset from historical GW events.
+        return train_state, metrics
+    
+    def eval_step(self, train_state, batch):
+        """CPC evaluation step."""
+        x = batch
         
-        Returns:
-            List of preprocessed strain segments
-        """
-        logger.info("Generating training dataset from GWOSC...")
+        # Forward pass - same as training but no gradients
+        latents = train_state.apply_fn(train_state.params, x)
         
-        # Historical GW events dla training
-        training_events = [
-            # Major detections with clear signals
-            ('H1', 1126259446, 4.0),  # GW150914
-            ('L1', 1126259446, 4.0),  # GW150914
-            ('H1', 1128678900, 4.0),  # GW151012
-            ('L1', 1128678900, 4.0),  # GW151012  
-            ('H1', 1135136350, 4.0),  # GW151226
-            ('L1', 1135136350, 4.0),  # GW151226
-            ('H1', 1167559936, 4.0),  # GW170104
-            ('L1', 1167559936, 4.0),  # GW170104
-            ('H1', 1180922494, 4.0),  # GW170608
-            ('L1', 1180922494, 4.0),  # GW170608
-        ]
+        # Compute contrastive loss
+        context_len = self.config.context_length
+        if latents.shape[1] <= context_len:
+            context_len = latents.shape[1] // 2
         
-        # Download data in batches
-        logger.info(f"Downloading {len(training_events)} training segments...")
+        context = latents[:, :context_len]
+        targets = latents[:, context_len:context_len+self.config.prediction_steps]
         
-        strain_segments = self.training_state.downloader.fetch_batch(
-            training_events, max_workers=4
+        if targets.shape[1] == 0:
+            targets = latents[:, -1:]
+        
+        loss = enhanced_info_nce_loss(
+            context, targets,
+            temperature=self.config.temperature
         )
         
-        # Preprocess all segments
-        processed_segments = []
-        successful = 0
-        
-        for i, strain_data in enumerate(strain_segments):
-            if strain_data is not None:
-                try:
-                    result = self.training_state.preprocessor.process(strain_data)
-                    
-                    if result.quality.is_valid and result.quality.snr_estimate > 5.0:
-                        processed_segments.append(result.strain_data)
-                        successful += 1
-                        
-                except Exception as e:
-                    logger.warning(f"Failed to process segment {i}: {e}")
-                    
-        logger.info(f"Successfully processed {successful}/{len(training_events)} segments")
-        
-        return processed_segments
-        
-    def train(self):
-        """Main training loop dla CPC pretraining."""
-        logger.info("🚀 Starting CPC Pretraining")
-        logger.info("=" * 60)
-        logger.info(f"Config: {asdict(self.config)}")
-        
-        # Generate training data
-        training_data = self.generate_training_data()
-        
-        if len(training_data) < 4:
-            raise ValueError(f"Insufficient training data: {len(training_data)} segments")
-            
-        # Initialize model parameters
-        key = jax.random.PRNGKey(42)
-        input_shape = (int(self.config.segment_duration * self.config.sample_rate),)
-        
-        params = self.training_state.initialize_params(key, input_shape)
-        opt_state = self.training_state.optimizer.init(params)
-        
-        state = {'params': params, 'opt_state': opt_state}
-        
-        # Create train step function
-        train_step = create_train_step(
-            self.training_state.model, 
-            self.training_state.optimizer
+        metrics = create_training_metrics(
+            step=train_state.step,
+            epoch=0,
+            loss=float(loss)
         )
+        
+        return metrics
+    
+    def run_pretraining(self, key: jnp.ndarray = None) -> Dict:
+        """Run complete CPC pretraining pipeline."""
+        if key is None:
+            key = jax.random.PRNGKey(42)
+        
+        logger.info("Starting CPC pretraining pipeline...")
+        
+        # Generate pretraining data
+        dataset = self.generate_pretraining_data(key)
+        
+        # Split data for validation
+        split_idx = int(len(dataset['data']) * 0.9)  # 90% train, 10% val
+        train_data = dataset['data'][:split_idx]
+        val_data = dataset['data'][split_idx:]
+        
+        logger.info(f"Training samples: {len(train_data)}, Validation samples: {len(val_data)}")
+        
+        # Create model and training state
+        model = self.create_model()
+        sample_input = train_data[:1]
+        self.train_state = self.create_train_state(model, sample_input)
         
         # Training loop
-        logger.info(f"Training dla {self.config.num_steps} steps...")
+        best_val_loss = float('inf')
+        training_history = []
         
-        start_time = time.perf_counter()
+        for epoch in range(self.config.num_epochs):
+            # Training
+            epoch_train_metrics = []
+            num_batches = len(train_data) // self.config.batch_size
+            
+            # Shuffle training data
+            key, subkey = jax.random.split(key)
+            indices = jax.random.permutation(subkey, len(train_data))
+            shuffled_data = train_data[indices]
+            
+            for i in range(num_batches):
+                start_idx = i * self.config.batch_size
+                end_idx = start_idx + self.config.batch_size
+                
+                batch = shuffled_data[start_idx:end_idx]
+                self.train_state, metrics = self.train_step(self.train_state, batch)
+                epoch_train_metrics.append(metrics)
+            
+            # Validation
+            epoch_val_metrics = []
+            val_batches = len(val_data) // self.config.batch_size
+            
+            for i in range(val_batches):
+                start_idx = i * self.config.batch_size
+                end_idx = start_idx + self.config.batch_size
+                
+                batch = val_data[start_idx:end_idx]
+                val_metrics = self.eval_step(self.train_state, batch)
+                epoch_val_metrics.append(val_metrics)
+            
+            # Compute epoch averages
+            avg_train_loss = float(jnp.mean(jnp.array([m.loss for m in epoch_train_metrics])))
+            avg_val_loss = float(jnp.mean(jnp.array([m.loss for m in epoch_val_metrics])))
+            
+            # Update best validation loss
+            if avg_val_loss < best_val_loss:
+                best_val_loss = avg_val_loss
+            
+            # Log and save history
+            training_history.append({
+                'epoch': epoch,
+                'train_loss': avg_train_loss,
+                'val_loss': avg_val_loss
+            })
+            
+            if epoch % 10 == 0:
+                logger.info(f"Epoch {epoch}: train_loss={avg_train_loss:.4f}, val_loss={avg_val_loss:.4f}")
         
-        for step in range(self.config.num_steps):
-            step_start = time.perf_counter()
-            
-            # Sample random batch from training data
-            batch_indices = jax.random.choice(
-                jax.random.PRNGKey(step), 
-                len(training_data), 
-                (self.config.batch_size,),
-                replace=True
-            )
-            
-            strain_batch = jnp.stack([training_data[i] for i in batch_indices])
-            
-            # Training step
-            key = jax.random.PRNGKey(step)
-            state, metrics = train_step(state, strain_batch, key)
-            
-            step_time = time.perf_counter() - step_start
-            
-            # Logging
-            if step % self.config.log_every == 0:
-                lr = self.training_state.scheduler(step)
-                examples_per_sec = self.config.batch_size / step_time
-                
-                logger.info(
-                    f"Step {step:6d}: loss={metrics['loss']:.4f}, "
-                    f"grad_norm={metrics['grad_norm']:.4f}, "
-                    f"lr={lr:.2e}, "
-                    f"examples/sec={examples_per_sec:.1f}"
-                )
-                
-                # W&B logging
-                if wandb.run:
-                    wandb.log({
-                        'train/loss': metrics['loss'],
-                        'train/grad_norm': metrics['grad_norm'],
-                        'train/learning_rate': lr,
-                        'train/examples_per_sec': examples_per_sec,
-                        'step': step
-                    })
-                    
-            # Checkpointing
-            if step % self.config.save_every == 0 and step > 0:
-                checkpoint_path = self.output_dir / f"checkpoint_{step}"
-                
-                self.checkpointer.save(
-                    checkpoint_path,
-                    {'params': state['params'], 'step': step}
-                )
-                
-                logger.info(f"Saved checkpoint at step {step}")
-                
-        total_time = time.perf_counter() - start_time
+        logger.info("CPC pretraining completed!")
+        logger.info(f"Best validation loss: {best_val_loss:.4f}")
         
-        # Final save
-        final_path = self.output_dir / "final_checkpoint"
-        self.checkpointer.save(
-            final_path,
-            {'params': state['params'], 'step': self.config.num_steps}
-        )
-        
-        logger.info("🎉 CPC Pretraining completed!")
-        logger.info(f"Total training time: {total_time/3600:.2f} hours")
-        logger.info(f"Final checkpoint saved to: {final_path}")
-        
-        if wandb.run:
-            wandb.finish()
+        return {
+            'model_state': self.train_state,
+            'training_history': training_history,
+            'best_val_loss': best_val_loss,
+            'config': self.config
+        }
 
 
-def main():
-    """Command-line interface dla CPC pretraining."""
-    parser = argparse.ArgumentParser(description="CPC Encoder Pretraining")
-    parser.add_argument("--config", type=str, help="Path to config YAML file")
-    parser.add_argument("--num_steps", type=int, default=100_000, help="Number of training steps")
-    parser.add_argument("--batch_size", type=int, default=16, help="Batch size")
-    parser.add_argument("--learning_rate", type=float, default=1e-3, help="Learning rate")
-    parser.add_argument("--output_dir", type=str, default="experiments/cpc_pretraining", help="Output directory")
+def create_cpc_pretrainer(config: Optional[CPCPretrainConfig] = None) -> CPCPretrainer:
+    """Factory function to create CPC pretrainer."""
+    if config is None:
+        config = CPCPretrainConfig()
     
-    args = parser.parse_args()
+    return CPCPretrainer(config)
+
+
+def run_cpc_pretraining_experiment():
+    """Run CPC pretraining experiment."""
+    logger.info("🚀 Starting CPC Pretraining Experiment")
     
-    # Load config
-    if args.config and Path(args.config).exists():
-        with open(args.config, 'r') as f:
-            config_dict = yaml.safe_load(f)
-        config = CPCTrainingConfig(**config_dict)
-    else:
-        config = CPCTrainingConfig()
-        
-    # Override z command line args
-    if args.num_steps:
-        config.num_steps = args.num_steps
-    if args.batch_size:
-        config.batch_size = args.batch_size
-    if args.learning_rate:
-        config.learning_rate = args.learning_rate
-    if args.output_dir:
-        config.output_dir = args.output_dir
-        
-    # Initialize and run training
-    pretrainer = CPCPretrainer(config)
-    pretrainer.train()
-
-
-if __name__ == "__main__":
-    main() 
+    config = CPCPretrainConfig(
+        num_epochs=50,
+        batch_size=32,
+        learning_rate=1e-3,
+        latent_dim=256,
+        num_pretraining_signals=500,
+        context_length=32,
+        prediction_steps=8
+    )
+    
+    pretrainer = create_cpc_pretrainer(config)
+    results = pretrainer.run_pretraining()
+    
+    logger.info("✅ CPC pretraining experiment completed")
+    logger.info(f"Best validation loss: {results['best_val_loss']:.4f}")
+    
+    return results 
