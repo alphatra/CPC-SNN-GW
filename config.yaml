@@ -1,0 +1,88 @@
+# LIGO CPC+SNN Configuration
+# Neuromorphic Gravitational Wave Detection Pipeline
+
+# Environment & Platform
+platform:
+  device: "metal"  # metal, cpu, gpu
+  precision: "float32"
+  enable_x64: false
+
+# Data Configuration  
+data:
+  sample_rate: 4096  # Hz
+  segment_duration: 4.0  # seconds
+  detectors: ["H1", "L1"]  # LIGO Hanford, Livingston
+  preprocessing:
+    whitening: true
+    bandpass: [20.0, 1024.0]  # Hz range
+    qtransform: false
+
+# CPC Encoder Configuration
+cpc:
+  latent_dim: 256
+  downsample_factor: 16
+  context_length: 12  # timesteps for prediction
+  num_negatives: 128  # for InfoNCE loss
+  temperature: 0.1
+  architecture:
+    conv_channels: [32, 64, 128]
+    kernel_size: 9
+    stride: 2
+    gru_hidden: 256
+
+# Spike Bridge Configuration  
+spike_bridge:
+  encoding: "poisson"  # poisson, temporal_contrast
+  spike_rate_max: 100.0  # Hz
+  dt: 0.001  # 1ms timesteps
+  threshold: 0.1  # for temporal contrast
+
+# SNN Classifier Configuration
+snn:
+  hidden_size: 128
+  num_layers: 2
+  neuron_type: "LIF"  # LIF, ALIF, IF
+  tau_mem: 0.020  # 20ms membrane time constant
+  tau_syn: 0.005  # 5ms synaptic time constant  
+  threshold: 1.0
+  num_classes: 3  # continuous_gw / binary_merger / noise_only
+
+# Training Configuration
+training:
+  # Phase 1: CPC Pretraining
+  cpc_pretrain:
+    steps: 100000
+    batch_size: 16
+    learning_rate: 0.003
+    optimizer: "adam"
+    grad_clip: 1.0
+    
+  # Phase 2: SNN Training (frozen CPC)
+  snn_train:
+    steps: 10000  
+    batch_size: 16
+    learning_rate: 0.001
+    optimizer: "adam"
+    grad_clip: 0.5
+    
+  # Phase 3: Joint Fine-tuning
+  joint_finetune:
+    steps: 5000
+    batch_size: 8  # smaller for memory
+    learning_rate: 0.0001
+    optimizer: "adam"
+    grad_clip: 0.1
+
+# Evaluation Metrics
+evaluation:
+  metrics: ["roc_auc", "accuracy", "precision", "recall"]
+  target_far: 0.033  # 1/30 days false alarm rate
+  target_tpr: 0.95   # 95% true positive rate
+
+# Logging & Monitoring
+logging:
+  level: "INFO"
+  log_dir: "logs/"
+  wandb_project: "ligo-cpc-snn"
+  save_checkpoints: true
+  checkpoint_dir: "checkpoints/" 
