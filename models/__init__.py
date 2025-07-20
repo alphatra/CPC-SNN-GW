@@ -9,8 +9,8 @@ Implements the 3-component neuromorphic pipeline:
 
 import importlib
 import logging
-from dataclasses import dataclass
-from typing import Dict, Optional, Union, Any
+from dataclasses import dataclass, field
+from typing import Dict, Optional, Union, Any, List
 
 # Module version
 __version__ = "1.0.0"
@@ -18,384 +18,169 @@ __version__ = "1.0.0"
 # Module logger
 logger = logging.getLogger(__name__)
 
-# Lazy import mappings
+# Core component imports - simplified lazy loading
 _LAZY_IMPORTS = {
-    # CPC Encoder components
+    # CPC Encoder - main components only
     "CPCEncoder": ("cpc_encoder", "CPCEncoder"),
     "EnhancedCPCEncoder": ("cpc_encoder", "EnhancedCPCEncoder"),
     "ExperimentConfig": ("cpc_encoder", "ExperimentConfig"),
-    "RMSNorm": ("cpc_encoder", "RMSNorm"),
-    "WeightNormDense": ("cpc_encoder", "WeightNormDense"),
-    "EquinoxGRUWrapper": ("cpc_encoder", "EquinoxGRUWrapper"),
-    "info_nce_loss": ("cpc_encoder", "info_nce_loss"),
-    "enhanced_info_nce_loss": ("cpc_encoder", "enhanced_info_nce_loss"),
-    "create_enhanced_cpc_encoder": ("cpc_encoder", "create_enhanced_cpc_encoder"),
-    "create_standard_cpc_encoder": ("cpc_encoder", "create_standard_cpc_encoder"),
-    "create_experiment_config": ("cpc_encoder", "create_experiment_config"),
     
-    # SNN Classifier components
+    # CPC Components and Losses
+    "RMSNorm": ("cpc_components", "RMSNorm"),
+    "WeightNormDense": ("cpc_components", "WeightNormDense"),
+    "enhanced_info_nce_loss": ("cpc_losses", "enhanced_info_nce_loss"),
+    "info_nce_loss": ("cpc_losses", "info_nce_loss"),
+    
+    # SNN Classifier - main components only
     "SNNClassifier": ("snn_classifier", "SNNClassifier"),
-    "create_snn_classifier": ("snn_classifier", "create_snn_classifier"),
-    "SNNTrainer": ("snn_classifier", "SNNTrainer"),
-    "LIFLayer": ("snn_classifier", "LIFLayer"),
     "EnhancedSNNClassifier": ("snn_classifier", "EnhancedSNNClassifier"),
     "VectorizedLIFLayer": ("snn_classifier", "VectorizedLIFLayer"),
-    "BatchedSNNValidator": ("snn_classifier", "BatchedSNNValidator"),
     "SNNConfig": ("snn_classifier", "SNNConfig"),
-    "SurrogateGradientType": ("snn_classifier", "SurrogateGradientType"),
-    "create_enhanced_snn_classifier": ("snn_classifier", "create_enhanced_snn_classifier"),
-    "create_snn_config": ("snn_classifier", "create_snn_config"),
-    "create_surrogate_gradient_fn": ("snn_classifier", "create_surrogate_gradient_fn"),
-    "spike_function_with_surrogate": ("snn_classifier", "spike_function_with_surrogate"),
+    "SNNTrainer": ("snn_classifier", "SNNTrainer"),
+    "LIFLayer": ("snn_classifier", "LIFLayer"),
     
-    # Spike Bridge components
+    # SNN Utils
+    "SurrogateGradientType": ("snn_utils", "SurrogateGradientType"),
+    "BatchedSNNValidator": ("snn_utils", "BatchedSNNValidator"),
+    "create_surrogate_gradient_fn": ("snn_utils", "create_surrogate_gradient_fn"),
+    
+    # Spike Bridge - main components only
     "SpikeBridge": ("spike_bridge", "SpikeBridge"),
-    "SpikeEncodingStrategy": ("spike_bridge", "SpikeEncodingStrategy"),
     "OptimizedSpikeBridge": ("spike_bridge", "OptimizedSpikeBridge"),
     "SpikeBridgeConfig": ("spike_bridge", "SpikeBridgeConfig"),
+    "SpikeEncodingStrategy": ("spike_bridge", "SpikeEncodingStrategy"),
     "ThroughputMetrics": ("spike_bridge", "ThroughputMetrics"),
-    "create_default_spike_bridge": ("spike_bridge", "create_default_spike_bridge"),
-    "create_fast_spike_bridge": ("spike_bridge", "create_fast_spike_bridge"),
-    "create_robust_spike_bridge": ("spike_bridge", "create_robust_spike_bridge"),
-    "create_spike_bridge_from_string": ("spike_bridge", "create_spike_bridge_from_string"),
+}
+
+# Factory functions mapping
+_FACTORY_FUNCTIONS = {
+    # CPC Encoder factories
+    "create_cpc_encoder": ("cpc_encoder", "create_cpc_encoder"),
+    "create_enhanced_cpc_encoder": ("cpc_encoder", "create_enhanced_cpc_encoder"),
+    
+    # SNN Classifier factories
+    "create_snn_classifier": ("snn_classifier", "create_snn_classifier"),
+    "create_enhanced_snn_classifier": ("snn_classifier", "create_enhanced_snn_classifier"),
+    "create_snn_config": ("snn_classifier", "create_snn_config"),
+    
+    # Spike Bridge factories
     "create_optimized_spike_bridge": ("spike_bridge", "create_optimized_spike_bridge"),
     "create_int8_spike_bridge": ("spike_bridge", "create_int8_spike_bridge"),
     "create_cosine_spike_bridge": ("spike_bridge", "create_cosine_spike_bridge"),
-    "create_benchmark_config": ("spike_bridge", "create_benchmark_config"),
+    "create_default_spike_bridge": ("spike_bridge", "create_default_spike_bridge"),
 }
 
-# Dependency requirements for specific modules
-_DEPENDENCY_REQUIREMENTS = {
-    "cpc_encoder": {
-        "equinox": "pip install equinox",
-        "flax": "pip install flax",
-        "optax": "pip install optax"
-    },
-    "snn_classifier": {
-        "jax": "pip install jax jaxlib",
-        "flax": "pip install flax"
-    },
-    "spike_bridge": {
-        "jax": "pip install jax jaxlib",
-        "numpy": "pip install numpy"
-    }
-}
+# Combine all imports
+_ALL_IMPORTS = {**_LAZY_IMPORTS, **_FACTORY_FUNCTIONS}
 
-__all__ = [
-    # Module version
-    "__version__",
-    
-    # CPC Encoder components
-    "CPCEncoder",
-    "EnhancedCPCEncoder",
-    "ExperimentConfig",
-    "RMSNorm",
-    "WeightNormDense",
-    "EquinoxGRUWrapper",
-    "info_nce_loss",
-    "enhanced_info_nce_loss",
-    "create_enhanced_cpc_encoder",
-    "create_standard_cpc_encoder",
-    "create_experiment_config",
-    
-    # SNN Classifier components
-    "SNNClassifier",
-    "create_snn_classifier", 
-    "SNNTrainer",
-    "LIFLayer",
-    "EnhancedSNNClassifier",
-    "VectorizedLIFLayer",
-    "BatchedSNNValidator",
-    "SNNConfig",
-    "SurrogateGradientType",
-    "create_enhanced_snn_classifier",
-    "create_snn_config",
-    "create_surrogate_gradient_fn",
-    "spike_function_with_surrogate",
-    
-    # Spike Bridge components
-    "SpikeBridge",
-    "SpikeEncodingStrategy",
-    "OptimizedSpikeBridge",
-    "SpikeBridgeConfig",
-    "ThroughputMetrics",
-    "create_default_spike_bridge",
-    "create_fast_spike_bridge",
-    "create_robust_spike_bridge",
-    "create_spike_bridge_from_string",
-    "create_optimized_spike_bridge",
-    "create_int8_spike_bridge",
-    "create_cosine_spike_bridge",
-    "create_benchmark_config",
-]
 
-# Global models module configuration
 @dataclass
 class ModelsConfig:
-    """Global configuration for models module."""
-    # CPC Encoder settings
-    cpc_hidden_size: int = 128
-    cpc_num_layers: int = 2
-    cpc_prediction_steps: int = 12
-    cpc_temperature: float = 0.1
+    """Central configuration for the models module."""
     
-    # SNN Classifier settings
-    snn_hidden_size: int = 256
-    snn_num_layers: int = 2
+    # CPC Configuration
+    cpc_latent_dim: int = 128
+    cpc_num_layers: int = 4
+    cpc_hidden_dim: int = 256
+    
+    # SNN Configuration
+    snn_hidden_size: int = 128
+    snn_num_classes: int = 2
+    snn_tau_mem: float = 20e-3
+    snn_tau_syn: float = 5e-3
     snn_threshold: float = 1.0
-    snn_tau_mem: float = 20.0
-    snn_tau_syn: float = 5.0
     
-    # Spike Bridge settings
-    spike_encoding_strategy: str = "linear"
-    spike_time_steps: int = 16
-    spike_threshold: float = 0.5
+    # Spike Bridge Configuration
+    spike_time_steps: int = 100
+    spike_max_rate: float = 100.0
+    spike_dt: float = 1e-3
+    spike_encoding: str = "poisson_rate"
     
-    # Training settings
-    learning_rate: float = 1e-3
-    batch_size: int = 32
-    max_epochs: int = 100
-    
-    # Hardware optimization
+    # Performance
     use_mixed_precision: bool = True
-    use_gradient_checkpointing: bool = False
-    use_jit_compilation: bool = True
-    
-    # Logging and monitoring
-    log_level: str = "INFO"
-    wandb_project: str = "cpc-snn-gw"
-    save_checkpoints: bool = True
-    checkpoint_dir: str = "checkpoints"
-    
-    def __post_init__(self):
-        """Validate configuration parameters."""
-        # Mixed precision requirements
-        if self.use_mixed_precision:
-            if self.cpc_hidden_size % 8 != 0:
-                raise ValueError(f"cpc_hidden_size must be divisible by 8 for mixed precision, got {self.cpc_hidden_size}")
-            if self.snn_hidden_size % 8 != 0:
-                raise ValueError(f"snn_hidden_size must be divisible by 8 for mixed precision, got {self.snn_hidden_size}")
+    enable_jit: bool = True
+    memory_efficient: bool = True
+
+
+def create_models_config(**kwargs) -> ModelsConfig:
+    """Create models configuration with overrides."""
+    return ModelsConfig(**kwargs)
+
+
+def get_available_models() -> List[str]:
+    """Get list of available model classes."""
+    model_classes = [
+        name for name, (module, cls) in _LAZY_IMPORTS.items()
+        if any(keyword in name for keyword in ["Encoder", "Classifier", "Bridge", "Layer"])
+    ]
+    return sorted(model_classes)
+
+
+def get_available_factories() -> List[str]:
+    """Get list of available factory functions."""
+    return sorted(_FACTORY_FUNCTIONS.keys())
+
+
+def validate_model_config(config: ModelsConfig) -> bool:
+    """Validate models configuration."""
+    try:
+        # Validate CPC config
+        assert config.cpc_latent_dim > 0, "CPC latent_dim must be positive"
+        assert config.cpc_num_layers > 0, "CPC num_layers must be positive"
+        assert config.cpc_hidden_dim > 0, "CPC hidden_dim must be positive"
         
-        # Positive values validation
-        if self.learning_rate <= 0:
-            raise ValueError(f"learning_rate must be positive, got {self.learning_rate}")
-        if self.batch_size <= 0:
-            raise ValueError(f"batch_size must be positive, got {self.batch_size}")
-        if self.max_epochs <= 0:
-            raise ValueError(f"max_epochs must be positive, got {self.max_epochs}")
-            
-        # SNN parameters validation
-        if self.snn_threshold <= 0:
-            raise ValueError(f"snn_threshold must be positive, got {self.snn_threshold}")
-        if self.snn_tau_mem <= 0:
-            raise ValueError(f"snn_tau_mem must be positive, got {self.snn_tau_mem}")
-        if self.snn_tau_syn <= 0:
-            raise ValueError(f"snn_tau_syn must be positive, got {self.snn_tau_syn}")
-            
-        # Spike encoding validation
-        valid_strategies = ["linear", "poisson", "threshold", "rate"]
-        if self.spike_encoding_strategy not in valid_strategies:
-            raise ValueError(f"spike_encoding_strategy must be one of {valid_strategies}, got {self.spike_encoding_strategy}")
-        if self.spike_time_steps <= 0:
-            raise ValueError(f"spike_time_steps must be positive, got {self.spike_time_steps}")
-            
-        # Temperature validation
-        if self.cpc_temperature <= 0:
-            raise ValueError(f"cpc_temperature must be positive, got {self.cpc_temperature}")
-            
-        # Prediction steps validation
-        if self.cpc_prediction_steps <= 0:
-            raise ValueError(f"cpc_prediction_steps must be positive, got {self.cpc_prediction_steps}")
-
-# Global config instance
-_global_config = ModelsConfig()
-
-def get_models_config() -> ModelsConfig:
-    """Get global models module configuration."""
-    return _global_config
-
-def set_models_config(config: ModelsConfig):
-    """Set global models module configuration."""
-    global _global_config
-    _global_config = config
-    logger.info(f"Models module config updated: CPC hidden_size={config.cpc_hidden_size}, SNN hidden_size={config.snn_hidden_size}")
-
-# Enhanced lazy import system with dependency checking
-def __getattr__(name):
-    """
-    Enhanced lazy import with comprehensive error handling and dependency checking.
-    
-    Args:
-        name: Name of the attribute to import
+        # Validate SNN config
+        assert config.snn_hidden_size > 0, "SNN hidden_size must be positive"
+        assert config.snn_num_classes > 1, "SNN num_classes must be > 1"
+        assert config.snn_tau_mem > 0, "SNN tau_mem must be positive"
+        assert config.snn_tau_syn > 0, "SNN tau_syn must be positive"
+        assert config.snn_threshold > 0, "SNN threshold must be positive"
         
-    Returns:
-        The imported attribute
+        # Validate Spike Bridge config
+        assert config.spike_time_steps > 0, "spike_time_steps must be positive"
+        assert config.spike_max_rate > 0, "spike_max_rate must be positive"
+        assert config.spike_dt > 0, "spike_dt must be positive"
         
-    Raises:
-        AttributeError: If the attribute doesn't exist
-        ImportError: If required dependencies are missing
-    """
-    if name == "__version__":
-        return __version__
-    
-    # Check if name is in lazy imports
-    if name in _LAZY_IMPORTS:
-        module_name, attr_name = _LAZY_IMPORTS[name]
+        return True
+        
+    except AssertionError as e:
+        logger.error(f"Model configuration validation failed: {e}")
+        return False
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy loading of model components."""
+    if name in _ALL_IMPORTS:
+        module_name, attr_name = _ALL_IMPORTS[name]
         
         try:
-            # Check for missing dependencies
-            if module_name in _DEPENDENCY_REQUIREMENTS:
-                missing_deps = []
-                for dep, install_cmd in _DEPENDENCY_REQUIREMENTS[module_name].items():
-                    try:
-                        importlib.import_module(dep)
-                    except ImportError:
-                        missing_deps.append((dep, install_cmd))
-                
-                if missing_deps:
-                    dep_names = [dep for dep, _ in missing_deps]
-                    install_cmds = [cmd for _, cmd in missing_deps]
-                    logger.warning(
-                        f"Missing optional dependencies for {module_name}: {dep_names}. "
-                        f"Install with: {'; '.join(install_cmds)}"
-                    )
-            
-            # Dynamic import with better error handling
+            # Try relative import first
             try:
-                module = importlib.import_module(module_name, package=__name__)
-            except ImportError:
-                # Fallback to absolute import for better compatibility
-                try:
-                    full_module_name = f"ligo_cpc_snn.models.{module_name}"
-                    module = importlib.import_module(full_module_name)
-                except ImportError as e:
-                    raise ImportError(
-                        f"Failed to import {module_name} from models package. "
-                        f"Ensure the module exists and dependencies are installed. "
-                        f"Original error: {e}"
-                    )
+                module = importlib.import_module(f".{module_name}", package=__name__)
+            except (ImportError, ValueError):
+                # Fallback to absolute import
+                module = importlib.import_module(f"models.{module_name}")
             
-            # Get the attribute from the module
-            if hasattr(module, attr_name):
-                attr = getattr(module, attr_name)
-                
-                # Cache the attribute for faster future access
-                globals()[name] = attr
-                
-                logger.debug(f"Lazy loaded: {name} from {module_name}")
-                return attr
-            else:
-                raise AttributeError(f"Module {module_name} has no attribute '{attr_name}'")
-                
-        except ImportError as e:
-            # More informative error message
-            error_msg = f"Cannot import {name} from {module_name}: {str(e)}"
+            attr = getattr(module, attr_name)
             
-            if module_name in _DEPENDENCY_REQUIREMENTS:
-                deps = _DEPENDENCY_REQUIREMENTS[module_name]
-                error_msg += f"\nMissing dependencies? Try: {'; '.join(deps.values())}"
+            # Cache the attribute for future use
+            globals()[name] = attr
+            return attr
             
-            raise ImportError(error_msg)
-        
         except Exception as e:
-            logger.error(f"Unexpected error importing {name}: {str(e)}")
-            raise AttributeError(f"Failed to import {name}: {str(e)}")
+            raise ImportError(f"Cannot import {name} from {module_name}: {str(e)}")
     
-    # Handle special config attributes
-    elif name == "models_config":
-        return get_models_config()
-    
-    else:
-        raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+    raise AttributeError(f"Module 'models' has no attribute '{name}'")
 
-# Convenience functions for unified model creation
-def create_unified_model(config: Optional[ModelsConfig] = None) -> Dict[str, Any]:
-    """
-    Create a unified model with all components.
-    
-    Args:
-        config: Optional configuration override
-        
-    Returns:
-        Dictionary containing all model components
-    """
-    if config is None:
-        config = get_models_config()
-    
-    # Lazy import the creation functions
-    cpc_encoder = create_enhanced_cpc_encoder(
-        hidden_size=config.cpc_hidden_size,
-        num_layers=config.cpc_num_layers,
-        prediction_steps=config.cpc_prediction_steps,
-        temperature=config.cpc_temperature
-    )
-    
-    spike_bridge = create_default_spike_bridge(
-        encoding_strategy=config.spike_encoding_strategy,
-        time_steps=config.spike_time_steps,
-        threshold=config.spike_threshold
-    )
-    
-    snn_classifier = create_enhanced_snn_classifier(
-        hidden_size=config.snn_hidden_size,
-        num_layers=config.snn_num_layers,
-        threshold=config.snn_threshold,
-        tau_mem=config.snn_tau_mem,
-        tau_syn=config.snn_tau_syn
-    )
-    
-    return {
-        "cpc_encoder": cpc_encoder,
-        "spike_bridge": spike_bridge,
-        "snn_classifier": snn_classifier,
-        "config": config
-    }
 
-def check_model_dependencies(module_name: Optional[str] = None) -> Dict[str, bool]:
-    """
-    Check which model dependencies are available.
-    
-    Args:
-        module_name: Specific module to check (optional)
-        
-    Returns:
-        Dictionary mapping dependency names to availability
-    """
-    results = {}
-    
-    modules_to_check = [module_name] if module_name else _DEPENDENCY_REQUIREMENTS.keys()
-    
-    for mod_name in modules_to_check:
-        if mod_name in _DEPENDENCY_REQUIREMENTS:
-            for dep_name in _DEPENDENCY_REQUIREMENTS[mod_name].keys():
-                try:
-                    importlib.import_module(dep_name)
-                    results[dep_name] = True
-                except ImportError:
-                    results[dep_name] = False
-    
-    return results
+def __dir__() -> List[str]:
+    """Return available attributes for tab completion."""
+    return list(_ALL_IMPORTS.keys()) + [
+        "ModelsConfig", "create_models_config", "get_available_models",
+        "get_available_factories", "validate_model_config", "__version__"
+    ]
 
-def get_missing_model_dependencies(module_name: Optional[str] = None) -> Dict[str, str]:
-    """
-    Get missing model dependencies and their install commands.
-    
-    Args:
-        module_name: Specific module to check (optional)
-        
-    Returns:
-        Dictionary mapping missing dependency names to install commands
-    """
-    missing = {}
-    
-    modules_to_check = [module_name] if module_name else _DEPENDENCY_REQUIREMENTS.keys()
-    
-    for mod_name in modules_to_check:
-        if mod_name in _DEPENDENCY_REQUIREMENTS:
-            for dep_name, install_cmd in _DEPENDENCY_REQUIREMENTS[mod_name].items():
-                try:
-                    importlib.import_module(dep_name)
-                except ImportError:
-                    missing[dep_name] = install_cmd
-    
-    return missing 
+
+# Module initialization
+logger.info(f"Models module v{__version__} initialized with lazy loading")
+logger.info(f"Available models: {len(_LAZY_IMPORTS)} classes, {len(_FACTORY_FUNCTIONS)} factories") 
