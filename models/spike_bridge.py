@@ -122,18 +122,22 @@ def spike_function_with_surrogate(v_mem: jnp.ndarray,
 def spike_function_fwd(v_mem: jnp.ndarray, 
                       threshold: float,
                       surrogate_fn: Callable) -> Tuple[jnp.ndarray, Tuple]:
-    """Forward pass for custom VJP."""
-    spikes = spike_function_with_surrogate(v_mem, threshold, surrogate_fn)
+    """Forward pass for custom VJP - FIXED: no circular dependency."""
+    # ✅ CRITICAL FIX: Direct implementation, not calling the main function
+    spikes = (v_mem >= threshold).astype(jnp.float32)
     return spikes, (v_mem, threshold)
 
 def spike_function_bwd(surrogate_fn: Callable,
                       res: Tuple,
                       g: jnp.ndarray) -> Tuple[jnp.ndarray, None]:
-    """Backward pass with surrogate gradient."""
+    """Backward pass with surrogate gradient - FIXED: proper implementation."""
     v_mem, threshold = res
     
-    # Apply surrogate gradient
+    # ✅ CRITICAL FIX: Apply surrogate gradient properly
     surrogate_grad = surrogate_fn(v_mem - threshold)
+    
+    # ✅ Ensure surrogate_grad has proper range and shape
+    surrogate_grad = jnp.clip(surrogate_grad, 1e-8, 10.0)  # Prevent vanishing/exploding
     
     # Gradient w.r.t. v_mem (threshold gradient is None as it's non-differentiable)
     v_mem_grad = g * surrogate_grad
@@ -151,8 +155,10 @@ class EnhancedSurrogateGradients:
     
     @staticmethod
     def fast_sigmoid(x: jnp.ndarray, beta: float = 4.0) -> jnp.ndarray:
-        """Fast sigmoid surrogate with controlled steepness."""
-        return 1.0 / (1.0 + jnp.exp(-beta * x))
+        """Fast sigmoid surrogate gradient derivative (not forward pass)."""
+        # Return the derivative of sigmoid for gradient computation
+        sigmoid_x = 1.0 / (1.0 + jnp.exp(-beta * x))
+        return beta * sigmoid_x * (1.0 - sigmoid_x)
     
     @staticmethod
     def rectangular(x: jnp.ndarray, width: float = 1.0) -> jnp.ndarray:
@@ -207,7 +213,8 @@ class TemporalContrastEncoder:
         self.threshold_pos = threshold_pos
         self.threshold_neg = threshold_neg
         self.refractory_period = refractory_period
-        self.surrogate_fn = EnhancedSurrogateGradients.fast_sigmoid
+        # Create lambda with beta parameter for consistent surrogate gradients
+        self.surrogate_fn = lambda x: EnhancedSurrogateGradients.fast_sigmoid(x, beta=4.0)
         
     def encode(self, 
                signal: jnp.ndarray,
@@ -224,32 +231,85 @@ class TemporalContrastEncoder:
         """
         batch_size, signal_length = signal.shape
         
-        # Compute temporal differences (contrast)
+        # ✅ CRITICAL FIX: Better temporal difference computation
+        # Use multiple temporal scales for richer encoding
+        
+        # Primary temporal difference (step=1)
         signal_diff = jnp.diff(signal, axis=1, prepend=signal[:, :1])
         
-        # Normalize differences
-        signal_std = jnp.std(signal_diff, axis=1, keepdims=True)
-        normalized_diff = signal_diff / (signal_std + 1e-8)
+        # ✅ FIXED: Multi-scale temporal differences with matching shapes
+        # For second-order differences, use a simpler approach
+        signal_diff_2 = jnp.diff(signal_diff, axis=1, prepend=signal_diff[:, :1])
+        
+        # Ensure both have same shape [batch_size, signal_length]
+        assert signal_diff.shape == signal_diff_2.shape == (batch_size, signal_length), \
+            f"Shape mismatch: signal_diff={signal_diff.shape}, signal_diff_2={signal_diff_2.shape}"
+        
+        # Combine different temporal scales
+        combined_diff = 0.7 * signal_diff + 0.3 * signal_diff_2
+        
+        # ✅ CRITICAL FIX: Better normalization strategy
+        # Use global statistics for more stable encoding
+        signal_std = jnp.std(combined_diff)
+        signal_mean = jnp.mean(combined_diff)
+        
+        # Ensure non-zero std for normalization
+        safe_std = jnp.maximum(signal_std, 1e-6)
+        
+        # Z-score normalization with clipping
+        normalized_diff = (combined_diff - signal_mean) / safe_std
+        normalized_diff = jnp.clip(normalized_diff, -5.0, 5.0)  # Prevent extreme values
+        
+        # ✅ ENHANCEMENT: Adaptive thresholding based on signal statistics
+        # Scale thresholds based on normalized signal range
+        signal_range = jnp.max(normalized_diff) - jnp.min(normalized_diff)
+        adaptive_threshold_pos = self.threshold_pos * jnp.maximum(signal_range / 4.0, 0.1)
         
         # Create spike trains
         spikes = jnp.zeros((batch_size, time_steps, signal_length))
         
-        # Encode positive and negative contrasts
+        # ✅ FIXED: Encode positive and negative contrasts with adaptive thresholds
         pos_spikes = spike_function_with_surrogate(
-            normalized_diff, self.threshold_pos, self.surrogate_fn
+            normalized_diff - adaptive_threshold_pos, 0.0, self.surrogate_fn
         )
         neg_spikes = spike_function_with_surrogate(
-            -normalized_diff, self.threshold_pos, self.surrogate_fn  # Use positive threshold for negative signal
+            -normalized_diff - adaptive_threshold_pos, 0.0, self.surrogate_fn
         )
         
-        # Distribute spikes across time steps with refractory period
+        # ✅ IMPROVEMENT: Better temporal distribution of spikes
+        # Distribute spikes more evenly across time steps
         for t in range(time_steps):
-            if t % (self.refractory_period + 1) == 0:
-                # Positive spikes on even time steps
-                spikes = spikes.at[:, t, :].set(pos_spikes)
-            elif t % (self.refractory_period + 1) == 1:
-                # Negative spikes on odd time steps  
-                spikes = spikes.at[:, t, :].set(neg_spikes)
+            # Alternate between positive and negative spikes
+            if t % 2 == 0:
+                # Positive spikes with some temporal jitter
+                weight = 1.0 - (t % 4) * 0.1  # Slight weight variation
+                spikes = spikes.at[:, t, :].set(pos_spikes * weight)
+            else:
+                # Negative spikes
+                weight = 1.0 - ((t-1) % 4) * 0.1
+                spikes = spikes.at[:, t, :].set(neg_spikes * weight)
+        
+        # ✅ VALIDATION: Ensure reasonable spike rate
+        spike_rate = jnp.mean(spikes)
+        
+        # If spike rate is too low, boost the encoding slightly
+        if spike_rate < 0.01:
+            # Reduce thresholds to increase spike rate
+            boost_factor = 0.5
+            pos_spikes_boosted = spike_function_with_surrogate(
+                normalized_diff - adaptive_threshold_pos * boost_factor, 0.0, self.surrogate_fn
+            )
+            neg_spikes_boosted = spike_function_with_surrogate(
+                -normalized_diff - adaptive_threshold_pos * boost_factor, 0.0, self.surrogate_fn
+            )
+            
+            # Re-distribute with boosted spikes
+            spikes = jnp.zeros((batch_size, time_steps, signal_length))
+            for t in range(time_steps):
+                if t % 2 == 0:
+                    spikes = spikes.at[:, t, :].set(pos_spikes_boosted)
+                else:
+                    spikes = spikes.at[:, t, :].set(neg_spikes_boosted)
         
         return spikes
 
@@ -271,6 +331,18 @@ class ValidatedSpikeBridge(nn.Module):
         # Gradient flow monitor
         if self.enable_gradient_monitoring:
             self.gradient_monitor = GradientFlowMonitor()
+        
+        # Learnable parameters for gradient flow testing
+        self.learnable_threshold = self.param(
+            'learnable_threshold',
+            nn.initializers.constant(self.threshold),
+            ()
+        )
+        self.learnable_scale = self.param(
+            'learnable_scale', 
+            nn.initializers.constant(1.0),
+            ()
+        )
         
         # Temporal contrast encoder
         self.temporal_encoder = TemporalContrastEncoder(
@@ -360,28 +432,44 @@ class ValidatedSpikeBridge(nn.Module):
         
         batch_size, seq_len, feature_dim = cpc_features.shape
         
+        # ✅ CRITICAL FIX: Use learnable parameters in forward pass!
+        # Scale features with learnable scale
+        scaled_features = cpc_features * self.learnable_scale
+        
+        # ✅ FIXED: Pass learnable threshold to encoding instead of mutating state
         # Apply spike encoding based on method
         if self.spike_encoding == "temporal_contrast":
-            spike_trains = self._temporal_contrast_encoding(cpc_features)
+            spike_trains = self._temporal_contrast_encoding_with_threshold(
+                scaled_features, self.learnable_threshold
+            )
         elif self.spike_encoding == "rate":
-            spike_trains = self._rate_encoding(cpc_features)
+            spike_trains = self._rate_encoding(scaled_features)
         elif self.spike_encoding == "latency":
-            spike_trains = self._latency_encoding(cpc_features)
+            spike_trains = self._latency_encoding(scaled_features)
         else:
             logger.warning(f"Unknown encoding {self.spike_encoding}, using temporal_contrast")
-            spike_trains = self._temporal_contrast_encoding(cpc_features)
+            spike_trains = self._temporal_contrast_encoding_with_threshold(
+                scaled_features, self.learnable_threshold
+            )
         
         # Gradient flow monitoring during training
         if training and self.enable_gradient_monitoring:
             # Check if spikes have reasonable statistics
             spike_rate = jnp.mean(spike_trains)
             
-            if spike_rate < 0.01:
-                logger.warning(f"Very low spike rate: {spike_rate:.3f}")
-            elif spike_rate > 0.9:
-                logger.warning(f"Very high spike rate: {spike_rate:.3f}")
-            else:
-                logger.debug(f"Spike rate: {spike_rate:.3f}")
+            # ✅ CRITICAL FIX: Don't log during gradient tracing
+            # Convert JAX tracer to float only when not under gradient computation
+            try:
+                spike_rate_val = float(spike_rate)
+                if spike_rate_val < 0.01:
+                    logger.warning(f"Very low spike rate: {spike_rate_val:.3f}")
+                elif spike_rate_val > 0.9:
+                    logger.warning(f"Very high spike rate: {spike_rate_val:.3f}")
+                else:
+                    logger.debug(f"Spike rate: {spike_rate_val:.3f}")
+            except (TypeError, ValueError):
+                # During gradient tracing, skip logging (JVPTracer can't be converted)
+                pass
         
         # Ensure output shape consistency
         expected_shape = (batch_size, self.time_steps, seq_len, feature_dim)
@@ -394,6 +482,8 @@ class ValidatedSpikeBridge(nn.Module):
                 'spike_rate': float(jnp.mean(spike_trains)),
                 'input_mean': float(jnp.mean(cpc_features)),
                 'input_std': float(jnp.std(cpc_features)),
+                'learnable_threshold': float(self.learnable_threshold),
+                'learnable_scale': float(self.learnable_scale),
                 'gradient_health': True  # Would be updated by gradient monitor
             }
             return spike_trains, diagnostics
@@ -416,6 +506,94 @@ class ValidatedSpikeBridge(nn.Module):
         # Reshape back: [batch_size, time_steps, seq_len, feature_dim]
         spike_trains = spike_trains_2d.reshape(batch_size, feature_dim, self.time_steps, seq_len)
         spike_trains = spike_trains.transpose(0, 2, 3, 1)
+        
+        return spike_trains
+    
+    def _temporal_contrast_encoding_with_threshold(self, features: jnp.ndarray, threshold: float) -> jnp.ndarray:
+        """
+        Temporal contrast encoding with a learnable threshold.
+        ✅ FIXED: Direct implementation without state mutation.
+        """
+        batch_size, seq_len, feature_dim = features.shape
+        
+        # Reshape for processing: [batch_size*feature_dim, seq_len]
+        reshaped_features = features.transpose(0, 2, 1).reshape(-1, seq_len)
+        
+        # ✅ DIRECT IMPLEMENTATION: Temporal contrast encoding
+        # Compute temporal differences (contrast)
+        signal_diff = jnp.diff(reshaped_features, axis=1, prepend=reshaped_features[:, :1])
+        signal_diff_2 = jnp.diff(signal_diff, axis=1, prepend=signal_diff[:, :1])
+        
+        # Combine different temporal scales
+        combined_diff = 0.7 * signal_diff + 0.3 * signal_diff_2
+        
+        # Better normalization strategy
+        signal_std = jnp.std(combined_diff)
+        signal_mean = jnp.mean(combined_diff)
+        safe_std = jnp.maximum(signal_std, 1e-6)
+        
+        # Z-score normalization with clipping
+        normalized_diff = (combined_diff - signal_mean) / safe_std
+        normalized_diff = jnp.clip(normalized_diff, -5.0, 5.0)
+        
+        # ✅ USE LEARNABLE THRESHOLD: Adaptive thresholding
+        signal_range = jnp.max(normalized_diff) - jnp.min(normalized_diff)
+        adaptive_threshold_pos = threshold * jnp.maximum(signal_range / 4.0, 0.1)
+        
+        # Create spike trains
+        spike_trains_2d = jnp.zeros((reshaped_features.shape[0], self.time_steps, reshaped_features.shape[1]))
+        
+        # ✅ USE LEARNABLE THRESHOLD: Encode positive and negative contrasts
+        pos_spikes = spike_function_with_surrogate(
+            normalized_diff - adaptive_threshold_pos, 0.0, self.surrogate_fn
+        )
+        neg_spikes = spike_function_with_surrogate(
+            -normalized_diff - adaptive_threshold_pos, 0.0, self.surrogate_fn
+        )
+        
+        # Distribute spikes across time steps
+        for t in range(self.time_steps):
+            if t % 2 == 0:
+                weight = 1.0 - (t % 4) * 0.1
+                spike_trains_2d = spike_trains_2d.at[:, t, :].set(pos_spikes * weight)
+            else:
+                weight = 1.0 - ((t-1) % 4) * 0.1
+                spike_trains_2d = spike_trains_2d.at[:, t, :].set(neg_spikes * weight)
+        
+        # ✅ VALIDATION: Boost low spike rates
+        spike_rate = jnp.mean(spike_trains_2d)
+        spike_trains_2d = jnp.where(
+            spike_rate < 0.01,
+            # Boost by reducing threshold
+            self._boost_spike_encoding(reshaped_features, adaptive_threshold_pos * 0.5),
+            spike_trains_2d
+        )
+        
+        # Reshape back: [batch_size, time_steps, seq_len, feature_dim]
+        spike_trains = spike_trains_2d.reshape(batch_size, feature_dim, self.time_steps, seq_len)
+        spike_trains = spike_trains.transpose(0, 2, 3, 1)
+        
+        return spike_trains
+    
+    def _boost_spike_encoding(self, signal: jnp.ndarray, threshold: float) -> jnp.ndarray:
+        """Helper function for boosting spike rate when too low."""
+        # Simplified boost implementation
+        signal_diff = jnp.diff(signal, axis=1, prepend=signal[:, :1])
+        normalized_diff = signal_diff / (jnp.std(signal_diff) + 1e-6)
+        
+        pos_spikes = spike_function_with_surrogate(
+            normalized_diff - threshold, 0.0, self.surrogate_fn
+        )
+        neg_spikes = spike_function_with_surrogate(
+            -normalized_diff - threshold, 0.0, self.surrogate_fn
+        )
+        
+        spike_trains = jnp.zeros((signal.shape[0], self.time_steps, signal.shape[1]))
+        for t in range(self.time_steps):
+            if t % 2 == 0:
+                spike_trains = spike_trains.at[:, t, :].set(pos_spikes)
+            else:
+                spike_trains = spike_trains.at[:, t, :].set(neg_spikes)
         
         return spike_trains
     

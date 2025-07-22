@@ -24,7 +24,14 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 import logging
 import matplotlib.pyplot as plt
-import seaborn as sns
+
+# Optional plotting dependency
+try:
+    import seaborn as sns
+    HAS_SEABORN = True
+except ImportError:
+    HAS_SEABORN = False
+
 from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
@@ -103,14 +110,9 @@ class JAXPerformanceProfiler:
         os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'
         os.environ['JAX_PROFILER_PORT'] = '9999'
         
-        # Metal backend optimization
+        # Metal backend optimization (simplified flags)
         if self.config.device_type == "metal":
-            os.environ['XLA_FLAGS'] = (
-                '--xla_gpu_enable_triton_softmax_fusion=true '
-                '--xla_gpu_triton_gemm_any=True '
-                '--xla_gpu_enable_async_collectives=true '
-                '--xla_gpu_enable_latency_hiding_scheduler=true'
-            )
+            os.environ['XLA_FLAGS'] = '--xla_force_host_platform_device_count=1'
         
         logger.info(f"🔧 Profiling environment setup:")
         logger.info(f"   Device: {jax.devices()}")

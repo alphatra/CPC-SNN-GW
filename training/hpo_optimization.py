@@ -20,7 +20,7 @@ import pickle
 
 from .advanced_training import AdvancedTrainingConfig, AdvancedGWTrainer
 from .training_utils import setup_training_environment
-from ..utils.config import apply_performance_optimizations
+from utils.config import apply_performance_optimizations
 
 logger = logging.getLogger(__name__)
 

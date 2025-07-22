@@ -9,6 +9,7 @@ Loss functions for Contrastive Predictive Coding:
 
 import jax
 import jax.numpy as jnp
+import optax  # ✅ Added for cross_entropy function
 from typing import Optional
 import logging
 
@@ -91,7 +92,7 @@ def enhanced_info_nce_loss(z_context: jnp.ndarray,
         labels = jnp.arange(batch_size)
         
         # Compute cross-entropy loss
-        loss = jax.nn.sparse_softmax_cross_entropy_with_logits(
+        loss = optax.softmax_cross_entropy_with_integer_labels(
             logits=logits, labels=labels
         )
         

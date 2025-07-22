@@ -34,9 +34,9 @@ from .training_metrics import (
 )
 
 # Import models
-from ..models.cpc_encoder import CPCEncoder
-from ..models.snn_classifier import SNNClassifier  
-from ..models.spike_bridge import SpikeBridge
+from models.cpc_encoder import CPCEncoder
+from models.snn_classifier import SNNClassifier  
+from models.spike_bridge import ValidatedSpikeBridge
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +96,7 @@ class TrainerBase(ABC):
         )
         
         # Device optimization
-        self.device_info = optimize_jax_for_device(
-            max_memory_gb=config.max_memory_gb
-        )
+        self.device_info = optimize_jax_for_device()
         
         # Experiment tracking
         self.tracker = ExperimentTracker(
@@ -243,7 +241,7 @@ class CPCSNNTrainer(TrainerBase):
             
             def setup(self):
                 self.cpc_encoder = CPCEncoder(latent_dim=256)
-                self.spike_bridge = SpikeBridge()
+                self.spike_bridge = ValidatedSpikeBridge()
                 self.snn_classifier = SNNClassifier(hidden_size=128, num_classes=3)
             
             @nn.compact  

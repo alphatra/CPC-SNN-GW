@@ -26,12 +26,12 @@ from .base_trainer import TrainerBase, TrainingConfig
 from .training_utils import ProgressTracker
 from .training_metrics import create_training_metrics
 
-# Import model and data components
-from ..models.cpc_encoder import CPCEncoder
-from ..models.snn_classifier import SNNClassifier
-from ..models.spike_bridge import SpikeBridge
-from ..data.continuous_gw_generator import ContinuousGWGenerator
-from ..data.gw_downloader import GWOSCDownloader
+# Import models and data components
+from models.cpc_encoder import CPCEncoder
+from models.snn_classifier import SNNClassifier
+from models.spike_bridge import ValidatedSpikeBridge
+from data.gw_synthetic_generator import ContinuousGWGenerator
+from data.gw_downloader import GWOSCDownloader
 
 logger = logging.getLogger(__name__)
 
@@ -77,10 +77,17 @@ class EnhancedGWTrainer(TrainerBase):
         self.config: EnhancedGWConfig = config
         
         # Initialize data components
-        self.continuous_generator = ContinuousGWGenerator(
+        from data.gw_signal_params import SignalConfiguration
+        
+        signal_config = SignalConfiguration(
             base_frequency=50.0,
             freq_range=(20.0, 500.0),
             duration=4.0
+        )
+        
+        self.continuous_generator = ContinuousGWGenerator(
+            config=signal_config,
+            output_dir=str(self.directories['output'] / 'continuous_gw_cache')
         )
         
         if config.use_real_gwosc_data:
@@ -96,7 +103,7 @@ class EnhancedGWTrainer(TrainerBase):
             
             def __init__(self):
                 self.cpc_encoder = CPCEncoder(latent_dim=256)
-                self.spike_bridge = SpikeBridge()
+                self.spike_bridge = ValidatedSpikeBridge()
                 self.snn_classifier = SNNClassifier(hidden_size=128, num_classes=3)
             
             def init(self, key, x):

@@ -40,13 +40,8 @@ def apply_performance_optimizations():
     # Enable persistent caching for SpikeBridge and other functions
     # (Individual functions will use @jax.jit(cache=True))
     
-    # ✅ CRITICAL FIX 3: Advanced Metal optimizations
-    os.environ['XLA_FLAGS'] = (
-        '--xla_gpu_enable_triton_softmax_fusion=true '
-        '--xla_gpu_triton_gemm_any=True '
-        '--xla_gpu_enable_async_collectives=true '
-        '--xla_gpu_enable_latency_hiding_scheduler=true'
-    )
+    # ✅ CRITICAL FIX 3: Basic XLA optimizations (removed problematic GPU flags)
+    os.environ['XLA_FLAGS'] = '--xla_force_host_platform_device_count=1'
     
     # Platform verification
     logger.info(f"JAX platform: {jax.lib.xla_bridge.get_backend().platform}")
@@ -104,12 +99,12 @@ def setup_training_environment():
     
     # Import models for compilation
     try:
-        from ..models.spike_bridge import SpikeBridge
-        from ..models.snn_classifier import SNNClassifier
-        from ..models.cpc_encoder import CPCEncoder
+        from models.spike_bridge import ValidatedSpikeBridge
+        from models.snn_classifier import SNNClassifier
+        from models.cpc_encoder import CPCEncoder
         
         # Create dummy models for compilation
-        spike_bridge = SpikeBridge()
+        spike_bridge = ValidatedSpikeBridge()
         
         # ✅ SOLUTION: Pre-compile with realistic input shapes
         dummy_latents = jnp.ones((16, 256, 256))  # Batch, time, features
@@ -265,7 +260,7 @@ class TrainingConfig(BaseConfig):
     target_far: float = 1.0 / (30 * 24 * 3600)  # 1/30 days in Hz
 
 
-def validate_runtime_config(config: ExperimentConfig, model_params: dict = None) -> bool:
+def validate_runtime_config(config: Dict[str, Any], model_params: dict = None) -> bool:
     """
     🚨 CRITICAL FIX: Validate runtime matches config.yaml exactly
     
@@ -295,24 +290,24 @@ def validate_runtime_config(config: ExperimentConfig, model_params: dict = None)
     
     # Check config values
     try:
-        assert config.model.cpc.downsample_factor == critical_params['cpc_downsample_factor'], \
-            f"❌ downsample_factor mismatch: {config.model.cpc.downsample_factor} != {critical_params['cpc_downsample_factor']}"
+        assert config['model']['cpc']['downsample_factor'] == critical_params['cpc_downsample_factor'], \
+            f"❌ downsample_factor mismatch: {config['model']['cpc']['downsample_factor']} != {critical_params['cpc_downsample_factor']}"
         validation_results.append("✅ CPC downsample_factor = 4 (frequency preservation)")
         
-        assert config.model.cpc.context_length == critical_params['cpc_context_length'], \
-            f"❌ context_length mismatch: {config.model.cpc.context_length} != {critical_params['cpc_context_length']}"
+        assert config['model']['cpc']['context_length'] == critical_params['cpc_context_length'], \
+            f"❌ context_length mismatch: {config['model']['cpc']['context_length']} != {critical_params['cpc_context_length']}"
         validation_results.append("✅ CPC context_length = 256 (GW stationarity window)")
         
-        assert config.model.spike_bridge.encoding_strategy == critical_params['spike_encoding'], \
-            f"❌ spike_encoding mismatch: {config.model.spike_bridge.encoding_strategy} != {critical_params['spike_encoding']}"
+        assert config['model']['spike_bridge']['encoding_strategy'] == critical_params['spike_encoding'], \
+            f"❌ spike_encoding mismatch: {config['model']['spike_bridge']['encoding_strategy']} != {critical_params['spike_encoding']}"
         validation_results.append("✅ Spike encoding = temporal_contrast (frequency preservation)")
         
-        assert config.model.snn.hidden_sizes == critical_params['snn_hidden_sizes'], \
-            f"❌ snn_hidden_sizes mismatch: {config.model.snn.hidden_sizes} != {critical_params['snn_hidden_sizes']}"
+        assert config['model']['snn']['hidden_sizes'] == critical_params['snn_hidden_sizes'], \
+            f"❌ snn_hidden_sizes mismatch: {config['model']['snn']['hidden_sizes']} != {critical_params['snn_hidden_sizes']}"
         validation_results.append("✅ SNN architecture = 3 layers [256, 128, 64] (proper capacity)")
         
-        assert config.model.snn.surrogate_slope == critical_params['surrogate_slope'], \
-            f"❌ surrogate_slope mismatch: {config.model.snn.surrogate_slope} != {critical_params['surrogate_slope']}"
+        assert config['model']['snn']['surrogate_slope'] == critical_params['surrogate_slope'], \
+            f"❌ surrogate_slope mismatch: {config['model']['snn']['surrogate_slope']} != {critical_params['surrogate_slope']}"
         validation_results.append("✅ Surrogate slope = 4.0 (enhanced gradients)")
         
     except AttributeError as e:
@@ -375,7 +370,7 @@ def check_performance_config() -> dict:
     return performance_status
 
 
-def load_config(config_path: Optional[Path] = None) -> ExperimentConfig:
+def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
     """
     ✅ FIXED: Load configuration with performance optimizations.
     """

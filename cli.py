@@ -13,19 +13,33 @@ from typing import Optional
 
 import yaml
 
-from . import __version__
-from .utils import setup_logging
+try:
+    from . import __version__
+    from .utils import setup_logging
+except ImportError:
+    # Fallback for direct execution
+    try:
+        from _version import __version__
+    except ImportError:
+        __version__ = "0.1.0-dev"
+    from utils import setup_logging
 
 # Optional imports (will be loaded when needed)
 try:
     from .training.pretrain_cpc import main as cpc_train_main
 except ImportError:
-    cpc_train_main = None
+    try:
+        from training.pretrain_cpc import main as cpc_train_main
+    except ImportError:
+        cpc_train_main = None
     
 try:
     from .models.cpc_encoder import create_enhanced_cpc_encoder
 except ImportError:
-    create_enhanced_cpc_encoder = None
+    try:
+        from models.cpc_encoder import create_enhanced_cpc_encoder
+    except ImportError:
+        create_enhanced_cpc_encoder = None
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +52,10 @@ def run_standard_training(config, args):
     
     try:
         # ✅ Real training implementation using CPCSNNTrainer
-        from .training.base_trainer import CPCSNNTrainer, create_training_config
+        try:
+            from .training.base_trainer import CPCSNNTrainer, create_training_config
+        except ImportError:
+            from training.base_trainer import CPCSNNTrainer, create_training_config
         
         # Create output directory for this training run
         training_dir = args.output_dir / f"standard_training_{config.training.cpc_pretrain.batch_size}bs"
@@ -350,7 +367,10 @@ def train_cmd():
     logger.info(f"   Configuration: {args.config or 'default'}")
     
     # Load configuration
-    from .utils.config import load_config
+    try:
+        from .utils.config import load_config
+    except ImportError:
+        from utils.config import load_config
     
     config = load_config(args.config)
     logger.info(f"✅ Loaded configuration from {args.config or 'default'}")
@@ -374,7 +394,10 @@ def train_cmd():
     args.output_dir.mkdir(parents=True, exist_ok=True)
     
     # Save final configuration
-    from .utils.config import save_config
+    try:
+        from .utils.config import save_config
+    except ImportError:
+        from utils.config import save_config
     config_path = args.output_dir / "config.yaml"
     save_config(config, config_path)
     logger.info(f"💾 Saved configuration to {config_path}")

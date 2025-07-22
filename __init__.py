@@ -89,7 +89,7 @@ def export_dataset(dataset, output_path, format='hdf5', **kwargs):
     Returns:
         True if successful
     """
-    from .data.continuous_gw_generator import ContinuousGWGenerator
+    from .data.gw_synthetic_generator import ContinuousGWGenerator
     
     if format.lower() == 'hdf5':
         generator = ContinuousGWGenerator()
@@ -372,10 +372,10 @@ def __getattr__(name):
         from .data.label_utils import COLOR_SCHEMES
         return COLOR_SCHEMES
     elif name == "ContinuousGWGenerator":
-        from .data.continuous_gw_generator import ContinuousGWGenerator
+        from .data.gw_synthetic_generator import ContinuousGWGenerator
         return ContinuousGWGenerator
     elif name == "ContinuousGWParams":
-        from .data.continuous_gw_generator import ContinuousGWParams
+        from .data.gw_signal_params import ContinuousGWParams
         return ContinuousGWParams
     elif name == "DataPreprocessor":
         from .data.gw_download import DataPreprocessor
@@ -423,7 +423,7 @@ def __getattr__(name):
         from .data.gw_download import SegmentSampler
         return SegmentSampler
     elif name == "SignalConfiguration":
-        from .data.continuous_gw_generator import SignalConfiguration
+        from .data.gw_signal_params import SignalConfiguration
         return SignalConfiguration
     elif name == "cache_decorator":
         from .data.cache_manager import cache_decorator
@@ -438,7 +438,7 @@ def __getattr__(name):
         from .data.label_utils import create_label_visualization_config
         return create_label_visualization_config
     elif name == "create_mixed_gw_dataset":
-        from .data.continuous_gw_generator import create_mixed_gw_dataset
+        from .data.gw_dataset_builder import create_mixed_gw_dataset
         return create_mixed_gw_dataset
     elif name == "dataset_to_canonical":
         from .data.label_utils import dataset_to_canonical
@@ -485,8 +485,8 @@ def __getattr__(name):
         from .models.snn_classifier import LIFLayer
         return LIFLayer
     elif name == "OptimizedSpikeBridge":
-        from .models.spike_bridge import OptimizedSpikeBridge
-        return OptimizedSpikeBridge
+        from .models.spike_bridge import ValidatedSpikeBridge
+        return ValidatedSpikeBridge
     elif name == "RMSNorm":
         from .models.cpc_encoder import RMSNorm
         return RMSNorm
@@ -500,8 +500,8 @@ def __getattr__(name):
         from .models.snn_classifier import SNNTrainer
         return SNNTrainer
     elif name == "SpikeBridge":
-        from .models.spike_bridge import SpikeBridge
-        return SpikeBridge
+        from .models.spike_bridge import ValidatedSpikeBridge
+        return ValidatedSpikeBridge
     elif name == "SpikeEncodingStrategy":
         from .models.spike_bridge import SpikeEncodingStrategy
         return SpikeEncodingStrategy

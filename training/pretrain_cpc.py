@@ -23,9 +23,9 @@ from flax.training import train_state
 from .base_trainer import TrainerBase, TrainingConfig
 from .training_metrics import create_training_metrics
 
-# Import model components
-from ..models.cpc_encoder import CPCEncoder, enhanced_info_nce_loss
-from ..data.continuous_gw_generator import ContinuousGWGenerator
+# Import models and data
+from models.cpc_encoder import CPCEncoder, enhanced_info_nce_loss
+from data.gw_synthetic_generator import ContinuousGWGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +66,17 @@ class CPCPretrainer(TrainerBase):
         self.config: CPCPretrainConfig = config
         
         # Initialize data generator
-        self.continuous_generator = ContinuousGWGenerator(
+        from data.gw_signal_params import SignalConfiguration
+        
+        signal_config = SignalConfiguration(
             base_frequency=50.0,
             freq_range=(20.0, 500.0),
             duration=config.signal_duration
+        )
+        
+        self.continuous_generator = ContinuousGWGenerator(
+            config=signal_config,
+            output_dir=str(self.directories['output'] / 'continuous_gw_cache')
         )
         
         logger.info("Initialized CPCPretrainer for self-supervised learning")

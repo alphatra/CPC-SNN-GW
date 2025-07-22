@@ -75,16 +75,27 @@ class VectorizedLIFLayer(nn.Module):
     @nn.compact
     def __call__(self, spikes: jnp.ndarray, training: bool = False) -> jnp.ndarray:
         """
-        Apply vectorized LIF dynamics.
+        Forward pass through vectorized LIF layer.
         
         Args:
-            spikes: Input spikes [batch, time, input_dim]
+            spikes: Input spikes [batch, time, input_dim] or [batch, time, seq_len, feature_dim]
             training: Training mode flag
             
         Returns:
             Output spikes [batch, time, hidden_size]
         """
-        batch_size, time_steps, input_dim = spikes.shape
+        # ✅ CRITICAL FIX: Handle both 3D and 4D input shapes
+        if len(spikes.shape) == 4:
+            # 4D input from spike bridge: [batch, time_steps, seq_len, feature_dim]
+            batch_size, time_steps, seq_len, feature_dim = spikes.shape
+            # Flatten spatial dimensions: [batch, time, seq_len * feature_dim]
+            spikes = spikes.reshape(batch_size, time_steps, seq_len * feature_dim)
+            input_dim = seq_len * feature_dim
+        elif len(spikes.shape) == 3:
+            # 3D input: [batch, time, input_dim]
+            batch_size, time_steps, input_dim = spikes.shape
+        else:
+            raise ValueError(f"Expected 3D or 4D spike input, got {len(spikes.shape)}D: {spikes.shape}")
         
         # Weight and bias parameters
         W = self.param(

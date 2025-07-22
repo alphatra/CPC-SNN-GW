@@ -30,9 +30,9 @@ from .training_utils import ProgressTracker, format_training_time
 from .training_metrics import create_training_metrics
 
 # Import models
-from ..models.cpc_encoder import CPCEncoder, enhanced_info_nce_loss  
-from ..models.snn_classifier import SNNClassifier
-from ..models.spike_bridge import SpikeBridge
+from models.cpc_encoder import CPCEncoder, enhanced_info_nce_loss  
+from models.snn_classifier import SNNClassifier
+from models.spike_bridge import ValidatedSpikeBridge
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +112,7 @@ class UnifiedTrainer(TrainerBase):
     def create_model(self):
         """Create individual model components."""
         self.cpc_encoder = CPCEncoder(latent_dim=self.config.cpc_latent_dim)
-        self.spike_bridge = SpikeBridge()
+        self.spike_bridge = ValidatedSpikeBridge()
         self.snn_classifier = SNNClassifier(
             hidden_size=self.config.snn_hidden_size,
             num_classes=self.config.num_classes

@@ -32,6 +32,24 @@ class GWOSCEventData:
     snr: float
     metadata: Dict[str, Any]
 
+@dataclass 
+class ProcessingResult:
+    """Result from data processing operations."""
+    data: jnp.ndarray
+    quality_score: float
+    metadata: Dict[str, Any]
+    success: bool = True
+    error_message: Optional[str] = None
+
+@dataclass
+class QualityMetrics:
+    """Quality metrics for data assessment."""
+    snr: float
+    psd_score: float
+    glitch_probability: float
+    data_quality_flag: int
+    timestamp: float
+
 @dataclass
 class LIGODataQuality:
     """Data quality metrics for LIGO strain data."""

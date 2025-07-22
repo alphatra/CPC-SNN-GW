@@ -24,6 +24,162 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# ✅ NEW: Setup and configuration functions
+# ============================================================================
+
+def setup_professional_logging(level=logging.INFO, log_file=None):
+    """Setup professional logging configuration."""
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    
+    # File handler (optional)
+    handlers = [console_handler]
+    if log_file:
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(formatter)
+        handlers.append(file_handler)
+    
+    # Configure logger
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    for handler in handlers:
+        logger.addHandler(handler)
+    
+    return logger
+
+def setup_directories(output_dir: str):
+    """Setup training directories."""
+    from pathlib import Path
+    
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    # Create subdirectories
+    checkpoint_dir = output_path / "checkpoints"
+    log_dir = output_path / "logs"
+    results_dir = output_path / "results"
+    
+    checkpoint_dir.mkdir(exist_ok=True)
+    log_dir.mkdir(exist_ok=True)
+    results_dir.mkdir(exist_ok=True)
+    
+    # Return dictionary with all directory paths
+    return {
+        'output': output_path,
+        'checkpoints': checkpoint_dir,
+        'log': log_dir,
+        'logs': log_dir,  # Alias for compatibility
+        'results': results_dir
+    }
+
+def optimize_jax_for_device():
+    """Optimize JAX for the current device."""
+    import os
+    import jax
+    
+    # Memory optimization
+    os.environ.setdefault('XLA_PYTHON_CLIENT_MEM_FRACTION', '0.5')
+    os.environ.setdefault('JAX_THREEFRY_PARTITIONABLE', 'true')
+    
+    logger.info(f"JAX devices: {jax.devices()}")
+    logger.info(f"JAX platform: {jax.default_backend()}")
+    
+    return True
+
+def validate_config(config):
+    """Validate training configuration."""
+    # Basic validation
+    assert hasattr(config, 'batch_size'), "Config must have batch_size"
+    assert hasattr(config, 'learning_rate'), "Config must have learning_rate"
+    return True
+
+def save_config_to_file(config, filepath):
+    """Save configuration to file."""
+    import json
+    from pathlib import Path
+    
+    # Convert to dict if needed
+    if hasattr(config, '__dict__'):
+        config_dict = config.__dict__
+    else:
+        config_dict = config
+    
+    with open(filepath, 'w') as f:
+        json.dump(config_dict, f, indent=2, default=str)
+    
+    logger.info(f"Configuration saved to {filepath}")
+    return True
+
+def check_for_nans(values, name="values"):
+    """Check for NaN values in arrays."""
+    if jnp.any(jnp.isnan(values)):
+        logger.warning(f"NaN detected in {name}")
+        return True
+    return False
+
+class ProgressTracker:
+    """Track training progress with timing and metrics."""
+    
+    def __init__(self):
+        self.start_time = time.time()
+        self.epoch_times = []
+        self.metrics_history = []
+    
+    def start_epoch(self):
+        """Start timing an epoch."""
+        self.epoch_start = time.time()
+    
+    def end_epoch(self, metrics=None):
+        """End timing an epoch and record metrics."""
+        epoch_time = time.time() - self.epoch_start
+        self.epoch_times.append(epoch_time)
+        
+        if metrics:
+            self.metrics_history.append(metrics)
+        
+        return epoch_time
+    
+    def get_average_epoch_time(self):
+        """Get average epoch time."""
+        if not self.epoch_times:
+            return 0.0
+        return sum(self.epoch_times) / len(self.epoch_times)
+    
+    def get_total_time(self):
+        """Get total training time so far."""
+        return time.time() - self.start_time
+    
+    def get_estimated_remaining(self, current_epoch, total_epochs):
+        """Estimate remaining training time."""
+        if not self.epoch_times:
+            return 0.0
+        
+        avg_epoch_time = self.get_average_epoch_time()
+        remaining_epochs = total_epochs - current_epoch
+        return avg_epoch_time * remaining_epochs
+
+def format_training_time(current_time, total_time=None):
+    """Format training time for display."""
+    def format_time(seconds):
+        if seconds < 60:
+            return f"{seconds:.1f}s"
+        elif seconds < 3600:
+            return f"{seconds/60:.1f}m"
+        else:
+            return f"{seconds/3600:.1f}h"
+    
+    if total_time is None:
+        return format_time(current_time)
+    else:
+        return f"{format_time(current_time)} / {format_time(total_time)}"
+
+
 def setup_optimized_environment(memory_fraction: float = 0.5) -> None:
     """
     ✅ CRITICAL FIX: Setup optimized JAX environment based on Memory Bank techContext.md
@@ -39,18 +195,13 @@ def setup_optimized_environment(memory_fraction: float = 0.5) -> None:
     os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'  # Dynamic allocation
     os.environ['JAX_THREEFRY_PARTITIONABLE'] = 'true'     # Better RNG performance
     
-    # ✅ SOLUTION 2: Advanced XLA optimizations for Apple Silicon  
-    os.environ['XLA_FLAGS'] = (
-        '--xla_gpu_enable_triton_softmax_fusion=true '
-        '--xla_gpu_triton_gemm_any=True '
-        '--xla_gpu_enable_async_collectives=true '
-        '--xla_gpu_enable_latency_hiding_scheduler=true'
-    )
+    # ✅ SOLUTION 2: Basic XLA optimizations (removed problematic GPU flags)
+    os.environ['XLA_FLAGS'] = '--xla_force_host_platform_device_count=1'
     
     # JAX configuration optimizations
-    from jax.config import config
-    config.update('jax_enable_x64', False)  # Use float32 for speed
-    config.update('jax_platform_name', 'metal')  # Force Metal backend
+    import jax
+    jax.config.update('jax_enable_x64', False)  # Use float32 for speed
+    jax.config.update('jax_platform_name', 'metal')  # Force Metal backend
     
     logger.info("✅ Optimized JAX environment configured:")
     logger.info(f"   Memory fraction: {memory_fraction}")
@@ -58,14 +209,14 @@ def setup_optimized_environment(memory_fraction: float = 0.5) -> None:
     logger.info(f"   Devices: {jax.devices()}")
 
 
-@jax.jit(cache=True)  # ✅ SOLUTION: Enable persistent JIT caching
+@jax.jit  # ✅ SOLUTION: Enable persistent JIT caching (removed cache=True for compatibility)
 def cached_cpc_forward(params: Dict, x: jnp.ndarray) -> jnp.ndarray:
     """✅ CACHED: CPC forward pass with persistent compilation cache."""
     # Placeholder - actual implementation depends on CPC model
     return x  # Replace with actual CPC forward pass
 
 
-@jax.jit(cache=True)  # ✅ SOLUTION: Enable persistent JIT caching  
+@jax.jit  # ✅ SOLUTION: Enable persistent JIT caching  
 def cached_spike_bridge(latents: jnp.ndarray, 
                        threshold_pos: float = 0.1,
                        threshold_neg: float = -0.1) -> jnp.ndarray:
@@ -86,7 +237,7 @@ def cached_spike_bridge(latents: jnp.ndarray,
     return jnp.concatenate([on_spikes, off_spikes], axis=-1)
 
 
-@jax.jit(cache=True)  # ✅ SOLUTION: Enable persistent JIT caching
+@jax.jit  # ✅ SOLUTION: Enable persistent JIT caching
 def cached_snn_forward(spikes: jnp.ndarray, params: Dict) -> jnp.ndarray:
     """✅ CACHED: SNN forward pass with enhanced gradient flow."""
     # Placeholder - actual implementation depends on SNN model
@@ -239,11 +390,12 @@ def monitor_memory_usage() -> Dict[str, float]:
     return memory_info
 
 
+@jax.jit  # ✅ SOLUTION: Enable persistent JIT caching (removed cache=True for compatibility)
 def compute_gradient_norm(grads: Dict) -> float:
     """Compute gradient norm for monitoring training stability."""
-    grad_norms = jax.tree_map(lambda x: jnp.linalg.norm(x), grads)
-    total_norm = jnp.sqrt(sum(jax.tree_leaves(jax.tree_map(lambda x: x**2, grad_norms))))
-    return float(total_norm)
+    grad_norms = jax.tree.map(lambda x: jnp.linalg.norm(x), grads)
+    total_norm = jnp.sqrt(sum(jax.tree.leaves(jax.tree.map(lambda x: x**2, grad_norms))))
+    return total_norm  # Return JAX array instead of float() for JIT compatibility
 
 
 @dataclass

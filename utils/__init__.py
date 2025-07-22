@@ -121,7 +121,7 @@ def print_system_info() -> None:
     
     if 'memory_info' in device_info:
         memory_info = device_info['memory_info'] 
-        if 'bytes_in_use' in memory_info:
+        if memory_info and 'bytes_in_use' in memory_info:
             memory_gb = memory_info['bytes_in_use'] / (1024**3)
             logger.info(f"   Memory in use: {memory_gb:.2f} GB")
 

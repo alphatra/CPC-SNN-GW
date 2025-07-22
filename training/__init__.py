@@ -33,10 +33,8 @@ from .unified_trainer import (
 )
 
 from .advanced_training import (
-    AdvancedGWTrainer,
-    AdvancedTrainingConfig, 
-    create_advanced_trainer,
-    run_advanced_training_experiment
+    RealAdvancedGWTrainer as AdvancedGWTrainer,  # Use alias for compatibility
+    create_real_advanced_trainer as create_advanced_trainer  # Use alias for compatibility
 )
 
 from .enhanced_gw_training import (
@@ -87,7 +85,7 @@ AVAILABLE_TRAINERS = {
 AVAILABLE_CONFIGS = {
     'base': TrainingConfig,
     'unified': UnifiedTrainingConfig,
-    'advanced': AdvancedTrainingConfig,
+    'advanced': TrainingConfig,  # Use base config as fallback
     'enhanced': EnhancedGWConfig,
     'cpc_pretrain': CPCPretrainConfig
 }
@@ -127,7 +125,6 @@ def run_training_experiment(experiment_type: str = 'base'):
         Experiment results
     """
     experiment_runners = {
-        'advanced': run_advanced_training_experiment,
         'enhanced': run_enhanced_training_experiment,
         'cpc_pretrain': run_cpc_pretraining_experiment
     }
@@ -183,7 +180,6 @@ __all__ = [
     'UnifiedTrainingConfig', 
     'create_unified_trainer',
     'AdvancedGWTrainer',
-    'AdvancedTrainingConfig',
     'create_advanced_trainer',
     'EnhancedGWTrainer', 
     'EnhancedGWConfig',
@@ -211,7 +207,6 @@ __all__ = [
     'create_training_metrics',
     
     # Experiments
-    'run_advanced_training_experiment',
     'run_enhanced_training_experiment', 
     'run_cpc_pretraining_experiment',
     
