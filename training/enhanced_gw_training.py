@@ -117,8 +117,8 @@ class EnhancedGWTrainer(TrainerBase):
             
             def apply(self, params, x, train=True, rngs=None):
                 latents = self.cpc_encoder.apply(params['cpc'], x)
-                key = rngs.get('spike_bridge', jax.random.PRNGKey(42)) if rngs else jax.random.PRNGKey(42)
-                spikes = self.spike_bridge.apply(params['spike_bridge'], latents, key)
+                # ✅ CRITICAL FIX: Use training parameter, not key
+                spikes = self.spike_bridge.apply(params['spike_bridge'], latents, training=train)
                 logits = self.snn_classifier.apply(params['snn'], spikes)
                 return logits
         

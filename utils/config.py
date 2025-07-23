@@ -11,7 +11,7 @@ Configuration Management for LIGO CPC+SNN Pipeline
 import os
 import logging
 from typing import Dict, Any, Optional, List, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 import jax
 import jax.numpy as jnp
@@ -178,7 +178,7 @@ class DataConfig(BaseConfig):
     ✅ FIXED: Data configuration with realistic parameters.
     """
     # Basic parameters
-    sequence_length: int = 16384  # 4 seconds @ 4096 Hz
+    sequence_length: int = 4096   # ✅ DRASTICALLY REDUCED: 1 second @ 4096 Hz (GPU memory optimization)
     sample_rate: int = 4096
     duration: float = 4.0
     
@@ -205,7 +205,7 @@ class ModelConfig(BaseConfig):
     ✅ FIXED: Model configuration addressing architecture issues.
     """
     # 🚨 CRITICAL FIX: CPC parameters - synchronized with config.yaml
-    cpc_latent_dim: int = 512  # Increased for richer representations
+    cpc_latent_dim: int = 256  # ✅ REDUCED: GPU memory optimization 512→256
     cpc_downsample_factor: int = 4  # ✅ CRITICAL FIX: Was 64 → 4 (matches config.yaml)
     cpc_context_length: int = 64    # ✅ EXTENDED from 12 (covers ~250ms)
     cpc_num_negatives: int = 128    # ✅ INCREASED for better contrastive learning
@@ -260,6 +260,100 @@ class TrainingConfig(BaseConfig):
     target_far: float = 1.0 / (30 * 24 * 3600)  # 1/30 days in Hz
 
 
+@dataclass
+class LoggingConfig(BaseConfig):
+    """Logging and checkpointing configuration"""
+    
+    # Basic logging
+    level: str = "INFO"
+    use_wandb: bool = True
+    wandb_project: str = "ligo-cpc-snn-critical-fixed"
+    
+    # Checkpointing
+    checkpoint_dir: str = "./checkpoints"
+    save_every_n_epochs: int = 5
+    log_every_n_steps: int = 100
+    
+    # File logging
+    log_file: Optional[str] = None
+    max_log_files: int = 5
+
+@dataclass
+class PlatformConfig(BaseConfig):
+    """Platform and device configuration"""
+    
+    # Device settings
+    device: str = "auto"  # "auto", "cpu", "gpu", "metal"
+    precision: str = "float32"
+    memory_fraction: float = 0.5
+    
+    # Performance settings
+    enable_jit: bool = True
+    cache_compilation: bool = True
+    
+@dataclass
+class WandbConfig(BaseConfig):
+    """
+    ✅ NEW: Comprehensive W&B logging configuration
+    """
+    # Basic W&B settings
+    enabled: bool = True
+    project: str = "neuromorphic-gw-detection"
+    entity: Optional[str] = None  # W&B team/user
+    name: Optional[str] = None    # Run name (auto-generated if None)
+    notes: Optional[str] = None   # Run description
+    tags: List[str] = field(default_factory=lambda: [
+        "neuromorphic", "gravitational-waves", "snn", "cpc", "jax"
+    ])
+    
+    # Logging configuration
+    log_frequency: int = 10                    # Log every N steps
+    save_frequency: int = 100                  # Save artifacts every N steps
+    log_model_frequency: int = 500             # Log model every N steps
+    
+    # Feature toggles
+    enable_hardware_monitoring: bool = True    # CPU/GPU/memory monitoring
+    enable_visualizations: bool = True         # Custom plots and charts
+    enable_alerts: bool = True                # Performance alerts
+    enable_gradients: bool = True             # Gradient tracking
+    enable_model_artifacts: bool = True       # Model saving
+    enable_spike_tracking: bool = True        # Neuromorphic spike patterns
+    enable_performance_profiling: bool = True # Detailed performance metrics
+    
+    # Advanced features
+    watch_model: str = "all"                  # "gradients", "parameters", "all", or None
+    log_graph: bool = True                    # Log computation graph
+    log_code: bool = True                     # Log source code
+    save_code: bool = True                    # Save code artifacts
+    
+    # Custom metrics configuration
+    neuromorphic_metrics: bool = True         # Spike rates, encoding efficiency
+    contrastive_metrics: bool = True          # CPC-specific metrics
+    detection_metrics: bool = True            # GW detection accuracy metrics
+    latency_metrics: bool = True             # <100ms inference tracking
+    memory_metrics: bool = True              # Memory usage tracking
+    
+    # Dashboard configuration
+    create_summary_dashboard: bool = True     # Auto-create summary plots
+    dashboard_update_frequency: int = 100    # Update dashboard every N steps
+    
+    # Output configuration
+    output_dir: str = "wandb_outputs"
+    local_backup: bool = True                # Backup logs locally
+    
+    def __post_init__(self):
+        super().__post_init__()
+        
+        # Auto-generate run name if not provided
+        if not self.name:
+            import time
+            self.name = f"neuromorphic-gw-{int(time.time())}"
+        
+        # Auto-generate notes if not provided
+        if not self.notes:
+            self.notes = "Enhanced neuromorphic GW detection with comprehensive monitoring"
+
+
 def validate_runtime_config(config: Dict[str, Any], model_params: dict = None) -> bool:
     """
     🚨 CRITICAL FIX: Validate runtime matches config.yaml exactly
@@ -281,7 +375,7 @@ def validate_runtime_config(config: Dict[str, Any], model_params: dict = None) -
         'cpc_downsample_factor': 4,  # Must match config.yaml
         'cpc_context_length': 256,   # Must match config.yaml  
         'spike_encoding': 'temporal_contrast',  # Must match config.yaml
-        'snn_hidden_sizes': [256, 128, 64],     # Must match config.yaml
+        'snn_hidden_sizes': [128, 64, 32],     # ✅ REDUCED: GPU memory optimization
         'surrogate_slope': 4.0,      # Must match config.yaml
         'memory_fraction': 0.5       # Must match config.yaml
     }
@@ -372,22 +466,31 @@ def check_performance_config() -> dict:
 
 def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
     """
-    ✅ FIXED: Load configuration with performance optimizations.
+    ✅ FIXED: Load configuration with performance optimizations and enhanced W&B logging.
     """
     if config_path and Path(config_path).exists():
         # Load from file
         import yaml
         with open(config_path, 'r') as f:
             config_dict = yaml.safe_load(f)
+            
+        # ✅ NEW: Ensure wandb config exists
+        if 'wandb' not in config_dict:
+            logger.info("Adding default enhanced W&B configuration")
+            config_dict['wandb'] = asdict(WandbConfig())
+            
         logger.info(f"Loaded configuration from {config_path}")
     else:
         # Use defaults with fixes applied
         config_dict = {
-            'data': DataConfig(),
-            'model': ModelConfig(), 
-            'training': TrainingConfig()
+            'data': asdict(DataConfig()),
+            'model': asdict(ModelConfig()), 
+            'training': asdict(TrainingConfig()),
+            'logging': asdict(LoggingConfig()),  # ✅ NEW: Include logging config
+            'platform': asdict(PlatformConfig()),  # ✅ NEW: Include platform config
+            'wandb': asdict(WandbConfig())  # ✅ NEW: Include enhanced W&B config
         }
-        logger.info("Using default FIXED configuration")
+        logger.info("Using default FIXED configuration with enhanced W&B logging")
     
     return config_dict
 

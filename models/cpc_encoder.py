@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class RealCPCConfig:
     """🚨 FIXED: Real CPC configuration with critical parameter fixes."""
     # 🚨 CRITICAL FIX: Architecture parameters fixed for frequency preservation
-    latent_dim: int = 512  # ✅ INCREASED from 256 for richer representations
+    latent_dim: int = 256  # ✅ REDUCED: GPU memory optimization 512→256
     conv_channels: Tuple[int, ...] = (64, 128, 256, 512)  # ✅ Progressive depth
     downsample_factor: int = 4  # ✅ CRITICAL FIX: Was 64 (destroyed 99% frequency info)
     context_length: int = 256   # ✅ INCREASED from 64 for proper GW stationarity
@@ -56,7 +56,7 @@ class RealCPCConfig:
     # Advanced features
     use_gradient_checkpointing: bool = True
     use_mixed_precision: bool = True
-    input_scaling: float = 1e20
+    input_scaling: float = 1.0  # ✅ CRITICAL FIX: Changed from 1e20 to prevent numerical overflow
 
 
 class RealCPCEncoder(nn.Module):

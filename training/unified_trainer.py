@@ -168,23 +168,26 @@ class UnifiedTrainer(TrainerBase):
             tx=optimizer
         )
     
-    def _snn_frozen_apply_fn(self, params, x_latent, key):
+    def _snn_frozen_apply_fn(self, params, x_latent, training=True):
         """Apply function for SNN training stage (legacy frozen CPC)."""
-        spikes = self.spike_bridge.apply(params['spike_bridge'], x_latent, key)
+        # ✅ CRITICAL FIX: Use training parameter, not key
+        spikes = self.spike_bridge.apply(params['spike_bridge'], x_latent, training=training)
         logits = self.snn_classifier.apply(params['snn'], spikes)
         return logits
         
-    def _snn_with_cpc_apply_fn(self, params, x, key):
+    def _snn_with_cpc_apply_fn(self, params, x, training=True):
         """✅ NEW: Apply function for SNN training with CPC fine-tuning."""
         latents = self.cpc_encoder.apply(params['cpc'], x)
-        spikes = self.spike_bridge.apply(params['spike_bridge'], latents, key)
+        # ✅ CRITICAL FIX: Use training parameter, not key
+        spikes = self.spike_bridge.apply(params['spike_bridge'], latents, training=training)
         logits = self.snn_classifier.apply(params['snn'], spikes)
         return logits, latents
     
-    def _joint_apply_fn(self, params, x, key):
+    def _joint_apply_fn(self, params, x, training=True):
         """Apply function for joint training stage."""
         latents = self.cpc_encoder.apply(params['cpc'], x)
-        spikes = self.spike_bridge.apply(params['spike_bridge'], latents, key)
+        # ✅ CRITICAL FIX: Use training parameter, not key
+        spikes = self.spike_bridge.apply(params['spike_bridge'], latents, training=training)
         logits = self.snn_classifier.apply(params['snn'], spikes)
         return logits, latents
     
@@ -231,11 +234,11 @@ class UnifiedTrainer(TrainerBase):
         x, y = batch
         
         def loss_fn(params):
-            key = self._get_deterministic_key(f"snn_step_{train_state.step}")
+            # ✅ FIX: No key needed for SpikeBridge anymore
             
             if self.config.enable_cpc_finetuning_stage2:
                 # ✅ SOLUTION: CPC fine-tuning enabled (real gradients)
-                logits, latents = train_state.apply_fn(params, x, key)
+                logits, latents = train_state.apply_fn(params, x, training=True)
                 
                 # Classification loss
                 clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
@@ -254,7 +257,7 @@ class UnifiedTrainer(TrainerBase):
                 latents = jax.lax.stop_gradient(
                     self.cpc_encoder.apply(self.stage1_cpc_params, x)
                 )
-                logits = train_state.apply_fn(params, latents, key)
+                logits = train_state.apply_fn(params, latents, training=True)
                 loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
                 accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
                 return loss, accuracy
@@ -295,8 +298,8 @@ class UnifiedTrainer(TrainerBase):
         x, y = batch
         
         def loss_fn(params):
-            key = self._get_deterministic_key(f"joint_step_{train_state.step}")
-            logits, latents = train_state.apply_fn(params, x, key)
+            # ✅ FIX: No key needed, use training=True
+            logits, latents = train_state.apply_fn(params, x, training=True)
             
             # Classification loss
             clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
@@ -349,20 +352,19 @@ class UnifiedTrainer(TrainerBase):
             )
         else:
             # ✅ FIXED: Real classification evaluation
-            key = self._get_deterministic_key(f"eval_{train_state.step}")
             
             if self.current_stage == 2 and not self.config.enable_cpc_finetuning_stage2:
                 # Legacy frozen CPC
                 latents = jax.lax.stop_gradient(
                     self.cpc_encoder.apply(self.stage1_cpc_params, x)
                 )
-                logits = train_state.apply_fn(train_state.params, latents, key)
+                logits = train_state.apply_fn(train_state.params, latents, training=False)
             else:
                 # Real evaluation with current model
                 if self.current_stage == 2:
-                    logits, _ = train_state.apply_fn(train_state.params, x, key)
+                    logits, _ = train_state.apply_fn(train_state.params, x, training=False)
                 else:
-                    logits, _ = train_state.apply_fn(train_state.params, x, key)
+                    logits, _ = train_state.apply_fn(train_state.params, x, training=False)
             
             loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
             accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
