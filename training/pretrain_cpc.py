@@ -311,7 +311,7 @@ def run_cpc_pretraining_experiment():
     
     config = CPCPretrainConfig(
         num_epochs=50,
-        batch_size=32,
+        batch_size=1,  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
         learning_rate=1e-3,
         latent_dim=256,
         num_pretraining_signals=500,

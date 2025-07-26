@@ -1,0 +1,7 @@
+{"time":"2025-07-25T21:36:50.342033049Z","level":"INFO","msg":"stream: starting","core version":"0.19.11","symlink path":"outputs/wandb/run-20250725_213650-gp6sr44l/logs/debug-core.log"}
+{"time":"2025-07-25T21:36:50.49115991Z","level":"INFO","msg":"created new stream","id":"gp6sr44l"}
+{"time":"2025-07-25T21:36:50.491254344Z","level":"INFO","msg":"stream: started","id":"gp6sr44l"}
+{"time":"2025-07-25T21:36:50.491378985Z","level":"INFO","msg":"writer: Do: started","stream_id":"gp6sr44l"}
+{"time":"2025-07-25T21:36:50.491398851Z","level":"INFO","msg":"sender: started","stream_id":"gp6sr44l"}
+{"time":"2025-07-25T21:36:50.491608294Z","level":"INFO","msg":"handler: started","stream_id":"gp6sr44l"}
+{"time":"2025-07-25T21:36:50.607222279Z","level":"INFO","msg":"Starting system monitor"}

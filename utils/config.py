@@ -19,6 +19,10 @@ import time
 
 logger = logging.getLogger(__name__)
 
+# ✅ FIX: Module-level guards for preventing multiple executions
+_OPTIMIZATIONS_APPLIED = False
+_MODELS_COMPILED = False
+
 
 def apply_performance_optimizations():
     """
@@ -125,7 +129,7 @@ def setup_training_environment():
         
         # Pre-compile other models
         logger.info("   Compiling CPC Encoder...")
-        cpc_encoder = CPCEncoder(latent_dim=256)
+        cpc_encoder = CPCEncoder(latent_dim=64)   # ✅ ULTRA-MEMORY OPTIMIZED
         dummy_input = jnp.ones((16, 4096))  # Batch, sequence
         _ = cpc_encoder.apply(
             cpc_encoder.init(dummy_key, dummy_input),
@@ -133,7 +137,7 @@ def setup_training_environment():
         )
         
         logger.info("   Compiling SNN Classifier...")
-        snn_classifier = SNNClassifier(hidden_size=128, num_classes=3)
+        snn_classifier = SNNClassifier(hidden_size=32, num_classes=3)  # ✅ ULTRA-MEMORY OPTIMIZED
         dummy_spikes = jnp.ones((16, 256, 256))  # Batch, time, features
         _ = snn_classifier.apply(
             snn_classifier.init(dummy_key, dummy_spikes),
@@ -165,11 +169,9 @@ class BaseConfig:
     
     def __post_init__(self):
         """Apply optimizations after initialization."""
-        if self.enable_performance_optimizations:
-            apply_performance_optimizations()
-            
-        if self.pre_compile_models:
-            setup_training_environment()
+        # ✅ FIX: Disable automatic optimizations in __post_init__ 
+        # These will be called explicitly from main CLI/training entry points
+        pass  # Removed automatic optimization calls to prevent multiple executions
 
 
 @dataclass
@@ -205,7 +207,7 @@ class ModelConfig(BaseConfig):
     ✅ FIXED: Model configuration addressing architecture issues.
     """
     # 🚨 CRITICAL FIX: CPC parameters - synchronized with config.yaml
-    cpc_latent_dim: int = 256  # ✅ REDUCED: GPU memory optimization 512→256
+    cpc_latent_dim: int = 64   # ✅ ULTRA-MINIMAL: GPU memory optimization to prevent model collapse + memory issues
     cpc_downsample_factor: int = 4  # ✅ CRITICAL FIX: Was 64 → 4 (matches config.yaml)
     cpc_context_length: int = 64    # ✅ EXTENDED from 12 (covers ~250ms)
     cpc_num_negatives: int = 128    # ✅ INCREASED for better contrastive learning
@@ -247,7 +249,7 @@ class TrainingConfig(BaseConfig):
     joint_lr: float = 5e-5
     
     # Batch sizes (memory-optimized)
-    batch_size: int = 16  # Conservative for 16GB systems
+    batch_size: int = 1  # ✅ MEMORY FIX: Ultra-conservative for memory constraints
     grad_accumulation_steps: int = 4  # Effective batch = 64
     
     # ✅ NEW: Real evaluation
@@ -514,7 +516,6 @@ def save_config(config: Dict[str, Any], save_path: str):
     logger.info(f"Configuration saved to {save_path}")
 
 
-# ✅ NEW: Apply optimizations on import
-if __name__ != "__main__":
-    # Auto-apply optimizations when module is imported
-    apply_performance_optimizations() 
+# ✅ FIX: Removed auto-optimization on import to prevent multiple executions
+# Optimizations should be called explicitly where needed
+# apply_performance_optimizations()  # Commented out to prevent circular calls 

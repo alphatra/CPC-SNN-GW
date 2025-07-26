@@ -45,17 +45,18 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TrainingConfig:
     """Simplified training configuration - core parameters only."""
-    # Model parameters
+    # Model parameters - ✅ MEMORY OPTIMIZED
     model_name: str = "cpc_snn_gw"
-    batch_size: int = 32
-    learning_rate: float = 1e-2  # ✅ Higher LR for SGD optimizer
+    batch_size: int = 1  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
+    learning_rate: float = 1e-4  # ✅ ULTRA-CONSERVATIVE: Prevent model collapse (was 1e-3)
     weight_decay: float = 1e-4
     num_epochs: int = 100
+    num_classes: int = 2  # ✅ CONFIGURABLE: Binary classification by default
     
     # Training optimization - MEMORY OPTIMIZED
     optimizer: str = "sgd"  # ✅ FIX: SGD uses 2x less GPU memory than Adam
     scheduler: str = "cosine"
-    gradient_clipping: float = 0.0  # ✅ DISABLED: Saves 512MB GPU memory
+    gradient_clipping: float = 1.0  # ✅ RE-ENABLED: Needed for CPC stability
     mixed_precision: bool = True
     
     # Monitoring
@@ -276,14 +277,16 @@ class CPCSNNTrainer(TrainerBase):
         
         class CPCSNNModel(nn.Module):
             """Complete CPC+SNN pipeline model."""
+            num_classes: int  # ✅ CONFIGURABLE: Pass num_classes as parameter
             
             def setup(self):
-                self.cpc_encoder = CPCEncoder(latent_dim=256)
+                # ✅ ULTRA-MEMORY OPTIMIZED: Minimal model size to prevent collapse + memory issues
+                self.cpc_encoder = CPCEncoder(latent_dim=64)   # ⬇️ ULTRA-REDUCED: 128 → 64 (75% smaller than original)
                 self.spike_bridge = ValidatedSpikeBridge()
-                self.snn_classifier = SNNClassifier(hidden_size=128, num_classes=3)
+                self.snn_classifier = SNNClassifier(hidden_size=32, num_classes=self.num_classes)  # ⬇️ ULTRA-REDUCED: 64 → 32 (87.5% smaller)
             
             @nn.compact  
-            def __call__(self, x, train: bool = True):
+            def __call__(self, x, train: bool = True, return_intermediates: bool = False):
                 # CPC encoding
                 latents = self.cpc_encoder(x)
                 
@@ -293,9 +296,17 @@ class CPCSNNTrainer(TrainerBase):
                 # SNN classification
                 logits = self.snn_classifier(spikes)
                 
-                return logits
+                # ✅ FIXED: Return intermediate outputs for detailed metrics
+                if return_intermediates:
+                    return {
+                        'logits': logits,
+                        'cpc_features': latents,
+                        'snn_output': spikes
+                    }
+                else:
+                    return logits
         
-        return CPCSNNModel()
+        return CPCSNNModel(num_classes=self.config.num_classes)
     
     def create_train_state(self, model: nn.Module, sample_input: jnp.ndarray) -> train_state.TrainState:
         """Initialize training state with model parameters."""

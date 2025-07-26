@@ -1,0 +1,179 @@
+07:13:55 |     INFO | W&B tracking initialized
+2025-07-24 07:13:55,175 - training.training_metrics - INFO - W&B tracking initialized
+07:13:55 |     INFO | TensorBoard logging to: outputs/tensorboard
+2025-07-24 07:13:55,177 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+07:13:55 |     INFO | Using basic experiment tracker
+2025-07-24 07:13:55,177 - training.base_trainer - INFO - Using basic experiment tracker
+07:13:55 |     INFO | Configuration saved to outputs/config.json
+2025-07-24 07:13:55,179 - training.training_utils - INFO - Configuration saved to outputs/config.json
+07:13:55 |     INFO | Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 07:13:55,181 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+07:13:55 |     INFO | 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 07:13:55,182 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+07:13:55 |     INFO |    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 07:13:55,182 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+07:13:55 |     INFO |    2. Temporal Transformer: True
+2025-07-24 07:13:55,182 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+07:13:55 |     INFO |    3. Learnable Thresholds: True
+2025-07-24 07:13:55,183 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+07:13:55 |     INFO |    4. Enhanced LIF: True
+2025-07-24 07:13:55,183 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+07:13:55 |     INFO |    5. Momentum InfoNCE: True
+2025-07-24 07:13:55,183 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+07:13:55 |     INFO | 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 07:13:55,183 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+07:13:55 |     INFO | ================================================================================
+2025-07-24 07:13:55,184 - training.complete_enhanced_training - INFO - ================================================================================
+07:13:55 |     INFO | 📡 Loading real LIGO GW150914 data...
+2025-07-24 07:13:55,184 - training.complete_enhanced_training - INFO - 📡 Loading real LIGO GW150914 data...
+07:13:55 |  WARNING | Real LIGO data unavailable: create_real_ligo_dataset() got an unexpected keyword argument 'sequence_length'
+2025-07-24 07:13:55,184 - training.complete_enhanced_training - WARNING - Real LIGO data unavailable: create_real_ligo_dataset() got an unexpected keyword argument 'sequence_length'
+07:13:55 |     INFO | 🔄 Generating synthetic data for demonstration...
+2025-07-24 07:13:55,185 - training.complete_enhanced_training - INFO - 🔄 Generating synthetic data for demonstration...
+07:14:05 |     INFO | 🎯 Training for 2 epochs (10 steps/epoch)
+2025-07-24 07:14:05,128 - training.complete_enhanced_training - INFO - 🎯 Training for 2 epochs (10 steps/epoch)
+07:14:05 |     INFO | 📊 Total training steps: 20
+2025-07-24 07:14:05,129 - training.complete_enhanced_training - INFO - 📊 Total training steps: 20
+07:14:06 |    ERROR | ❌ Training integration error: 'TrainState' object has no attribute 'batch_stats'
+2025-07-24 07:14:06,045 - __main__ - ERROR - ❌ Training integration error: 'TrainState' object has no attribute 'batch_stats'
+07:14:06 |     INFO |
+⚡ Test 5/5: Performance Benchmarks
+2025-07-24 07:14:06,046 - __main__ - INFO -
+⚡ Test 5/5: Performance Benchmarks
+07:14:06 |     INFO | 🔍 Testing performance benchmarks...
+2025-07-24 07:14:06,047 - __main__ - INFO - 🔍 Testing performance benchmarks...
+07:14:06 |     INFO | JAX devices: [CudaDevice(id=0)]
+2025-07-24 07:14:06,048 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-07-24 07:14:06,048 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+07:14:06 |     INFO | JAX platform: gpu
+2025-07-24 07:14:06,048 - training.training_utils - INFO - JAX platform: gpu
+2025-07-24 07:14:06,048 - training.training_utils - INFO - JAX platform: gpu
+07:14:06 |     INFO | W&B tracking - using existing run
+2025-07-24 07:14:06,048 - training.training_metrics - INFO - W&B tracking - using existing run
+2025-07-24 07:14:06,048 - training.training_metrics - INFO - W&B tracking - using existing run
+07:14:06 |     INFO | TensorBoard logging to: outputs/tensorboard
+2025-07-24 07:14:06,050 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+2025-07-24 07:14:06,050 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+07:14:06 |     INFO | Using basic experiment tracker
+2025-07-24 07:14:06,050 - training.base_trainer - INFO - Using basic experiment tracker
+2025-07-24 07:14:06,050 - training.base_trainer - INFO - Using basic experiment tracker
+07:14:06 |     INFO | Configuration saved to outputs/config.json
+2025-07-24 07:14:06,051 - training.training_utils - INFO - Configuration saved to outputs/config.json
+2025-07-24 07:14:06,051 - training.training_utils - INFO - Configuration saved to outputs/config.json
+07:14:06 |     INFO | Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 07:14:06,053 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 07:14:06,053 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+07:14:06 |     INFO | 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 07:14:06,054 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 07:14:06,054 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+07:14:06 |     INFO |    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 07:14:06,054 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 07:14:06,054 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+07:14:06 |     INFO |    2. Temporal Transformer: True
+2025-07-24 07:14:06,055 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+2025-07-24 07:14:06,055 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+07:14:06 |     INFO |    3. Learnable Thresholds: True
+2025-07-24 07:14:06,055 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+2025-07-24 07:14:06,055 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+07:14:06 |     INFO |    4. Enhanced LIF: True
+2025-07-24 07:14:06,056 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+2025-07-24 07:14:06,056 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+07:14:06 |     INFO |    5. Momentum InfoNCE: True
+2025-07-24 07:14:06,056 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+2025-07-24 07:14:06,056 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+07:14:06 |     INFO |    Benchmarking forward pass performance...
+2025-07-24 07:14:06,979 - __main__ - INFO -    Benchmarking forward pass performance...
+2025-07-24 07:14:06,979 - __main__ - INFO -    Benchmarking forward pass performance...
+07:14:06 |     INFO | 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 07:14:06,980 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 07:14:06,980 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+07:14:06 |     INFO | ================================================================================
+2025-07-24 07:14:06,981 - training.complete_enhanced_training - INFO - ================================================================================
+2025-07-24 07:14:06,981 - training.complete_enhanced_training - INFO - ================================================================================
+07:14:08 |     INFO | 🎯 Training for 1 epochs (25 steps/epoch)
+2025-07-24 07:14:08,058 - training.complete_enhanced_training - INFO - 🎯 Training for 1 epochs (25 steps/epoch)
+2025-07-24 07:14:08,058 - training.complete_enhanced_training - INFO - 🎯 Training for 1 epochs (25 steps/epoch)
+07:14:08 |     INFO | 📊 Total training steps: 25
+2025-07-24 07:14:08,059 - training.complete_enhanced_training - INFO - 📊 Total training steps: 25
+2025-07-24 07:14:08,059 - training.complete_enhanced_training - INFO - 📊 Total training steps: 25
+07:14:08 |    ERROR | ❌ Performance benchmark error: 'TrainState' object has no attribute 'batch_stats'
+2025-07-24 07:14:08,993 - __main__ - ERROR - ❌ Performance benchmark error: 'TrainState' object has no attribute 'batch_stats'
+2025-07-24 07:14:08,993 - __main__ - ERROR - ❌ Performance benchmark error: 'TrainState' object has no attribute 'batch_stats'
+07:14:08 |     INFO |
+================================================================================
+2025-07-24 07:14:08,994 - __main__ - INFO -
+================================================================================
+2025-07-24 07:14:08,994 - __main__ - INFO -
+================================================================================
+07:14:08 |     INFO | 📊 COMPREHENSIVE TEST REPORT
+2025-07-24 07:14:08,995 - __main__ - INFO - 📊 COMPREHENSIVE TEST REPORT
+2025-07-24 07:14:08,995 - __main__ - INFO - 📊 COMPREHENSIVE TEST REPORT
+07:14:08 |     INFO | ================================================================================
+2025-07-24 07:14:08,995 - __main__ - INFO - ================================================================================
+2025-07-24 07:14:08,995 - __main__ - INFO - ================================================================================
+07:14:08 |     INFO | ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+2025-07-24 07:14:08,996 - __main__ - INFO - ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+2025-07-24 07:14:08,996 - __main__ - INFO - ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+07:14:08 |     INFO |
+📈 Test Summary:
+2025-07-24 07:14:08,997 - __main__ - INFO -
+📈 Test Summary:
+2025-07-24 07:14:08,997 - __main__ - INFO -
+📈 Test Summary:
+07:14:08 |     INFO |    Total test time: 52.28s
+2025-07-24 07:14:08,997 - __main__ - INFO -    Total test time: 52.28s
+2025-07-24 07:14:08,997 - __main__ - INFO -    Total test time: 52.28s
+07:14:08 |     INFO |    Tests passed: 3/5
+2025-07-24 07:14:08,998 - __main__ - INFO -    Tests passed: 3/5
+2025-07-24 07:14:08,998 - __main__ - INFO -    Tests passed: 3/5
+07:14:08 |     INFO |    Overall success: False
+2025-07-24 07:14:08,998 - __main__ - INFO -    Overall success: False
+2025-07-24 07:14:08,998 - __main__ - INFO -    Overall success: False
+07:14:08 |     INFO |
+🚀 Enhancement Integration Status:
+2025-07-24 07:14:08,999 - __main__ - INFO -
+🚀 Enhancement Integration Status:
+2025-07-24 07:14:08,999 - __main__ - INFO -
+🚀 Enhancement Integration Status:
+07:14:08 |     INFO |    1. Adaptive Surrogate: ✅
+2025-07-24 07:14:08,999 - __main__ - INFO -    1. Adaptive Surrogate: ✅
+2025-07-24 07:14:08,999 - __main__ - INFO -    1. Adaptive Surrogate: ✅
+07:14:09 |     INFO |    2. Temporal Transformer: ✅
+2025-07-24 07:14:09,000 - __main__ - INFO -    2. Temporal Transformer: ✅
+2025-07-24 07:14:09,000 - __main__ - INFO -    2. Temporal Transformer: ✅
+07:14:09 |     INFO |    3. Learnable Thresholds: ✅
+2025-07-24 07:14:09,000 - __main__ - INFO -    3. Learnable Thresholds: ✅
+2025-07-24 07:14:09,000 - __main__ - INFO -    3. Learnable Thresholds: ✅
+07:14:09 |     INFO |    4. Enhanced LIF: ✅
+2025-07-24 07:14:09,001 - __main__ - INFO -    4. Enhanced LIF: ✅
+2025-07-24 07:14:09,001 - __main__ - INFO -    4. Enhanced LIF: ✅
+07:14:09 |     INFO |    5. Momentum InfoNCE: ✅
+2025-07-24 07:14:09,001 - __main__ - INFO -    5. Momentum InfoNCE: ✅
+2025-07-24 07:14:09,001 - __main__ - INFO -    5. Momentum InfoNCE: ✅
+07:14:09 |     INFO |
+⚠️ Errors encountered (2 total):
+2025-07-24 07:14:09,002 - __main__ - INFO -
+⚠️ Errors encountered (2 total):
+2025-07-24 07:14:09,002 - __main__ - INFO -
+⚠️ Errors encountered (2 total):
+07:14:09 |     INFO |    - training: Training integration error: 'TrainState' object has no attribute 'batch_stats'
+2025-07-24 07:14:09,002 - __main__ - INFO -    - training: Training integration error: 'TrainState' object has no attribute 'batch_stats'
+2025-07-24 07:14:09,002 - __main__ - INFO -    - training: Training integration error: 'TrainState' object has no attribute 'batch_stats'
+07:14:09 |     INFO |    - performance: Performance benchmark error: 'TrainState' object has no attribute 'batch_stats'
+2025-07-24 07:14:09,003 - __main__ - INFO -    - performance: Performance benchmark error: 'TrainState' object has no attribute 'batch_stats'
+2025-07-24 07:14:09,003 - __main__ - INFO -    - performance: Performance benchmark error: 'TrainState' object has no attribute 'batch_stats'
+07:14:09 |     INFO |
+================================================================================
+2025-07-24 07:14:09,003 - __main__ - INFO -
+================================================================================
+2025-07-24 07:14:09,003 - __main__ - INFO -
+================================================================================
+07:14:09 |     INFO | 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+2025-07-24 07:14:09,004 - __main__ - INFO - 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+2025-07-24 07:14:09,004 - __main__ - INFO - 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+07:14:09 |     INFO |    Please address errors before production deployment
+2025-07-24 07:14:09,005 - __main__ - INFO -    Please address errors before production deployment
+2025-07-24 07:14:09,005 - __main__ - INFO -    Please address errors before production deployment
+07:14:09 |     INFO | ================================================================================
+2025-07-24 07:14:09,005 - __main__ - INFO - ================================================================================
+2025-07-24 07:14:09,005 - __main__ - INFO - ================================================================================

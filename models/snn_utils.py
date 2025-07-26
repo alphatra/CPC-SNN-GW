@@ -2,7 +2,7 @@
 SNN Utilities: Surrogate Gradients and Validation Metrics
 
 Utility functions for Spiking Neural Networks:
-- Surrogate gradient functions for backpropagation through spikes
+- Enhanced adaptive surrogate gradient functions for improved backpropagation
 - Batched validation metrics (F1, AUROC, confusion matrix)
 - Performance optimization utilities
 """
@@ -10,7 +10,7 @@ Utility functions for Spiking Neural Networks:
 import jax
 import jax.numpy as jnp
 import flax.linen as nn
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 from enum import Enum
 import logging
 
@@ -24,23 +24,94 @@ class SurrogateGradientType(Enum):
     PIECEWISE = "piecewise"
     TRIANGULAR = "triangular"
     EXPONENTIAL = "exponential"
+    # ✅ NEW: Enhanced adaptive surrogate
+    ADAPTIVE_MULTI_SCALE = "adaptive_multi_scale"
+
+
+def create_enhanced_surrogate_gradient_fn(membrane_potential: Optional[jnp.ndarray] = None,
+                                        training_progress: float = 0.0) -> Callable[[jnp.ndarray], jnp.ndarray]:
+    """
+    Create enhanced adaptive surrogate gradient function.
+    
+    This improves upon static surrogate gradients by:
+    1. Adapting to membrane potential dynamics
+    2. Progressive difficulty during training (curriculum learning)
+    3. Multi-scale gradient combination
+    
+    Args:
+        membrane_potential: Current membrane potential for adaptive scaling
+        training_progress: Progress through training (0.0 to 1.0)
+        
+    Returns:
+        Enhanced adaptive surrogate gradient function
+    """
+    def adaptive_multi_scale_surrogate(x: jnp.ndarray) -> jnp.ndarray:
+        """
+        🚀 ENHANCED: Multi-scale adaptive surrogate gradient.
+        
+        Combines multiple surrogate types with adaptive weighting based on:
+        - Training progress (curriculum learning)
+        - Membrane potential dynamics (biological realism) 
+        - Multi-scale temporal features
+        """
+        # Base surrogate gradients with different characteristics
+        sigmoid_grad = 10.0 / (1.0 + jnp.abs(10.0 * x))  # Smooth, wide
+        triangular_grad = jnp.maximum(0.0, 1.0 - jnp.abs(4.0 * x))  # Sharp, localized
+        exponential_grad = 3.0 * jnp.exp(-3.0 * jnp.abs(x))  # Biological-like decay
+        
+        # 🎯 CURRICULUM LEARNING: Adaptive weighting based on training progress
+        # Early training: Favor wide, smooth gradients for exploration
+        early_weight = jnp.maximum(0.0, 1.0 - 2.0 * training_progress)
+        # Mid training: Balanced combination
+        mid_weight = 4.0 * training_progress * (1.0 - training_progress)  # Bell curve
+        # Late training: Favor sharp, precise gradients
+        late_weight = jnp.maximum(0.0, 2.0 * training_progress - 1.0)
+        
+        # 🧠 MEMBRANE-POTENTIAL ADAPTIVE SCALING
+        if membrane_potential is not None:
+            # Scale based on membrane potential dynamics
+            membrane_scale = jnp.tanh(jnp.abs(membrane_potential.mean()))
+            # Near threshold: favor precise gradients
+            # Far from threshold: favor exploratory gradients
+            precision_factor = 1.0 + membrane_scale
+        else:
+            precision_factor = 1.0
+        
+        # 🔄 MULTI-SCALE COMBINATION with adaptive weights
+        combined_gradient = (
+            early_weight * sigmoid_grad +           # Exploration phase
+            mid_weight * triangular_grad +          # Balanced phase  
+            late_weight * exponential_grad +       # Precision phase
+            0.1 * (sigmoid_grad * triangular_grad)  # Nonlinear interaction
+        ) * precision_factor
+        
+        return combined_gradient
+    
+    return adaptive_multi_scale_surrogate
 
 
 def create_surrogate_gradient_fn(gradient_type: SurrogateGradientType, 
-                                beta: float = 10.0) -> Callable[[jnp.ndarray], jnp.ndarray]:
+                                beta: float = 10.0,
+                                membrane_potential: Optional[jnp.ndarray] = None,
+                                training_progress: float = 0.0) -> Callable[[jnp.ndarray], jnp.ndarray]:
     """
-    Create surrogate gradient function.
+    Create surrogate gradient function with enhanced adaptive option.
     
     Args:
         gradient_type: Type of surrogate gradient
-        beta: Steepness parameter
+        beta: Steepness parameter for traditional methods
+        membrane_potential: Current membrane potential for adaptive methods
+        training_progress: Training progress for curriculum learning
         
     Returns:
         Surrogate gradient function
     """
-    if gradient_type == SurrogateGradientType.FAST_SIGMOID:
+    if gradient_type == SurrogateGradientType.ADAPTIVE_MULTI_SCALE:
+        return create_enhanced_surrogate_gradient_fn(membrane_potential, training_progress)
+    
+    elif gradient_type == SurrogateGradientType.FAST_SIGMOID:
         def fast_sigmoid(x):
-            return 1.0 / (1.0 + jnp.abs(beta * x))
+            return beta / (1.0 + jnp.abs(beta * x))
         return fast_sigmoid
     
     elif gradient_type == SurrogateGradientType.ATAN:
@@ -96,6 +167,33 @@ def spike_function_with_surrogate(v_mem: jnp.ndarray,
     
     # Straight-through estimator: forward spikes, backward surrogate
     return spikes + jax.lax.stop_gradient(spikes - surrogate_grad)
+
+
+def spike_function_with_enhanced_surrogate(v_mem: jnp.ndarray,
+                                         threshold: float,
+                                         training_progress: float = 0.0) -> jnp.ndarray:
+    """
+    🚀 ENHANCED: Spike function with adaptive multi-scale surrogate gradients.
+    
+    This version automatically adapts the surrogate gradient based on:
+    - Current membrane potential dynamics
+    - Training progress for curriculum learning
+    
+    Args:
+        v_mem: Membrane potential
+        threshold: Spike threshold  
+        training_progress: Current training progress (0.0 to 1.0)
+        
+    Returns:
+        Binary spike output with enhanced adaptive surrogate gradients
+    """
+    # Create adaptive surrogate function based on current membrane state
+    surrogate_fn = create_enhanced_surrogate_gradient_fn(
+        membrane_potential=v_mem,
+        training_progress=training_progress
+    )
+    
+    return spike_function_with_surrogate(v_mem, threshold, surrogate_fn)
 
 
 class BatchedSNNValidator:

@@ -1,0 +1,25 @@
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_setup.py:_flush():70] Current SDK version is 0.19.11
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_setup.py:_flush():70] Configure stats pid to 31803
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_setup.py:_flush():70] Loading settings from /teamspace/studios/this_studio/.config/wandb/settings
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_setup.py:_flush():70] Loading settings from /teamspace/studios/this_studio/CPC-SNN-GW/wandb/settings
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_setup.py:_flush():70] Loading settings from environment variables
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_init.py:setup_run_log_directory():724] Logging user logs to outputs/standard_training_2bs/wandb/run-20250724_055844-oauttkry/logs/debug.log
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_init.py:setup_run_log_directory():725] Logging internal logs to outputs/standard_training_2bs/wandb/run-20250724_055844-oauttkry/logs/debug-internal.log
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_init.py:init():852] calling init triggers
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_init.py:init():857] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_init.py:init():893] starting backend
+2025-07-24 05:58:44,432 INFO    MainThread:31803 [wandb_init.py:init():897] sending inform_init request
+2025-07-24 05:58:44,434 INFO    MainThread:31803 [backend.py:_multiprocessing_setup():101] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2025-07-24 05:58:44,435 INFO    MainThread:31803 [wandb_init.py:init():907] backend started and connected
+2025-07-24 05:58:44,436 INFO    MainThread:31803 [wandb_init.py:init():1005] updated telemetry
+2025-07-24 05:58:44,450 INFO    MainThread:31803 [wandb_init.py:init():1029] communicating run to backend with 90.0 second timeout
+2025-07-24 05:58:44,669 INFO    MainThread:31803 [wandb_init.py:init():1104] starting run threads in backend
+2025-07-24 05:58:44,973 INFO    MainThread:31803 [wandb_run.py:_console_start():2573] atexit reg
+2025-07-24 05:58:44,974 INFO    MainThread:31803 [wandb_run.py:_redirect():2421] redirect: wrap_raw
+2025-07-24 05:58:44,974 INFO    MainThread:31803 [wandb_run.py:_redirect():2490] Wrapping output streams.
+2025-07-24 05:58:44,974 INFO    MainThread:31803 [wandb_run.py:_redirect():2513] Redirects installed.
+2025-07-24 05:58:44,976 INFO    MainThread:31803 [wandb_init.py:init():1150] run started, returning control to user process
+2025-07-24 05:58:44,980 INFO    MainThread:31803 [wandb_run.py:_config_callback():1436] config_cb None None {'model_name': 'cpc_snn_gw', 'batch_size': 2, 'learning_rate': 0.001, 'weight_decay': 0.0001, 'num_epochs': 1, 'num_classes': 2, 'optimizer': 'sgd', 'scheduler': 'cosine', 'gradient_clipping': 1.0, 'mixed_precision': True, 'log_every': 10, 'eval_every': 100, 'save_every': 1000, 'output_dir': 'outputs/standard_training_2bs', 'use_wandb': True, 'use_tensorboard': True, 'project_name': 'cpc-snn-gw', 'max_memory_gb': 8.0, 'enable_profiling': False, 'early_stopping_patience': 10, 'early_stopping_metric': 'loss', 'early_stopping_mode': 'min'}
+2025-07-24 05:58:48,988 INFO    MainThread:31803 [wandb_run.py:_config_callback():1436] config_cb None None {'model_name': 'cpc_snn_gw', 'batch_size': 2, 'learning_rate': 0.001, 'weight_decay': 0.0001, 'num_epochs': 1, 'num_classes': 2, 'optimizer': 'sgd', 'scheduler': 'cosine', 'gradient_clipping': 1.0, 'mixed_precision': True, 'log_every': 10, 'eval_every': 100, 'save_every': 1000, 'output_dir': 'outputs/standard_training_2bs', 'use_wandb': True, 'use_tensorboard': False, 'project_name': 'gravitational-wave-detection', 'max_memory_gb': 8.0, 'enable_profiling': False, 'early_stopping_patience': 10, 'early_stopping_metric': 'loss', 'early_stopping_mode': 'min'}
+2025-07-24 05:59:26,001 INFO    MsgRouterThr:31803 [mailbox.py:close():129] [no run ID] Closing mailbox, abandoning 1 handles.

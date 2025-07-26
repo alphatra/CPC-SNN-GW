@@ -54,7 +54,7 @@ class HPOConfiguration:
     
     def __post_init__(self):
         if self.batch_size_options is None:
-            self.batch_size_options = [16, 32, 64, 128]
+            self.batch_size_options = [1, 2, 4]  # ✅ MEMORY FIX: Ultra-small batch sizes only
         
         if self.cpc_latent_dim_options is None:
             self.cpc_latent_dim_options = [128, 256, 512]
@@ -277,7 +277,7 @@ class HPOObjective:
             # Setup training config from trial parameters
             training_config = AdvancedTrainingConfig(
                 learning_rate=trial.params.get('learning_rate', 1e-4),
-                batch_size=trial.params.get('batch_size', 16),
+                batch_size=trial.params.get('batch_size', 1),  # ✅ MEMORY FIX: Default ultra-small batch
                 cpc_latent_dim=trial.params.get('cpc_latent_dim', 512),
                 snn_hidden_sizes=trial.params.get('snn_hidden_sizes', [256, 128, 64]),
                 weight_decay=trial.params.get('weight_decay', 0.01),
@@ -505,13 +505,14 @@ def run_full_hpo_experiment(n_trials: int = 100) -> optuna.Study:
     return runner.run_optimization()
 
 if __name__ == "__main__":
-    # Run HPO optimization
-    import os
-    os.environ['JAX_PLATFORM_NAME'] = 'cpu'
+    # Run HPO optimization with smart device detection
+    from utils.device_auto_detection import setup_auto_device_optimization
+    device_config, training_config = setup_auto_device_optimization()
     
     # Quick test
     study = run_quick_hpo_experiment(n_trials=5)
     print(f"✅ Quick HPO completed! Best accuracy: {study.best_value:.4f}")
+    print(f"🚀 Optimized for {device_config.platform.upper()} with {device_config.expected_speedup:.1f}x speedup")
     
     # Uncomment for full experiment
     # study = run_full_hpo_experiment(n_trials=100)

@@ -487,22 +487,23 @@ def create_evaluation_dataset(num_samples: int = 1000,
         List of (signal, label) tuples for evaluation
     """
     from .gw_synthetic_generator import ContinuousGWGenerator
-    from .gw_signal_params import GeneratorSettings
+    from .gw_signal_params import SignalConfiguration
     
     logger.info(f"✅ Creating evaluation dataset: {num_samples} samples")
     
     # ✅ SOLUTION: Create realistic evaluation dataset
     key = jax.random.PRNGKey(random_seed)
     
-    # Generator settings
-    settings = GeneratorSettings(
-        num_signals=num_samples // 3,  # Split evenly among 3 classes
-        signal_duration=sequence_length / sample_rate,
-        sample_rate=sample_rate,
-        include_noise_only=True
+    # Correct signal configuration for ContinuousGWGenerator
+    config = SignalConfiguration(
+        base_frequency=50.0,
+        freq_range=(20.0, 200.0),
+        duration=sequence_length / sample_rate,
+        sampling_rate=sample_rate,
+        include_doppler=True
     )
     
-    generator = ContinuousGWGenerator(settings)
+    generator = ContinuousGWGenerator(config)
     
     eval_data = []
     
@@ -521,7 +522,7 @@ def create_evaluation_dataset(num_samples: int = 1000,
     )
     
     for params in cw_params_list:
-        signal = generator.create_synthetic_timeseries(params, duration=settings.signal_duration)
+        signal = generator.create_synthetic_timeseries(params, duration=config.duration)
         # Ensure correct length
         if len(signal) > sequence_length:
             signal = signal[:sequence_length]
@@ -535,7 +536,7 @@ def create_evaluation_dataset(num_samples: int = 1000,
     logger.info("   Generating binary merger signals...")
     for i in range(samples_per_class + (1 if remaining_samples > 1 else 0)):
         # ✅ FIXED: Proper PN chirp evolution instead of linear chirp
-        t = jnp.linspace(0, settings.signal_duration, sequence_length)
+        t = jnp.linspace(0, config.duration, sequence_length)
         
         # ✅ SOLUTION: Post-Newtonian chirp mass evolution
         subkey = jax.random.fold_in(key2, i)
@@ -557,7 +558,7 @@ def create_evaluation_dataset(num_samples: int = 1000,
         # where t_merger depends on chirp mass
         
         # Merger time (seconds before end of signal)
-        t_merger = settings.signal_duration * 0.8  # Merger at 80% through signal
+        t_merger = config.duration * 0.8  # Merger at 80% through signal
         t_to_merger = t_merger - t  # Time until merger
         t_to_merger = jnp.where(t_to_merger <= 0, 1e-6, t_to_merger)  # Avoid singularity
         
@@ -570,14 +571,28 @@ def create_evaluation_dataset(num_samples: int = 1000,
         c = 299792458    # m/s
         
         # PN coefficient
-        pn_coeff = (256/5) * (jnp.pi ** (8/3)) * ((G * chirp_mass / (c**3)) ** (5/3))
+        # Temporarily enable 64-bit precision for this calculation to avoid overflow
+        original_x64_state = jax.config.jax_enable_x64
+        jax.config.update("jax_enable_x64", True)
+        try:
+            # Cast constants and inputs to float64 for high-precision calculation
+            G_64, c_64, chirp_mass_64 = jnp.float64(G), jnp.float64(c), jnp.float64(chirp_mass)
+            
+            # Perform calculation in float64
+            pn_coeff_64 = (256/5) * (jnp.pi ** (8/3)) * ((G_64 * chirp_mass_64 / (c_64**3)) ** (5/3))
+            
+            # Cast back to float32 for consistency with the rest of the pipeline
+            pn_coeff = jnp.float32(pn_coeff_64)
+        finally:
+            # Restore original x64 setting
+            jax.config.update("jax_enable_x64", original_x64_state)
         
         # Frequency evolution
         frequency = f_initial * ((pn_coeff * t_to_merger) ** (-3/8))
         frequency = jnp.where(frequency > 500, 500, frequency)  # Cap at Nyquist
         
         # ✅ SOLUTION: Proper phase evolution (integrate frequency)
-        dt = settings.signal_duration / sequence_length
+        dt = config.duration / sequence_length
         phase = jnp.cumsum(2 * jnp.pi * frequency * dt)
         
         # Amplitude evolution (increases as frequency increases)

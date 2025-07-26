@@ -1,0 +1,179 @@
+07:07:43 |     INFO | W&B tracking initialized
+2025-07-24 07:07:43,643 - training.training_metrics - INFO - W&B tracking initialized
+07:07:43 |     INFO | TensorBoard logging to: outputs/tensorboard
+2025-07-24 07:07:43,645 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+07:07:43 |     INFO | Using basic experiment tracker
+2025-07-24 07:07:43,645 - training.base_trainer - INFO - Using basic experiment tracker
+07:07:43 |     INFO | Configuration saved to outputs/config.json
+2025-07-24 07:07:43,647 - training.training_utils - INFO - Configuration saved to outputs/config.json
+07:07:43 |     INFO | Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 07:07:43,649 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+07:07:43 |     INFO | 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 07:07:43,650 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+07:07:43 |     INFO |    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 07:07:43,650 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+07:07:43 |     INFO |    2. Temporal Transformer: True
+2025-07-24 07:07:43,651 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+07:07:43 |     INFO |    3. Learnable Thresholds: True
+2025-07-24 07:07:43,651 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+07:07:43 |     INFO |    4. Enhanced LIF: True
+2025-07-24 07:07:43,651 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+07:07:43 |     INFO |    5. Momentum InfoNCE: True
+2025-07-24 07:07:43,652 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+07:07:43 |     INFO | 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 07:07:43,652 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+07:07:43 |     INFO | ================================================================================
+2025-07-24 07:07:43,653 - training.complete_enhanced_training - INFO - ================================================================================
+07:07:43 |     INFO | 📡 Loading real LIGO GW150914 data...
+2025-07-24 07:07:43,653 - training.complete_enhanced_training - INFO - 📡 Loading real LIGO GW150914 data...
+07:07:43 |  WARNING | Real LIGO data unavailable: create_real_ligo_dataset() got an unexpected keyword argument 'sequence_length'
+2025-07-24 07:07:43,653 - training.complete_enhanced_training - WARNING - Real LIGO data unavailable: create_real_ligo_dataset() got an unexpected keyword argument 'sequence_length'
+07:07:43 |     INFO | 🔄 Generating synthetic data for demonstration...
+2025-07-24 07:07:43,654 - training.complete_enhanced_training - INFO - 🔄 Generating synthetic data for demonstration...
+07:07:53 |     INFO | 🎯 Training for 2 epochs (10 steps/epoch)
+2025-07-24 07:07:53,533 - training.complete_enhanced_training - INFO - 🎯 Training for 2 epochs (10 steps/epoch)
+07:07:53 |     INFO | 📊 Total training steps: 20
+2025-07-24 07:07:53,534 - training.complete_enhanced_training - INFO - 📊 Total training steps: 20
+07:07:55 |    ERROR | ❌ Training integration error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+2025-07-24 07:07:55,372 - __main__ - ERROR - ❌ Training integration error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+07:07:55 |     INFO |
+⚡ Test 5/5: Performance Benchmarks
+2025-07-24 07:07:55,372 - __main__ - INFO -
+⚡ Test 5/5: Performance Benchmarks
+07:07:55 |     INFO | 🔍 Testing performance benchmarks...
+2025-07-24 07:07:55,373 - __main__ - INFO - 🔍 Testing performance benchmarks...
+07:07:55 |     INFO | JAX devices: [CudaDevice(id=0)]
+2025-07-24 07:07:55,374 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-07-24 07:07:55,374 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+07:07:55 |     INFO | JAX platform: gpu
+2025-07-24 07:07:55,375 - training.training_utils - INFO - JAX platform: gpu
+2025-07-24 07:07:55,375 - training.training_utils - INFO - JAX platform: gpu
+07:07:55 |     INFO | W&B tracking - using existing run
+2025-07-24 07:07:55,375 - training.training_metrics - INFO - W&B tracking - using existing run
+2025-07-24 07:07:55,375 - training.training_metrics - INFO - W&B tracking - using existing run
+07:07:55 |     INFO | TensorBoard logging to: outputs/tensorboard
+2025-07-24 07:07:55,377 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+2025-07-24 07:07:55,377 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+07:07:55 |     INFO | Using basic experiment tracker
+2025-07-24 07:07:55,377 - training.base_trainer - INFO - Using basic experiment tracker
+2025-07-24 07:07:55,377 - training.base_trainer - INFO - Using basic experiment tracker
+07:07:55 |     INFO | Configuration saved to outputs/config.json
+2025-07-24 07:07:55,378 - training.training_utils - INFO - Configuration saved to outputs/config.json
+2025-07-24 07:07:55,378 - training.training_utils - INFO - Configuration saved to outputs/config.json
+07:07:55 |     INFO | Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 07:07:55,381 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 07:07:55,381 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+07:07:55 |     INFO | 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 07:07:55,382 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 07:07:55,382 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+07:07:55 |     INFO |    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 07:07:55,382 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 07:07:55,382 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+07:07:55 |     INFO |    2. Temporal Transformer: True
+2025-07-24 07:07:55,382 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+2025-07-24 07:07:55,382 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+07:07:55 |     INFO |    3. Learnable Thresholds: True
+2025-07-24 07:07:55,383 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+2025-07-24 07:07:55,383 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+07:07:55 |     INFO |    4. Enhanced LIF: True
+2025-07-24 07:07:55,383 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+2025-07-24 07:07:55,383 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+07:07:55 |     INFO |    5. Momentum InfoNCE: True
+2025-07-24 07:07:55,383 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+2025-07-24 07:07:55,383 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+07:07:56 |     INFO |    Benchmarking forward pass performance...
+2025-07-24 07:07:56,342 - __main__ - INFO -    Benchmarking forward pass performance...
+2025-07-24 07:07:56,342 - __main__ - INFO -    Benchmarking forward pass performance...
+07:07:56 |     INFO | 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 07:07:56,343 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 07:07:56,343 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+07:07:56 |     INFO | ================================================================================
+2025-07-24 07:07:56,344 - training.complete_enhanced_training - INFO - ================================================================================
+2025-07-24 07:07:56,344 - training.complete_enhanced_training - INFO - ================================================================================
+07:07:57 |     INFO | 🎯 Training for 1 epochs (25 steps/epoch)
+2025-07-24 07:07:57,427 - training.complete_enhanced_training - INFO - 🎯 Training for 1 epochs (25 steps/epoch)
+2025-07-24 07:07:57,427 - training.complete_enhanced_training - INFO - 🎯 Training for 1 epochs (25 steps/epoch)
+07:07:57 |     INFO | 📊 Total training steps: 25
+2025-07-24 07:07:57,428 - training.complete_enhanced_training - INFO - 📊 Total training steps: 25
+2025-07-24 07:07:57,428 - training.complete_enhanced_training - INFO - 📊 Total training steps: 25
+07:07:58 |    ERROR | ❌ Performance benchmark error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+2025-07-24 07:07:58,695 - __main__ - ERROR - ❌ Performance benchmark error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+2025-07-24 07:07:58,695 - __main__ - ERROR - ❌ Performance benchmark error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+07:07:58 |     INFO |
+================================================================================
+2025-07-24 07:07:58,696 - __main__ - INFO -
+================================================================================
+2025-07-24 07:07:58,696 - __main__ - INFO -
+================================================================================
+07:07:58 |     INFO | 📊 COMPREHENSIVE TEST REPORT
+2025-07-24 07:07:58,697 - __main__ - INFO - 📊 COMPREHENSIVE TEST REPORT
+2025-07-24 07:07:58,697 - __main__ - INFO - 📊 COMPREHENSIVE TEST REPORT
+07:07:58 |     INFO | ================================================================================
+2025-07-24 07:07:58,697 - __main__ - INFO - ================================================================================
+2025-07-24 07:07:58,697 - __main__ - INFO - ================================================================================
+07:07:58 |     INFO | ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+2025-07-24 07:07:58,698 - __main__ - INFO - ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+2025-07-24 07:07:58,698 - __main__ - INFO - ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+07:07:58 |     INFO |
+📈 Test Summary:
+2025-07-24 07:07:58,698 - __main__ - INFO -
+📈 Test Summary:
+2025-07-24 07:07:58,698 - __main__ - INFO -
+📈 Test Summary:
+07:07:58 |     INFO |    Total test time: 52.11s
+2025-07-24 07:07:58,699 - __main__ - INFO -    Total test time: 52.11s
+2025-07-24 07:07:58,699 - __main__ - INFO -    Total test time: 52.11s
+07:07:58 |     INFO |    Tests passed: 3/5
+2025-07-24 07:07:58,699 - __main__ - INFO -    Tests passed: 3/5
+2025-07-24 07:07:58,699 - __main__ - INFO -    Tests passed: 3/5
+07:07:58 |     INFO |    Overall success: False
+2025-07-24 07:07:58,700 - __main__ - INFO -    Overall success: False
+2025-07-24 07:07:58,700 - __main__ - INFO -    Overall success: False
+07:07:58 |     INFO |
+🚀 Enhancement Integration Status:
+2025-07-24 07:07:58,700 - __main__ - INFO -
+🚀 Enhancement Integration Status:
+2025-07-24 07:07:58,700 - __main__ - INFO -
+🚀 Enhancement Integration Status:
+07:07:58 |     INFO |    1. Adaptive Surrogate: ✅
+2025-07-24 07:07:58,701 - __main__ - INFO -    1. Adaptive Surrogate: ✅
+2025-07-24 07:07:58,701 - __main__ - INFO -    1. Adaptive Surrogate: ✅
+07:07:58 |     INFO |    2. Temporal Transformer: ✅
+2025-07-24 07:07:58,702 - __main__ - INFO -    2. Temporal Transformer: ✅
+2025-07-24 07:07:58,702 - __main__ - INFO -    2. Temporal Transformer: ✅
+07:07:58 |     INFO |    3. Learnable Thresholds: ✅
+2025-07-24 07:07:58,702 - __main__ - INFO -    3. Learnable Thresholds: ✅
+2025-07-24 07:07:58,702 - __main__ - INFO -    3. Learnable Thresholds: ✅
+07:07:58 |     INFO |    4. Enhanced LIF: ✅
+2025-07-24 07:07:58,703 - __main__ - INFO -    4. Enhanced LIF: ✅
+2025-07-24 07:07:58,703 - __main__ - INFO -    4. Enhanced LIF: ✅
+07:07:58 |     INFO |    5. Momentum InfoNCE: ✅
+2025-07-24 07:07:58,703 - __main__ - INFO -    5. Momentum InfoNCE: ✅
+2025-07-24 07:07:58,703 - __main__ - INFO -    5. Momentum InfoNCE: ✅
+07:07:58 |     INFO |
+⚠️ Errors encountered (2 total):
+2025-07-24 07:07:58,704 - __main__ - INFO -
+⚠️ Errors encountered (2 total):
+2025-07-24 07:07:58,704 - __main__ - INFO -
+⚠️ Errors encountered (2 total):
+07:07:58 |     INFO |    - training: Training integration error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+2025-07-24 07:07:58,704 - __main__ - INFO -    - training: Training integration error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+2025-07-24 07:07:58,704 - __main__ - INFO -    - training: Training integration error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+07:07:58 |     INFO |    - performance: Performance benchmark error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+2025-07-24 07:07:58,705 - __main__ - INFO -    - performance: Performance benchmark error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+2025-07-24 07:07:58,705 - __main__ - INFO -    - performance: Performance benchmark error: Cannot update variable "mean" in "/cpc_encoder/bn_0" because collection "batch_stats" is immutable. (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.ModifyScopeVariableError)
+07:07:58 |     INFO |
+================================================================================
+2025-07-24 07:07:58,705 - __main__ - INFO -
+================================================================================
+2025-07-24 07:07:58,705 - __main__ - INFO -
+================================================================================
+07:07:58 |     INFO | 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+2025-07-24 07:07:58,706 - __main__ - INFO - 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+2025-07-24 07:07:58,706 - __main__ - INFO - 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+07:07:58 |     INFO |    Please address errors before production deployment
+2025-07-24 07:07:58,707 - __main__ - INFO -    Please address errors before production deployment
+2025-07-24 07:07:58,707 - __main__ - INFO -    Please address errors before production deployment
+07:07:58 |     INFO | ================================================================================
+2025-07-24 07:07:58,707 - __main__ - INFO - ================================================================================
+2025-07-24 07:07:58,707 - __main__ - INFO - ================================================================================

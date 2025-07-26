@@ -9,6 +9,7 @@ Key improvements:
 - Modular utilities via snn_utils (surrogate gradients, validation)
 - Memory-efficient implementations for long sequences
 - Comprehensive backward compatibility
+- 🚀 NEW: Enhanced LIF with refractory period and state persistence
 """
 
 import jax
@@ -22,7 +23,8 @@ import logging
 # Import local utilities  
 from .snn_utils import (
     SurrogateGradientType, create_surrogate_gradient_fn, 
-    spike_function_with_surrogate, BatchedSNNValidator
+    spike_function_with_surrogate, spike_function_with_enhanced_surrogate,
+    BatchedSNNValidator
 )
 
 logger = logging.getLogger(__name__)
@@ -42,8 +44,20 @@ class SNNConfig:
     threshold: float = 1.0  # Spike threshold
     dt: float = 1e-3        # Time step
     
+    # 🚀 NEW: Enhanced LIF parameters
+    use_enhanced_lif: bool = True  # Use enhanced LIF with memory and refractory period
+    tau_ref: float = 2e-3   # Refractory period time constant
+    tau_adaptation: float = 100e-3  # Spike frequency adaptation
+    use_refractory_period: bool = True  # Enable refractory period
+    use_adaptation: bool = True  # Enable spike frequency adaptation
+    use_learnable_dynamics: bool = True  # Learn time constants
+    reset_mechanism: str = "soft"  # "hard" or "soft" reset
+    reset_factor: float = 0.8  # For soft reset (0.0=hard, 1.0=no reset)
+    refractory_time_constant: float = 2.0  # Alias for compatibility
+    adaptation_time_constant: float = 20.0  # Alias for compatibility
+    
     # Surrogate gradient
-    surrogate_type: SurrogateGradientType = SurrogateGradientType.FAST_SIGMOID
+    surrogate_type: SurrogateGradientType = SurrogateGradientType.ADAPTIVE_MULTI_SCALE  # 🚀 Use enhanced
     surrogate_beta: float = 10.0  # Surrogate gradient steepness
     
     # Training
@@ -55,31 +69,90 @@ class SNNConfig:
     memory_efficient: bool = True
 
 
-class VectorizedLIFLayer(nn.Module):
+class EnhancedLIFWithMemory(nn.Module):
     """
-    Vectorized LIF layer optimized for single fused kernel.
+    🚀 ENHANCED: LIF neuron with refractory period, adaptation, and persistent state.
     
-    All operations are vectorized across batch and time dimensions
-    for maximum GPU/TPU efficiency.
+    Biologically realistic features:
+    - Refractory period: neurons can't spike immediately after spiking
+    - Spike frequency adaptation: neurons adapt their excitability
+    - Learnable time constants: network learns optimal dynamics
+    - Soft/hard reset mechanisms: configurable membrane reset
+    - State persistence: maintains state across time steps
     """
     
     config: SNNConfig
     
     def setup(self):
-        """Initialize LIF layer parameters."""
+        """Initialize enhanced LIF parameters."""
+        # 🧠 LEARNABLE TIME CONSTANTS (if enabled)
+        if self.config.use_learnable_dynamics:
+            # Learnable membrane time constant
+            self.tau_mem_param = self.param(
+                'tau_mem_learnable',
+                lambda key, shape: jnp.log(self.config.tau_mem),  # Log-space for positivity
+                ()
+            )
+            
+            # Learnable synaptic time constant
+            self.tau_syn_param = self.param(
+                'tau_syn_learnable', 
+                lambda key, shape: jnp.log(self.config.tau_syn),
+                ()
+            )
+            
+            # Learnable refractory time constant
+            if self.config.use_refractory_period:
+                self.tau_ref_param = self.param(
+                    'tau_ref_learnable',
+                    lambda key, shape: jnp.log(self.config.tau_ref),
+                    ()
+                )
+            
+            # Learnable adaptation time constant
+            if self.config.use_adaptation:
+                self.tau_adapt_param = self.param(
+                    'tau_adapt_learnable',
+                    lambda key, shape: jnp.log(self.config.tau_adaptation),
+                    ()
+                )
+            
+            logger.debug("🚀 Using learnable LIF time constants")
+        else:
+            logger.debug("⚠️  Using fixed LIF time constants")
+        
+        # Enhanced surrogate gradient
         self.surrogate_fn = create_surrogate_gradient_fn(
             self.config.surrogate_type, 
             self.config.surrogate_beta
         )
     
+    def _get_time_constants(self) -> Dict[str, float]:
+        """Get current time constants (learnable or fixed)."""
+        if self.config.use_learnable_dynamics:
+            return {
+                'tau_mem': jnp.exp(self.tau_mem_param),  # Ensure positivity
+                'tau_syn': jnp.exp(self.tau_syn_param),
+                'tau_ref': jnp.exp(self.tau_ref_param) if self.config.use_refractory_period else 0.0,
+                'tau_adapt': jnp.exp(self.tau_adapt_param) if self.config.use_adaptation else 0.0
+            }
+        else:
+            return {
+                'tau_mem': self.config.tau_mem,
+                'tau_syn': self.config.tau_syn,
+                'tau_ref': self.config.tau_ref if self.config.use_refractory_period else 0.0,
+                'tau_adapt': self.config.tau_adaptation if self.config.use_adaptation else 0.0
+            }
+    
     @nn.compact
-    def __call__(self, spikes: jnp.ndarray, training: bool = False) -> jnp.ndarray:
+    def __call__(self, spikes: jnp.ndarray, training: bool = False, training_progress: float = 0.0) -> jnp.ndarray:
         """
-        Forward pass through vectorized LIF layer.
+        Enhanced LIF forward pass with refractory period and adaptation.
         
         Args:
             spikes: Input spikes [batch, time, input_dim] or [batch, time, seq_len, feature_dim]
             training: Training mode flag
+            training_progress: Training progress for adaptive surrogate (0.0 to 1.0)
             
         Returns:
             Output spikes [batch, time, hidden_size]
@@ -109,88 +182,146 @@ class VectorizedLIFLayer(nn.Module):
             (self.config.hidden_size,)
         )
         
-        # Choose implementation strategy
-        if self.config.use_fused_kernel and self.config.memory_efficient:
-            return self._optimized_lif_forward(spikes, W, b, training)
-        else:
-            return self._scan_lif_forward(spikes, W, b, training)
+        # Get current time constants
+        time_constants = self._get_time_constants()
+        
+        # 🚀 ENHANCED LIF with refractory period and adaptation
+        return self._enhanced_lif_forward(spikes, W, b, time_constants, training, training_progress)
     
-    def _optimized_lif_forward(self, spikes: jnp.ndarray, W: jnp.ndarray, b: jnp.ndarray, training: bool) -> jnp.ndarray:
-        """Optimized LIF forward pass with vectorized operations."""
-        batch_size, time_steps, _ = spikes.shape
+    def _enhanced_lif_forward(self, 
+                             spikes: jnp.ndarray, 
+                             W: jnp.ndarray, 
+                             b: jnp.ndarray,
+                             time_constants: Dict[str, float],
+                             training: bool,
+                             training_progress: float) -> jnp.ndarray:
+        """Enhanced LIF forward pass using JAX scan for memory efficiency."""
+        batch_size, time_steps, input_dim = spikes.shape
         
         # Precompute decay factors
-        alpha_mem = jnp.exp(-self.config.dt / self.config.tau_mem)
-        alpha_syn = jnp.exp(-self.config.dt / self.config.tau_syn)
+        alpha_mem = jnp.exp(-self.config.dt / time_constants['tau_mem'])
+        alpha_syn = jnp.exp(-self.config.dt / time_constants['tau_syn'])
         
-        # Initialize states
-        v_mem = jnp.zeros((batch_size, self.config.hidden_size))
-        i_syn = jnp.zeros((batch_size, self.config.hidden_size))
+        # Enhanced state with refractory period and adaptation
+        if self.config.use_refractory_period:
+            alpha_ref = jnp.exp(-self.config.dt / time_constants['tau_ref'])
         
-        output_spikes = []
+        if self.config.use_adaptation:
+            alpha_adapt = jnp.exp(-self.config.dt / time_constants['tau_adapt'])
         
-        # Time loop (unrolled for small sequences)
-        for t in range(time_steps):
-            # Synaptic current update
-            i_syn = alpha_syn * i_syn + jnp.dot(spikes[:, t], W) + b
+        # 🧠 ENHANCED INITIAL STATE
+        init_state = {
+            'v_mem': jnp.zeros((batch_size, self.config.hidden_size)),  # Membrane potential
+            'i_syn': jnp.zeros((batch_size, self.config.hidden_size)),  # Synaptic current
+        }
+        
+        # Add refractory state if enabled
+        if self.config.use_refractory_period:
+            init_state['refrac_timer'] = jnp.zeros((batch_size, self.config.hidden_size))
+        
+        # Add adaptation state if enabled  
+        if self.config.use_adaptation:
+            init_state['adapt_current'] = jnp.zeros((batch_size, self.config.hidden_size))
+        
+        def enhanced_lif_step(carry, spike_t):
+            """Enhanced LIF step with all biological features."""
+            v_mem = carry['v_mem']
+            i_syn = carry['i_syn']
+            
+            # 🚨 REFRACTORY PERIOD HANDLING
+            if self.config.use_refractory_period:
+                refrac_timer = carry['refrac_timer']
+                # Neurons in refractory period can't receive input
+                input_mask = (refrac_timer <= 0).astype(jnp.float32)
+            else:
+                input_mask = 1.0
+            
+            # 🧠 SPIKE FREQUENCY ADAPTATION
+            if self.config.use_adaptation:
+                adapt_current = carry['adapt_current']
+                # Adaptation reduces excitability after spiking
+                effective_threshold = self.config.threshold + adapt_current
+            else:
+                effective_threshold = self.config.threshold
+                adapt_current = 0.0
+            
+            # Synaptic current update (masked by refractory period)
+            synaptic_input = jnp.dot(spike_t, W) + b
+            i_syn = alpha_syn * i_syn + synaptic_input * input_mask
             
             # Membrane potential update
             v_mem = alpha_mem * v_mem + i_syn
             
-            # Spike generation with surrogate gradient
-            spikes_out = spike_function_with_surrogate(
-                v_mem, self.config.threshold, self.surrogate_fn
-            )
+            # 🚀 ENHANCED SPIKE GENERATION with adaptive surrogate
+            if self.config.surrogate_type == SurrogateGradientType.ADAPTIVE_MULTI_SCALE:
+                spikes_out = spike_function_with_enhanced_surrogate(
+                    v_mem - effective_threshold,
+                    threshold=0.0,
+                    training_progress=training_progress
+                )
+            else:
+                spikes_out = spike_function_with_surrogate(
+                    v_mem, effective_threshold, self.surrogate_fn
+                )
             
-            # Reset membrane potential
-            v_mem = v_mem - spikes_out * self.config.threshold
+            # 🔄 MEMBRANE RESET (soft or hard)
+            if self.config.reset_mechanism == "hard":
+                # Hard reset: set to 0
+                v_mem = v_mem * (1.0 - spikes_out)
+            else:
+                # Soft reset: subtract scaled threshold
+                v_mem = v_mem - spikes_out * effective_threshold * self.config.reset_factor
             
-            output_spikes.append(spikes_out)
-        
-        # Stack outputs: [batch, time, hidden_size]
-        return jnp.stack(output_spikes, axis=1)
-    
-    def _scan_lif_forward(self, spikes: jnp.ndarray, W: jnp.ndarray, b: jnp.ndarray, training: bool) -> jnp.ndarray:
-        """LIF forward pass using JAX scan for memory efficiency."""
-        batch_size, time_steps, _ = spikes.shape
-        
-        # Precompute decay factors
-        alpha_mem = jnp.exp(-self.config.dt / self.config.tau_mem)
-        alpha_syn = jnp.exp(-self.config.dt / self.config.tau_syn)
-        
-        # Initial state
-        init_state = {
-            'v_mem': jnp.zeros((batch_size, self.config.hidden_size)),
-            'i_syn': jnp.zeros((batch_size, self.config.hidden_size))
-        }
-        
-        def lif_step(carry, spike_t):
-            v_mem, i_syn = carry['v_mem'], carry['i_syn']
+            # 📊 UPDATE ENHANCED STATES
+            new_carry = {
+                'v_mem': v_mem,
+                'i_syn': i_syn
+            }
             
-            # Synaptic current update
-            i_syn = alpha_syn * i_syn + jnp.dot(spike_t, W) + b
+            # Update refractory timer
+            if self.config.use_refractory_period:
+                # Start refractory period on spike, decay otherwise
+                refrac_timer = jnp.where(
+                    spikes_out > 0,
+                    time_constants['tau_ref'] / self.config.dt,  # Reset timer on spike
+                    jnp.maximum(0.0, refrac_timer - 1.0)  # Decay timer
+                )
+                new_carry['refrac_timer'] = refrac_timer
             
-            # Membrane potential update  
-            v_mem = alpha_mem * v_mem + i_syn
+            # Update adaptation current
+            if self.config.use_adaptation:
+                # Increase adaptation on spike, decay otherwise
+                adapt_current = alpha_adapt * adapt_current + spikes_out * 0.1  # Adaptive increment
+                new_carry['adapt_current'] = adapt_current
             
-            # Spike generation
-            spikes_out = spike_function_with_surrogate(
-                v_mem, self.config.threshold, self.surrogate_fn
-            )
-            
-            # Reset
-            v_mem = v_mem - spikes_out * self.config.threshold
-            
-            new_carry = {'v_mem': v_mem, 'i_syn': i_syn}
             return new_carry, spikes_out
         
-        # Apply scan
+        # Apply enhanced scan
         _, output_spikes = jax.lax.scan(
-            lif_step, init_state, spikes.transpose(1, 0, 2)
+            enhanced_lif_step, init_state, spikes.transpose(1, 0, 2)
         )
         
         # Transpose back: [batch, time, hidden_size]
         return output_spikes.transpose(1, 0, 2)
+
+
+class VectorizedLIFLayer(nn.Module):
+    """
+    Vectorized LIF layer optimized for single fused kernel.
+    🚀 ENHANCED: Now uses EnhancedLIFWithMemory by default
+    """
+    
+    config: SNNConfig
+    
+    def setup(self):
+        """Initialize LIF layer with enhanced dynamics."""
+        # Use enhanced LIF by default
+        self.enhanced_lif = EnhancedLIFWithMemory(config=self.config)
+    
+    @nn.compact
+    def __call__(self, spikes: jnp.ndarray, training: bool = False, training_progress: float = 0.0) -> jnp.ndarray:
+        """Forward pass using enhanced LIF neurons."""
+        return self.enhanced_lif(spikes, training=training, training_progress=training_progress)
 
 
 class EnhancedSNNClassifier(nn.Module):
@@ -202,30 +333,32 @@ class EnhancedSNNClassifier(nn.Module):
     - Configurable surrogate gradient methods
     - Batch normalization and dropout support
     - Memory-efficient implementations
+    - 🚀 ENHANCED: Now supports enhanced LIF with refractory period and adaptation
     """
     
     config: SNNConfig
     
     @nn.compact
-    def __call__(self, spikes: jnp.ndarray, training: bool = False) -> jnp.ndarray:
+    def __call__(self, spikes: jnp.ndarray, training: bool = False, training_progress: float = 0.0) -> jnp.ndarray:
         """
         Forward pass through SNN classifier.
         
         Args:
             spikes: Input spikes [batch, time, input_dim]
             training: Training mode flag
+            training_progress: Training progress (0.0 to 1.0) for adaptive components
             
         Returns:
             Classification logits [batch, num_classes]
         """
         x = spikes
         
-        # Multiple LIF layers
+        # Multiple enhanced LIF layers
         for i in range(self.config.num_layers):
             x = VectorizedLIFLayer(
                 config=self.config,
                 name=f'lif_layer_{i}'
-            )(x, training=training)
+            )(x, training=training, training_progress=training_progress)
             
             # Optional batch normalization
             if self.config.use_batch_norm:
@@ -244,10 +377,11 @@ class EnhancedSNNClassifier(nn.Module):
         # Global average pooling over time
         x_pooled = jnp.mean(x, axis=1)  # [batch, hidden_size]
         
-        # Final classification layer
+        # Final classification layer with enhanced initialization
         logits = nn.Dense(
             self.config.num_classes,
-            kernel_init=nn.initializers.xavier_uniform(),
+            kernel_init=nn.initializers.he_normal(),  # Better for GELU/ReLU-like
+            bias_init=nn.initializers.zeros,
             name='classifier'
         )(x_pooled)
         

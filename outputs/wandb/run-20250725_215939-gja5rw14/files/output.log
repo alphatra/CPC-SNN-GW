@@ -1,0 +1,288 @@
+INFO:training.training_metrics:W&B tracking initialized
+2025-07-25 21:59:40,164 - training.training_metrics - INFO - W&B tracking initialized
+INFO:training.training_metrics:TensorBoard logging to: outputs/tensorboard
+2025-07-25 21:59:40,220 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+INFO:training.base_trainer:Using basic experiment tracker
+2025-07-25 21:59:40,221 - training.base_trainer - INFO - Using basic experiment tracker
+INFO:training.training_utils:Configuration saved to outputs/config.json
+2025-07-25 21:59:40,222 - training.training_utils - INFO - Configuration saved to outputs/config.json
+INFO:training.base_trainer:Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-25 21:59:40,226 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+INFO:training.complete_enhanced_training:🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-25 21:59:40,228 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+INFO:training.complete_enhanced_training:   1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-25 21:59:40,228 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+INFO:training.complete_enhanced_training:   2. Temporal Transformer: True
+2025-07-25 21:59:40,229 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+INFO:training.complete_enhanced_training:   3. Learnable Thresholds: True
+2025-07-25 21:59:40,229 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+INFO:training.complete_enhanced_training:   4. Enhanced LIF: True
+2025-07-25 21:59:40,230 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+INFO:training.complete_enhanced_training:   5. Momentum InfoNCE: True
+2025-07-25 21:59:40,230 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+INFO:__main__:🚀 Starting training...
+2025-07-25 21:59:40,231 - __main__ - INFO - 🚀 Starting training...
+INFO:training.complete_enhanced_training:🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-25 21:59:40,231 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+INFO:training.complete_enhanced_training:================================================================================
+2025-07-25 21:59:40,232 - training.complete_enhanced_training - INFO - ================================================================================
+INFO:training.complete_enhanced_training:📡 Loading real LIGO GW150914 data...
+2025-07-25 21:59:40,232 - training.complete_enhanced_training - INFO - 📡 Loading real LIGO GW150914 data...
+INFO:data.real_ligo_integration:🌊 Attempting to download real GW150914 data...
+2025-07-25 21:59:40,233 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+INFO:data.real_ligo_integration:✅ ReadLIGO available - loading real GW150914 data
+2025-07-25 21:59:40,233 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+INFO:data.real_ligo_integration:🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-07-25 21:59:40,234 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+INFO:data.real_ligo_integration:🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-07-25 21:59:40,234 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+INFO:data.real_ligo_integration:✅ Real GW150914 strain loaded:
+2025-07-25 21:59:40,264 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+INFO:data.real_ligo_integration:   H1: 131072 samples
+2025-07-25 21:59:40,264 - data.real_ligo_integration - INFO -    H1: 131072 samples
+INFO:data.real_ligo_integration:   L1: 131072 samples
+2025-07-25 21:59:40,265 - data.real_ligo_integration - INFO -    L1: 131072 samples
+INFO:data.real_ligo_integration:   Time span: 1126259446.000 to 1126259478.000 GPS
+2025-07-25 21:59:40,265 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+INFO:data.real_ligo_integration:   Sample rate: 4096 Hz
+2025-07-25 21:59:40,265 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+INFO:data.real_ligo_integration:✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-07-25 21:59:40,269 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+INFO:data.real_ligo_integration:📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-07-25 21:59:40,269 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+INFO:data.real_ligo_integration:🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-07-25 21:59:40,270 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+INFO:data.real_ligo_integration:✅ GW150914 strain data obtained: 2048 samples
+2025-07-25 21:59:40,271 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+INFO:data.real_ligo_integration:🌊 Created proper windowed dataset:
+2025-07-25 21:59:40,534 - data.real_ligo_integration - INFO - 🌊 Created proper windowed dataset:
+INFO:data.real_ligo_integration:   Total windows: 15
+2025-07-25 21:59:40,535 - data.real_ligo_integration - INFO -    Total windows: 15
+INFO:data.real_ligo_integration:   Window size: 256
+2025-07-25 21:59:40,535 - data.real_ligo_integration - INFO -    Window size: 256
+INFO:data.real_ligo_integration:   Signal windows (label=1): 3
+2025-07-25 21:59:40,683 - data.real_ligo_integration - INFO -    Signal windows (label=1): 3
+INFO:data.real_ligo_integration:   Noise windows (label=0): 12
+2025-07-25 21:59:40,741 - data.real_ligo_integration - INFO -    Noise windows (label=0): 12
+INFO:data.real_ligo_integration:   Class balance: 20.0% positive
+2025-07-25 21:59:40,797 - data.real_ligo_integration - INFO -    Class balance: 20.0% positive
+INFO:utils.data_split:📊 Creating stratified split (train: 80.0%):
+2025-07-25 21:59:41,963 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+INFO:utils.data_split:   Class 0 samples: 12
+2025-07-25 21:59:41,964 - utils.data_split - INFO -    Class 0 samples: 12
+INFO:utils.data_split:   Class 1 samples: 3
+2025-07-25 21:59:41,965 - utils.data_split - INFO -    Class 1 samples: 3
+Traceback (most recent call last):
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_cpc_debug.py", line 80, in <module>
+    results = test_cpc_debug()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_cpc_debug.py", line 50, in test_cpc_debug
+    results = trainer.run_complete_enhanced_training()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 578, in run_complete_enhanced_training
+    (signals, labels), _ = create_real_ligo_dataset(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/data/real_ligo_integration.py", line 268, in create_real_ligo_dataset
+    (train_signals, train_labels), (test_signals, test_labels) = create_stratified_split(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/utils/data_split.py", line 80, in create_stratified_split
+    train_indices = jax.random.permutation(jax.random.PRNGKey(random_seed + 2), train_indices)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 589, in permutation
+    return maybe_auto_axes(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 594, in _permutation
+    return _shuffle(key, x, axis)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 625, in _shuffle
+    sort_keys = _random_bits(subkey, 32, x.shape)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 119, in _random_bits
+    return prng.random_bits(key, bit_width=bit_width, shape=shape)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 669, in random_bits
+    return random_bits_p.bind(keys, bit_width=bit_width, shape=shape)
+jax._src.source_info_util.JaxStackTraceBeforeTransformation: KeyboardInterrupt
+
+The preceding stack trace is the source of the JAX operation that, once transformed by JAX, triggered the following exception.
+
+--------------------
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_cpc_debug.py", line 80, in <module>
+    results = test_cpc_debug()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_cpc_debug.py", line 50, in test_cpc_debug
+    results = trainer.run_complete_enhanced_training()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 578, in run_complete_enhanced_training
+    (signals, labels), _ = create_real_ligo_dataset(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/data/real_ligo_integration.py", line 268, in create_real_ligo_dataset
+    (train_signals, train_labels), (test_signals, test_labels) = create_stratified_split(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/utils/data_split.py", line 80, in create_stratified_split
+    train_indices = jax.random.permutation(jax.random.PRNGKey(random_seed + 2), train_indices)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 589, in permutation
+    return maybe_auto_axes(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 594, in _permutation
+    return _shuffle(key, x, axis)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/traceback_util.py", line 182, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 292, in cache_miss
+    executable, pgle_profiler) = _python_pjit_helper(fun, jit_info, *args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 153, in _python_pjit_helper
+    out_flat, compiled, profiler = _pjit_call_impl_python(*args_flat, **p.params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 1846, in _pjit_call_impl_python
+    compiled = _resolve_and_lower(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 1813, in _resolve_and_lower
+    return _pjit_lower(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 1931, in _pjit_lower
+    return _pjit_lower_cached(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 1951, in _pjit_lower_cached
+    return pxla.lower_sharding_computation(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/profiler.py", line 354, in wrapper
+    return func(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/pxla.py", line 2321, in lower_sharding_computation
+    nreps, tuple_args, shape_poly_state) = _cached_lowering_to_hlo(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/pxla.py", line 1912, in _cached_lowering_to_hlo
+    lowering_result = mlir.lower_jaxpr_to_module(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 1274, in lower_jaxpr_to_module
+    lower_jaxpr_to_fun(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 1766, in lower_jaxpr_to_fun
+    out_vals, tokens_out = jaxpr_subcomp(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2043, in jaxpr_subcomp
+    ans = lower_per_platform(rule_ctx, str(eqn.primitive),
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2165, in lower_per_platform
+    output = kept_rules[0](ctx, *rule_args, **rule_kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 698, in random_bits_lowering
+    out = bits_lowering(ctx_new, keys)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2281, in f_lowered
+    out, tokens = jaxpr_subcomp(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2043, in jaxpr_subcomp
+    ans = lower_per_platform(rule_ctx, str(eqn.primitive),
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2165, in lower_per_platform
+    output = kept_rules[0](ctx, *rule_args, **rule_kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 932, in _threefry2x32_gpu_lowering_rule
+    return _threefry2x32_lowering_rule(ctx, k1, k2, x1, x2)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2807, in cached_lowering
+    func = _emit_lowering_rule_as_fun(partial(f, **params), ctx)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 1889, in _emit_lowering_rule_as_fun
+    outs = lowering_rule(sub_ctx, *unflattened_args)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2274, in f_lowered
+    jaxpr, _, consts, () = pe.trace_to_jaxpr_dynamic(wrapped_fun, ctx.avals_in)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/profiler.py", line 354, in wrapper
+    return func(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 2292, in trace_to_jaxpr_dynamic
+    ans = fun.call_wrapped(*in_tracers)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 211, in call_wrapped
+    return self.f_transformed(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 396, in _get_result_paths_thunk
+    ans = _fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 908, in _threefry2x32_lowering
+    x = apply_round(x, r)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 852, in apply_round
+    v[1] = rotate_left(v[1], rot)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 824, in _rotate_left
+    if lax.dtype(d) != dtype:
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/dtypes.py", line 818, in dtype
+    elif issubdtype(getattr(x, 'dtype', None), extended):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/dtypes.py", line 430, in issubdtype
+    return _issubdtype_cached(
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_cpc_debug.py", line 80, in <module>
+    results = test_cpc_debug()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_cpc_debug.py", line 50, in test_cpc_debug
+    results = trainer.run_complete_enhanced_training()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 578, in run_complete_enhanced_training
+    (signals, labels), _ = create_real_ligo_dataset(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/data/real_ligo_integration.py", line 268, in create_real_ligo_dataset
+    (train_signals, train_labels), (test_signals, test_labels) = create_stratified_split(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/utils/data_split.py", line 80, in create_stratified_split
+    train_indices = jax.random.permutation(jax.random.PRNGKey(random_seed + 2), train_indices)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 589, in permutation
+    return maybe_auto_axes(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 594, in _permutation
+    return _shuffle(key, x, axis)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 625, in _shuffle
+    sort_keys = _random_bits(subkey, 32, x.shape)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 119, in _random_bits
+    return prng.random_bits(key, bit_width=bit_width, shape=shape)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 669, in random_bits
+    return random_bits_p.bind(keys, bit_width=bit_width, shape=shape)
+jax._src.source_info_util.JaxStackTraceBeforeTransformation: KeyboardInterrupt
+
+The preceding stack trace is the source of the JAX operation that, once transformed by JAX, triggered the following exception.
+
+--------------------
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_cpc_debug.py", line 80, in <module>
+    results = test_cpc_debug()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_cpc_debug.py", line 50, in test_cpc_debug
+    results = trainer.run_complete_enhanced_training()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 578, in run_complete_enhanced_training
+    (signals, labels), _ = create_real_ligo_dataset(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/data/real_ligo_integration.py", line 268, in create_real_ligo_dataset
+    (train_signals, train_labels), (test_signals, test_labels) = create_stratified_split(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/utils/data_split.py", line 80, in create_stratified_split
+    train_indices = jax.random.permutation(jax.random.PRNGKey(random_seed + 2), train_indices)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 589, in permutation
+    return maybe_auto_axes(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/random.py", line 594, in _permutation
+    return _shuffle(key, x, axis)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/traceback_util.py", line 182, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 292, in cache_miss
+    executable, pgle_profiler) = _python_pjit_helper(fun, jit_info, *args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 153, in _python_pjit_helper
+    out_flat, compiled, profiler = _pjit_call_impl_python(*args_flat, **p.params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 1846, in _pjit_call_impl_python
+    compiled = _resolve_and_lower(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 1813, in _resolve_and_lower
+    return _pjit_lower(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 1931, in _pjit_lower
+    return _pjit_lower_cached(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/pjit.py", line 1951, in _pjit_lower_cached
+    return pxla.lower_sharding_computation(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/profiler.py", line 354, in wrapper
+    return func(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/pxla.py", line 2321, in lower_sharding_computation
+    nreps, tuple_args, shape_poly_state) = _cached_lowering_to_hlo(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/pxla.py", line 1912, in _cached_lowering_to_hlo
+    lowering_result = mlir.lower_jaxpr_to_module(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 1274, in lower_jaxpr_to_module
+    lower_jaxpr_to_fun(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 1766, in lower_jaxpr_to_fun
+    out_vals, tokens_out = jaxpr_subcomp(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2043, in jaxpr_subcomp
+    ans = lower_per_platform(rule_ctx, str(eqn.primitive),
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2165, in lower_per_platform
+    output = kept_rules[0](ctx, *rule_args, **rule_kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 698, in random_bits_lowering
+    out = bits_lowering(ctx_new, keys)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2281, in f_lowered
+    out, tokens = jaxpr_subcomp(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2043, in jaxpr_subcomp
+    ans = lower_per_platform(rule_ctx, str(eqn.primitive),
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2165, in lower_per_platform
+    output = kept_rules[0](ctx, *rule_args, **rule_kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 932, in _threefry2x32_gpu_lowering_rule
+    return _threefry2x32_lowering_rule(ctx, k1, k2, x1, x2)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2807, in cached_lowering
+    func = _emit_lowering_rule_as_fun(partial(f, **params), ctx)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 1889, in _emit_lowering_rule_as_fun
+    outs = lowering_rule(sub_ctx, *unflattened_args)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/mlir.py", line 2274, in f_lowered
+    jaxpr, _, consts, () = pe.trace_to_jaxpr_dynamic(wrapped_fun, ctx.avals_in)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/profiler.py", line 354, in wrapper
+    return func(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 2292, in trace_to_jaxpr_dynamic
+    ans = fun.call_wrapped(*in_tracers)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 211, in call_wrapped
+    return self.f_transformed(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 396, in _get_result_paths_thunk
+    ans = _fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 908, in _threefry2x32_lowering
+    x = apply_round(x, r)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 852, in apply_round
+    v[1] = rotate_left(v[1], rot)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/prng.py", line 824, in _rotate_left
+    if lax.dtype(d) != dtype:
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/dtypes.py", line 818, in dtype
+    elif issubdtype(getattr(x, 'dtype', None), extended):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/dtypes.py", line 430, in issubdtype
+    return _issubdtype_cached(
+KeyboardInterrupt

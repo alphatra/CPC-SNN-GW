@@ -15,16 +15,31 @@ __version__ = "1.0.0"
 # Module logger
 logger = logging.getLogger(__name__)
 
-# Lazy import mappings
+# ✅ FIXED: Lazy import mappings (ReadLIGO instead of GWOSC)
 _LAZY_IMPORTS = {
-    # GWOSC downloaders and preprocessing
-    "GWOSCDownloader": ("gw_download", "GWOSCDownloader"),
+    # ✅ ReadLIGO downloaders and preprocessing  
+    "ReadLIGODownloader": ("gw_download", "ReadLIGODownloader"),
+    "LIGODownloader": ("gw_download", "LIGODownloader"),
     "DataPreprocessor": ("gw_download", "DataPreprocessor"),
-    "ProductionGWOSCDownloader": ("gw_download", "ProductionGWOSCDownloader"),
     "AdvancedDataPreprocessor": ("gw_download", "AdvancedDataPreprocessor"),
     "QualityMetrics": ("gw_download", "QualityMetrics"),
     "ProcessingResult": ("gw_download", "ProcessingResult"),
     "SegmentSampler": ("gw_download", "SegmentSampler"),
+    
+    # ✅ ReadLIGO data sources
+    "LIGOEventData": ("gw_download", "LIGOEventData"),
+    "LIGODataQuality": ("gw_download", "LIGODataQuality"),
+    "ReadLIGODataFetcher": ("gw_download", "ReadLIGODataFetcher"),
+    "LIGODataValidator": ("gw_download", "LIGODataValidator"),
+    
+    # ✅ Real LIGO data integration
+    "download_gw150914_data": ("real_ligo_integration", "download_gw150914_data"),
+    "create_proper_windows": ("real_ligo_integration", "create_proper_windows"),
+    "create_real_ligo_dataset": ("real_ligo_integration", "create_real_ligo_dataset"),
+    "create_simulated_gw150914_strain": ("real_ligo_integration", "create_simulated_gw150914_strain"),
+    
+    # ⚠️ DEPRECATED: GWOSC (with warnings)
+    "GWOSCDownloader": ("gw_download", "GWOSCDownloader"),
     
     # Professional cache management
     "ProfessionalCacheManager": ("cache_manager", "ProfessionalCacheManager"),
@@ -82,14 +97,29 @@ __all__ = [
     # Module version
     "__version__",
     
-    # GWOSC downloaders and preprocessing
-    "GWOSCDownloader",
+    # ✅ FIXED: ReadLIGO downloaders and preprocessing
+    "ReadLIGODownloader",
+    "LIGODownloader",
     "DataPreprocessor", 
-    "ProductionGWOSCDownloader",
     "AdvancedDataPreprocessor",
     "QualityMetrics",
     "ProcessingResult",
     "SegmentSampler",
+    
+    # ✅ ReadLIGO data sources
+    "LIGOEventData",
+    "LIGODataQuality", 
+    "ReadLIGODataFetcher",
+    "LIGODataValidator",
+    
+    # ✅ Real LIGO data integration
+    "download_gw150914_data",
+    "create_proper_windows", 
+    "create_real_ligo_dataset",
+    "create_simulated_gw150914_strain",
+    
+    # ⚠️ DEPRECATED: GWOSC (with warnings)
+    "GWOSCDownloader",
     
     # Professional cache management
     "ProfessionalCacheManager",

@@ -276,7 +276,7 @@ class EnhancedGWTrainer(TrainerBase):
         
         # Simple gradient accumulation (if configured)
         if hasattr(self.config, 'gradient_accumulation_steps') and self.config.gradient_accumulation_steps > 1:
-            grads = jax.tree_map(lambda g: g / self.config.gradient_accumulation_steps, grads)
+            grads = jax.tree.map(lambda g: g / self.config.gradient_accumulation_steps, grads)
         
         train_state = train_state.apply_gradients(grads=grads)
         
@@ -467,7 +467,7 @@ def run_enhanced_training_experiment():
     
     config = EnhancedGWConfig(
         num_epochs=50,
-        batch_size=16,
+        batch_size=1,  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
         learning_rate=1e-3,
         use_real_gwosc_data=True,  # ✅ CRITICAL FIX: Enable real GWOSC data for authentic training
         gradient_accumulation_steps=2

@@ -295,7 +295,7 @@ def fixed_gradient_accumulation(loss_fn, params: Dict, batch: jnp.ndarray,
         if total_grads is None:
             total_grads = grads
         else:
-            total_grads = jax.tree_map(lambda x, y: x + y, total_grads, grads)
+            total_grads = jax.tree.map(lambda x, y: x + y, total_grads, grads)
     
     # ✅ No division needed - gradients already properly scaled
     return total_loss, total_grads

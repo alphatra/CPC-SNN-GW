@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt
 
 # Optional plotting dependency
 try:
-    import seaborn as sns
+import seaborn as sns
     HAS_SEABORN = True
 except ImportError:
     HAS_SEABORN = False

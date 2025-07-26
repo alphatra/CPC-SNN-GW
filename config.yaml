@@ -31,7 +31,7 @@ data:
 model:
   # 🚨 CRITICAL FIX: CPC Encoder parameters optimized for GW frequency preservation
   cpc:
-    latent_dim: 512  # ✅ INCREASED from 256 for richer representations
+    latent_dim: 64   # ✅ ULTRA-MINIMAL: GPU memory optimization to prevent model collapse + memory issues
     downsample_factor: 4  # ✅ CRITICAL FIX: Was 64 (destroyed 99% freq info) → 4
     context_length: 256  # ✅ INCREASED from 64 for proper GW stationarity window
     prediction_steps: 12  # Keep reasonable for memory
@@ -60,29 +60,29 @@ model:
 
 # Training Configuration
 training:
-  # Phase 1: CPC Pretraining
+  # Phase 1: CPC Pretraining - ✅ MEMORY OPTIMIZED
   cpc_pretrain:
     learning_rate: 1e-4  # ✅ OPTIMIZED from analysis
-    batch_size: 16
+    batch_size: 1  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
     num_epochs: 50
     warmup_epochs: 5
     weight_decay: 0.01
     use_cosine_scheduling: true
     
-  # Phase 2: SNN Training  
+  # Phase 2: SNN Training - ✅ MEMORY OPTIMIZED
   snn_train:
     learning_rate: 5e-4  # ✅ HIGHER for SNN optimization
-    batch_size: 32
+    batch_size: 1  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
     num_epochs: 100
     focal_loss_alpha: 0.25
     focal_loss_gamma: 2.0
     mixup_alpha: 0.2
     early_stopping_patience: 10
     
-  # Phase 3: Joint Fine-tuning
+  # Phase 3: Joint Fine-tuning - ✅ MEMORY OPTIMIZED
   joint_finetune:
     learning_rate: 1e-5  # Lower for fine-tuning
-    batch_size: 16
+    batch_size: 1  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
     num_epochs: 25
     enable_cpc_gradients: true  # ✅ CRITICAL: Enable end-to-end gradients
 
@@ -115,7 +115,7 @@ logging:
 hpo:
   search_space:
     learning_rate: [1e-5, 3e-5, 1e-4, 3e-4, 1e-3]
-    batch_size: [8, 16, 32, 64]
+    batch_size: [1, 2, 4]  # ✅ MEMORY FIX: Ultra-small batch sizes only
     cpc_latent_dim: [256, 512, 768]
     context_length: [128, 256, 512]  # ✅ REALISTIC ranges
     weight_decay: [0.001, 0.01, 0.1]

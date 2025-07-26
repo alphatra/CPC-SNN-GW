@@ -22,10 +22,17 @@ import numpy as np
 # Optional dependencies with fallbacks
 try:
     import wandb
+    from utils.wandb_enhanced_logger import (
+        EnhancedWandbLogger, create_enhanced_wandb_logger,
+        NeuromorphicMetrics, PerformanceMetrics,
+        create_neuromorphic_metrics, create_performance_metrics
+    )
     WANDB_AVAILABLE = True
 except ImportError:
     WANDB_AVAILABLE = False
     wandb = None
+    EnhancedWandbLogger = None
+    create_enhanced_wandb_logger = None
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -124,14 +131,19 @@ class ExperimentTracker:
         # Setup W&B
         if use_wandb and WANDB_AVAILABLE:
             try:
-                self.wandb_run = wandb.init(
-                    project=project_name,
-                    name=self.experiment_name,
-                    config=wandb_config or {},
-                    tags=tags or [],
-                    dir=str(self.output_dir)
-                )
-                logger.info("W&B tracking initialized")
+                # ✅ FIX: Check if W&B run already exists
+                if wandb.run is not None:
+                    self.wandb_run = wandb.run
+                    logger.info("W&B tracking - using existing run")
+                else:
+                    self.wandb_run = wandb.init(
+                        project=project_name,
+                        name=self.experiment_name,
+                        config=wandb_config or {},
+                        tags=tags or [],
+                        dir=str(self.output_dir)
+                    )
+                    logger.info("W&B tracking initialized")
             except Exception as e:
                 logger.warning(f"Failed to initialize W&B: {e}")
                 self.wandb_run = None
@@ -198,7 +210,8 @@ class ExperimentTracker:
         """Log hyperparameters to tracking systems."""
         if self.wandb_run:
             try:
-                self.wandb_run.config.update(config)
+                # ✅ FIX: Allow value changes for W&B config updates
+                self.wandb_run.config.update(config, allow_val_change=True)
             except Exception as e:
                 logger.warning(f"W&B config update failed: {e}")
         
@@ -401,4 +414,211 @@ def create_training_metrics(step: int,
         loss=loss,
         wall_time=time.time(),
         **kwargs
+    ) 
+
+
+class EnhancedMetricsLogger:
+    """
+    🚀 Enhanced metrics logger with comprehensive neuromorphic tracking
+    
+    Integrates EnhancedWandbLogger with complete neuromorphic-specific metrics,
+    performance monitoring, and interactive visualizations.
+    """
+    
+    def __init__(self,
+                 project_name: str = "neuromorphic-gw-detection",
+                 experiment_name: Optional[str] = None,
+                 output_dir: str = "outputs",
+                 wandb_config: Optional[Dict[str, Any]] = None,
+                 config: Optional[Dict[str, Any]] = None,
+                 tags: Optional[List[str]] = None):
+        
+        self.project_name = project_name
+        self.experiment_name = experiment_name
+        self.output_dir = Path(output_dir)
+        self.config = config or {}
+        
+        # Initialize enhanced W&B logger
+        self.enhanced_wandb = None
+        if WANDB_AVAILABLE and wandb_config and wandb_config.get('enabled', True):
+            try:
+                wandb_settings = wandb_config.copy()
+                wandb_settings.update({
+                    'project': wandb_settings.get('project', project_name),
+                    'name': wandb_settings.get('name', experiment_name),
+                    'config': config,
+                    'tags': wandb_settings.get('tags', tags or []),
+                    'output_dir': str(self.output_dir)
+                })
+                
+                self.enhanced_wandb = create_enhanced_wandb_logger(**wandb_settings)
+                logger.info("🚀 Enhanced W&B logger initialized")
+                
+            except Exception as e:
+                logger.warning(f"Enhanced W&B initialization failed: {e}")
+                self.enhanced_wandb = None
+        
+        # Fallback to basic logger if enhanced fails
+        if not self.enhanced_wandb and WANDB_AVAILABLE:
+            try:
+                from training.training_metrics import WandbLogger
+                self.fallback_logger = WandbLogger(
+                    project_name=project_name,
+                    experiment_name=experiment_name,
+                    output_dir=output_dir,
+                    use_wandb=True,
+                    wandb_config=wandb_config
+                )
+                logger.info("Using fallback W&B logger")
+            except Exception as e:
+                logger.warning(f"Fallback logger initialization failed: {e}")
+                self.fallback_logger = None
+        else:
+            self.fallback_logger = None
+        
+        # Metrics buffers
+        self.step_count = 0
+        self.performance_buffer = []
+        self.neuromorphic_buffer = []
+    
+    def log_training_step(self, 
+                         metrics: TrainingMetrics,
+                         model_state: Any = None,
+                         gradients: Optional[Dict[str, jnp.ndarray]] = None,
+                         spikes: Optional[jnp.ndarray] = None,
+                         performance_data: Optional[Dict[str, float]] = None,
+                         prefix: str = "train"):
+        """
+        Log comprehensive training step with neuromorphic and performance metrics
+        """
+        
+        if self.enhanced_wandb:
+            with self.enhanced_wandb.log_step_context(step=self.step_count):
+                
+                # 1. Log basic training metrics
+                basic_metrics = {
+                    f"{prefix}/loss": float(metrics.loss),
+                    f"{prefix}/accuracy": float(getattr(metrics, 'accuracy', 0.0)),
+                    f"{prefix}/epoch": metrics.epoch,
+                    f"{prefix}/learning_rate": float(getattr(metrics, 'learning_rate', 0.0))
+                }
+                
+                if hasattr(metrics, 'custom_metrics') and getattr(metrics, 'custom_metrics'):
+                    for key, value in getattr(metrics, 'custom_metrics').items():
+                        basic_metrics[f"{prefix}/{key}"] = float(value)
+                
+                self.enhanced_wandb.run.log(basic_metrics, step=self.step_count)
+                
+                # 2. Log neuromorphic-specific metrics
+                if spikes is not None:
+                    self._log_neuromorphic_metrics(spikes, prefix)
+                
+                # 3. Log performance metrics
+                if performance_data:
+                    self._log_performance_metrics(performance_data, prefix)
+                
+                # 4. Log gradient statistics
+                if gradients:
+                    self.enhanced_wandb.log_gradient_stats(gradients, f"{prefix}_gradients")
+                
+                # 5. Log spike patterns
+                if spikes is not None:
+                    self.enhanced_wandb.log_spike_patterns(spikes, f"{prefix}_spikes")
+        
+        elif self.fallback_logger:
+            # Use fallback logger
+            self.fallback_logger.log_metrics(metrics, prefix)
+        
+        self.step_count += 1
+    
+    def _log_neuromorphic_metrics(self, spikes: jnp.ndarray, prefix: str):
+        """Extract and log neuromorphic-specific metrics"""
+        try:
+            spikes_np = np.array(spikes)
+            
+            # Calculate neuromorphic metrics
+            spike_rate = float(np.mean(spikes_np))
+            spike_std = float(np.std(spikes_np))
+            spike_sparsity = 1.0 - spike_rate
+            
+            # Create neuromorphic metrics object
+            if create_neuromorphic_metrics:
+                neuro_metrics = create_neuromorphic_metrics(
+                    spike_rate=spike_rate,
+                    spike_sparsity=spike_sparsity,
+                    encoding_fidelity=min(spike_rate * 10, 1.0),  # Heuristic
+                    network_activity=spike_rate
+                )
+                
+                # Log to enhanced wandb
+                self.enhanced_wandb.log_neuromorphic_metrics(neuro_metrics, prefix)
+            
+            # Store for analysis
+            self.neuromorphic_buffer.append({
+                'step': self.step_count,
+                'spike_rate': spike_rate,
+                'sparsity': spike_sparsity
+            })
+            
+        except Exception as e:
+            logger.warning(f"Neuromorphic metrics calculation failed: {e}")
+    
+    def _log_performance_metrics(self, performance_data: Dict[str, float], prefix: str):
+        """Log performance and hardware metrics"""
+        try:
+            # Create performance metrics object
+            if create_performance_metrics:
+                perf_metrics = create_performance_metrics(
+                    inference_latency_ms=performance_data.get('inference_latency_ms', 0.0),
+                    memory_usage_mb=performance_data.get('memory_usage_mb', 0.0),
+                    cpu_usage_percent=performance_data.get('cpu_usage_percent', 0.0),
+                    samples_per_second=performance_data.get('samples_per_second', 0.0)
+                )
+                
+                # Log to enhanced wandb
+                self.enhanced_wandb.log_performance_metrics(perf_metrics, prefix)
+            
+            # Store for analysis
+            self.performance_buffer.append({
+                'step': self.step_count,
+                'latency': performance_data.get('inference_latency_ms', 0.0),
+                'memory': performance_data.get('memory_usage_mb', 0.0)
+            })
+            
+        except Exception as e:
+            logger.warning(f"Performance metrics logging failed: {e}")
+    
+    def finish(self):
+        """Finish logging and cleanup"""
+        if self.enhanced_wandb:
+            self.enhanced_wandb.finish()
+        if self.fallback_logger:
+            self.fallback_logger.finish()
+        
+        logger.info("🏁 Enhanced metrics logging finished")
+
+
+# Factory function for easy creation
+def create_enhanced_metrics_logger(config: Dict[str, Any],
+                                 experiment_name: Optional[str] = None,
+                                 output_dir: str = "outputs") -> EnhancedMetricsLogger:
+    """Factory function to create enhanced metrics logger from config"""
+    
+    # Extract wandb config
+    wandb_config = config.get('wandb', {})
+    
+    # Set project name from config or default
+    project_name = wandb_config.get('project', 'neuromorphic-gw-detection')
+    
+    # Generate experiment name if not provided
+    if not experiment_name:
+        experiment_name = wandb_config.get('name') or f"neuromorphic-gw-{int(time.time())}"
+    
+    return EnhancedMetricsLogger(
+        project_name=project_name,
+        experiment_name=experiment_name,
+        output_dir=output_dir,
+        wandb_config=wandb_config,
+        config=config,
+        tags=wandb_config.get('tags', ['neuromorphic', 'gravitational-waves'])
     ) 

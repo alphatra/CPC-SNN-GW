@@ -1,0 +1,154 @@
+06:52:51 |     INFO | W&B tracking initialized
+2025-07-24 06:52:51,695 - training.training_metrics - INFO - W&B tracking initialized
+06:52:51 |     INFO | TensorBoard logging to: outputs/tensorboard
+2025-07-24 06:52:51,696 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+06:52:51 |     INFO | Using basic experiment tracker
+2025-07-24 06:52:51,696 - training.base_trainer - INFO - Using basic experiment tracker
+06:52:51 |     INFO | Configuration saved to outputs/config.json
+2025-07-24 06:52:51,697 - training.training_utils - INFO - Configuration saved to outputs/config.json
+06:52:51 |     INFO | Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 06:52:51,699 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+06:52:51 |     INFO | 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 06:52:51,700 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+06:52:51 |     INFO |    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 06:52:51,701 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+06:52:51 |     INFO |    2. Temporal Transformer: True
+2025-07-24 06:52:51,701 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+06:52:51 |     INFO |    3. Learnable Thresholds: True
+2025-07-24 06:52:51,701 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+06:52:51 |     INFO |    4. Enhanced LIF: True
+2025-07-24 06:52:51,702 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+06:52:51 |     INFO |    5. Momentum InfoNCE: True
+2025-07-24 06:52:51,702 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+06:52:51 |     INFO | 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 06:52:51,702 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+06:52:51 |     INFO | ================================================================================
+2025-07-24 06:52:51,702 - training.complete_enhanced_training - INFO - ================================================================================
+06:52:51 |     INFO | 📡 Loading real LIGO GW150914 data...
+2025-07-24 06:52:51,703 - training.complete_enhanced_training - INFO - 📡 Loading real LIGO GW150914 data...
+06:52:51 |  WARNING | Real LIGO data unavailable: create_real_ligo_dataset() got an unexpected keyword argument 'sequence_length'
+2025-07-24 06:52:51,703 - training.complete_enhanced_training - WARNING - Real LIGO data unavailable: create_real_ligo_dataset() got an unexpected keyword argument 'sequence_length'
+06:52:51 |     INFO | 🔄 Generating synthetic data for demonstration...
+2025-07-24 06:52:51,703 - training.complete_enhanced_training - INFO - 🔄 Generating synthetic data for demonstration...
+06:52:58 |    ERROR | ❌ Training integration error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:58,260 - __main__ - ERROR - ❌ Training integration error: Cannot interpret '0.8' as a data type
+06:52:58 |     INFO |
+⚡ Test 5/5: Performance Benchmarks
+2025-07-24 06:52:58,261 - __main__ - INFO -
+⚡ Test 5/5: Performance Benchmarks
+06:52:58 |     INFO | 🔍 Testing performance benchmarks...
+2025-07-24 06:52:58,261 - __main__ - INFO - 🔍 Testing performance benchmarks...
+06:52:58 |     INFO | JAX devices: [CudaDevice(id=0)]
+2025-07-24 06:52:58,263 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-07-24 06:52:58,263 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+06:52:58 |     INFO | JAX platform: gpu
+2025-07-24 06:52:58,264 - training.training_utils - INFO - JAX platform: gpu
+2025-07-24 06:52:58,264 - training.training_utils - INFO - JAX platform: gpu
+06:52:58 |     INFO | W&B tracking - using existing run
+2025-07-24 06:52:58,265 - training.training_metrics - INFO - W&B tracking - using existing run
+2025-07-24 06:52:58,265 - training.training_metrics - INFO - W&B tracking - using existing run
+06:52:58 |     INFO | TensorBoard logging to: outputs/tensorboard
+2025-07-24 06:52:58,268 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+2025-07-24 06:52:58,268 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+06:52:58 |     INFO | Using basic experiment tracker
+2025-07-24 06:52:58,268 - training.base_trainer - INFO - Using basic experiment tracker
+2025-07-24 06:52:58,268 - training.base_trainer - INFO - Using basic experiment tracker
+06:52:58 |     INFO | Configuration saved to outputs/config.json
+2025-07-24 06:52:58,269 - training.training_utils - INFO - Configuration saved to outputs/config.json
+2025-07-24 06:52:58,269 - training.training_utils - INFO - Configuration saved to outputs/config.json
+06:52:58 |     INFO | Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 06:52:58,271 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-24 06:52:58,271 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+06:52:58 |     INFO | 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 06:52:58,272 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-24 06:52:58,272 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+06:52:58 |     INFO |    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 06:52:58,273 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-24 06:52:58,273 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+06:52:58 |     INFO |    2. Temporal Transformer: True
+2025-07-24 06:52:58,273 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+2025-07-24 06:52:58,273 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+06:52:58 |     INFO |    3. Learnable Thresholds: True
+2025-07-24 06:52:58,273 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+2025-07-24 06:52:58,273 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+06:52:58 |     INFO |    4. Enhanced LIF: True
+2025-07-24 06:52:58,274 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+2025-07-24 06:52:58,274 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+06:52:58 |     INFO |    5. Momentum InfoNCE: True
+2025-07-24 06:52:58,274 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+2025-07-24 06:52:58,274 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+06:52:59 |     INFO |    Benchmarking forward pass performance...
+2025-07-24 06:52:59,335 - __main__ - INFO -    Benchmarking forward pass performance...
+2025-07-24 06:52:59,335 - __main__ - INFO -    Benchmarking forward pass performance...
+06:52:59 |     INFO | 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 06:52:59,336 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-24 06:52:59,336 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+06:52:59 |     INFO | ================================================================================
+2025-07-24 06:52:59,337 - training.complete_enhanced_training - INFO - ================================================================================
+2025-07-24 06:52:59,337 - training.complete_enhanced_training - INFO - ================================================================================
+06:52:59 |    ERROR | ❌ Performance benchmark error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,774 - __main__ - ERROR - ❌ Performance benchmark error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,774 - __main__ - ERROR - ❌ Performance benchmark error: Cannot interpret '0.8' as a data type
+06:52:59 |     INFO |
+================================================================================
+2025-07-24 06:52:59,775 - __main__ - INFO -
+================================================================================
+2025-07-24 06:52:59,775 - __main__ - INFO -
+================================================================================
+06:52:59 |     INFO | 📊 COMPREHENSIVE TEST REPORT
+2025-07-24 06:52:59,775 - __main__ - INFO - 📊 COMPREHENSIVE TEST REPORT
+2025-07-24 06:52:59,775 - __main__ - INFO - 📊 COMPREHENSIVE TEST REPORT
+06:52:59 |     INFO | ================================================================================
+2025-07-24 06:52:59,776 - __main__ - INFO - ================================================================================
+2025-07-24 06:52:59,776 - __main__ - INFO - ================================================================================
+06:52:59 |     INFO | ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+2025-07-24 06:52:59,777 - __main__ - INFO - ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+2025-07-24 06:52:59,777 - __main__ - INFO - ❌ SOME TESTS FAILED - INTEGRATION ISSUES DETECTED
+06:52:59 |     INFO |
+📈 Test Summary:
+2025-07-24 06:52:59,777 - __main__ - INFO -
+📈 Test Summary:
+2025-07-24 06:52:59,777 - __main__ - INFO -
+📈 Test Summary:
+06:52:59 |     INFO |    Total test time: 34.24s
+2025-07-24 06:52:59,778 - __main__ - INFO -    Total test time: 34.24s
+2025-07-24 06:52:59,778 - __main__ - INFO -    Total test time: 34.24s
+06:52:59 |     INFO |    Tests passed: 1/5
+2025-07-24 06:52:59,778 - __main__ - INFO -    Tests passed: 1/5
+2025-07-24 06:52:59,778 - __main__ - INFO -    Tests passed: 1/5
+06:52:59 |     INFO |    Overall success: False
+2025-07-24 06:52:59,779 - __main__ - INFO -    Overall success: False
+2025-07-24 06:52:59,779 - __main__ - INFO -    Overall success: False
+06:52:59 |     INFO |
+⚠️ Errors encountered (4 total):
+2025-07-24 06:52:59,779 - __main__ - INFO -
+⚠️ Errors encountered (4 total):
+2025-07-24 06:52:59,779 - __main__ - INFO -
+⚠️ Errors encountered (4 total):
+06:52:59 |     INFO |    - model_init: Model initialization error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,780 - __main__ - INFO -    - model_init: Model initialization error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,780 - __main__ - INFO -    - model_init: Model initialization error: Cannot interpret '0.8' as a data type
+06:52:59 |     INFO |    - enhancements: Enhancement testing error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,781 - __main__ - INFO -    - enhancements: Enhancement testing error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,781 - __main__ - INFO -    - enhancements: Enhancement testing error: Cannot interpret '0.8' as a data type
+06:52:59 |     INFO |    - training: Training integration error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,781 - __main__ - INFO -    - training: Training integration error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,781 - __main__ - INFO -    - training: Training integration error: Cannot interpret '0.8' as a data type
+06:52:59 |     INFO |    - performance: Performance benchmark error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,782 - __main__ - INFO -    - performance: Performance benchmark error: Cannot interpret '0.8' as a data type
+2025-07-24 06:52:59,782 - __main__ - INFO -    - performance: Performance benchmark error: Cannot interpret '0.8' as a data type
+06:52:59 |     INFO |
+================================================================================
+2025-07-24 06:52:59,783 - __main__ - INFO -
+================================================================================
+2025-07-24 06:52:59,783 - __main__ - INFO -
+================================================================================
+06:52:59 |     INFO | 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+2025-07-24 06:52:59,783 - __main__ - INFO - 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+2025-07-24 06:52:59,783 - __main__ - INFO - 🔧 INTEGRATION ISSUES REQUIRE ATTENTION
+06:52:59 |     INFO |    Please address errors before production deployment
+2025-07-24 06:52:59,784 - __main__ - INFO -    Please address errors before production deployment
+2025-07-24 06:52:59,784 - __main__ - INFO -    Please address errors before production deployment
+06:52:59 |     INFO | ================================================================================
+2025-07-24 06:52:59,784 - __main__ - INFO - ================================================================================
+2025-07-24 06:52:59,784 - __main__ - INFO - ================================================================================

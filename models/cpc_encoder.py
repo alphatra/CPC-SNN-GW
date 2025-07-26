@@ -9,6 +9,7 @@ Key fixes from analysis:
 - Proper context-prediction training loop  
 - Fixed downsample factor (4 instead of 64)
 - Enhanced architecture for 80%+ accuracy
+- 🚀 NEW: Advanced Temporal Transformer for superior temporal modeling
 """
 
 import jax
@@ -26,11 +27,123 @@ from .cpc_losses import enhanced_info_nce_loss, info_nce_loss, contrastive_accur
 logger = logging.getLogger(__name__)
 
 
+# ✅ NEW: Temporal Transformer Configuration
+@dataclass
+class TemporalTransformerConfig:
+    """Configuration for Temporal Transformer in Enhanced CPC."""
+    num_heads: int = 8
+    num_layers: int = 4
+    dropout_rate: float = 0.1
+    multi_scale_kernels: Tuple[int, ...] = (3, 5, 7, 9)
+    use_layer_norm: bool = True
+    use_residual_connections: bool = True
+    attention_dropout: float = 0.1
+    feed_forward_dim: int = 512
+
+
+class TemporalTransformerCPC(nn.Module):
+    """
+    🚀 ENHANCED: Advanced Temporal Transformer for CPC.
+    
+    Replaces simple Dense temporal processor with sophisticated architecture:
+    - Multi-scale temporal convolutions (1, 3, 5, 7 time steps)
+    - Self-attention for long-range dependencies  
+    - Residual connections and layer normalization
+    - Optimized for gravitational wave temporal patterns
+    """
+    transformer_config: TemporalTransformerConfig
+    
+    @nn.compact
+    def __call__(self, x: jnp.ndarray, training: bool = False) -> Dict[str, jnp.ndarray]:
+        """
+        Enhanced temporal modeling with multi-scale attention.
+        
+        Args:
+            x: Input features [batch, time, features]
+            training: Training mode flag
+            
+        Returns:
+            Dictionary with processed features and attention weights
+        """
+        batch_size, seq_len, feature_dim = x.shape
+        
+        # Multi-scale temporal convolutions
+        multi_scale_outputs = []
+        for kernel_size in self.transformer_config.multi_scale_kernels:
+            conv_output = nn.Conv(
+                features=feature_dim,
+                kernel_size=(kernel_size,),
+                padding='SAME',
+                name=f'multi_scale_conv_{kernel_size}'
+            )(x)
+            
+            if self.transformer_config.use_layer_norm:
+                conv_output = nn.LayerNorm(name=f'layer_norm_conv_{kernel_size}')(conv_output)
+            
+            multi_scale_outputs.append(conv_output)
+        
+        # Combine multi-scale features
+        combined_features = sum(multi_scale_outputs) / len(multi_scale_outputs)
+        
+        # Self-attention layers
+        attention_weights = None
+        x_processed = combined_features
+        
+        for layer_idx in range(self.transformer_config.num_layers):
+            # Multi-head self-attention
+            attention_output = nn.MultiHeadDotProductAttention(
+                num_heads=self.transformer_config.num_heads,
+                dropout_rate=self.transformer_config.attention_dropout,
+                name=f'attention_layer_{layer_idx}'
+            )(x_processed, deterministic=not training)
+            
+            # Residual connection
+            if self.transformer_config.use_residual_connections:
+                x_processed = x_processed + attention_output
+            else:
+                x_processed = attention_output
+            
+            # Layer normalization
+            if self.transformer_config.use_layer_norm:
+                x_processed = nn.LayerNorm(name=f'layer_norm_attention_{layer_idx}')(x_processed)
+            
+            # Feed-forward network
+            ff_output = nn.Dense(
+                features=self.transformer_config.feed_forward_dim,
+                name=f'ff_dense1_{layer_idx}'
+            )(x_processed)
+            ff_output = nn.gelu(ff_output)
+            ff_output = nn.Dropout(
+                rate=self.transformer_config.dropout_rate, 
+                deterministic=not training
+            )(ff_output)
+            ff_output = nn.Dense(
+                features=feature_dim,
+                name=f'ff_dense2_{layer_idx}'
+            )(ff_output)
+            
+            # Residual connection for feed-forward
+            if self.transformer_config.use_residual_connections:
+                x_processed = x_processed + ff_output
+            else:
+                x_processed = ff_output
+            
+            # Final layer normalization
+            if self.transformer_config.use_layer_norm:
+                x_processed = nn.LayerNorm(name=f'layer_norm_ff_{layer_idx}')(x_processed)
+        
+        return {
+            'processed_features': x_processed,
+            'attention_weights': attention_weights,
+            'multi_scale_features': combined_features
+        }
+
+
 @dataclass
 class RealCPCConfig:
     """🚨 FIXED: Real CPC configuration with critical parameter fixes."""
     # 🚨 CRITICAL FIX: Architecture parameters fixed for frequency preservation
-    latent_dim: int = 256  # ✅ REDUCED: GPU memory optimization 512→256
+    latent_dim: int = 64   # ✅ ULTRA-MINIMAL: GPU memory optimization 128→64 (prevents model collapse + memory)
     conv_channels: Tuple[int, ...] = (64, 128, 256, 512)  # ✅ Progressive depth
     downsample_factor: int = 4  # ✅ CRITICAL FIX: Was 64 (destroyed 99% frequency info)
     context_length: int = 256   # ✅ INCREASED from 64 for proper GW stationarity
@@ -57,6 +170,11 @@ class RealCPCConfig:
     use_gradient_checkpointing: bool = True
     use_mixed_precision: bool = True
     input_scaling: float = 1.0  # ✅ CRITICAL FIX: Changed from 1e20 to prevent numerical overflow
+    
+    # 🚀 NEW: Temporal Transformer parameters
+    use_temporal_transformer: bool = True  # Enable enhanced temporal modeling
+    temporal_attention_heads: int = 8
+    temporal_scales: Tuple[int, ...] = (1, 3, 5, 7, 9)
 
 
 class RealCPCEncoder(nn.Module):
@@ -69,6 +187,7 @@ class RealCPCEncoder(nn.Module):
     - Fixed architecture parameters (downsample_factor=4, context_length=256)
     - Proper context-prediction training loop
     - Enhanced gradient flow and numerical stability
+    - 🚀 NEW: Advanced Temporal Transformer for superior temporal modeling
     """
     config: RealCPCConfig
     
@@ -103,6 +222,8 @@ class RealCPCEncoder(nn.Module):
                 kernel_size=(self.config.conv_kernel_size,),
                 strides=(stride,),
                 padding='SAME',
+                kernel_init=nn.initializers.he_normal(),  # ✅ Explicit He init for GELU
+                bias_init=nn.initializers.zeros,
                 name=f'conv_{i}'
             )(x_conv)
             
@@ -121,33 +242,50 @@ class RealCPCEncoder(nn.Module):
             
             outputs[f'conv_{i}'] = x_conv
         
-        # Remove channel dimension and prepare for RNN: [batch, time_downsampled, features]
+        # Remove channel dimension and prepare for temporal processing: [batch, time_downsampled, features]
         # 🚨 CRITICAL FIX: x_conv already has correct shape [batch, time, features] - no squeeze needed
         x_features = x_conv  # Shape: [batch, time_downsampled, conv_channels[-1]]
         
-        # 🚨 FIXED: Temporal modeling with simple Dense layers
-        # Use stable Dense layer implementation - no gradient checkpointing for now
-        temporal_processor = nn.Dense(
-            features=self.config.gru_hidden_size,
-            kernel_init=nn.initializers.xavier_uniform(),
-            name='temporal_processor'
-        )
+        # 🚀 ENHANCED: Temporal modeling with Advanced Transformer
+        if self.config.use_temporal_transformer:
+            # Use sophisticated Temporal Transformer
+            temporal_processor = TemporalTransformerCPC(
+                transformer_config=TemporalTransformerConfig(
+                    num_heads=self.config.temporal_attention_heads,
+                    multi_scale_kernels=self.config.temporal_scales,
+                    dropout_rate=self.config.dropout_rate,
+                    num_layers=4, # Default layers for temporal transformer
+                    use_layer_norm=True,
+                    use_residual_connections=True,
+                    attention_dropout=0.1,
+                    feed_forward_dim=512
+                ),
+                name='temporal_transformer'
+            )
+            temporal_output = temporal_processor(x_features, training=train)
+            x_temporal = temporal_output['processed_features']
+            logger.debug("🚀 Using Enhanced Temporal Transformer for superior temporal modeling")
+        else:
+            # Fallback to simple Dense layer (legacy mode)
+            temporal_processor = nn.Dense(
+                features=self.config.gru_hidden_size,
+                kernel_init=nn.initializers.he_normal(),
+                bias_init=nn.initializers.zeros,
+                name='temporal_processor_legacy'
+            )
+            x_temporal = temporal_processor(x_features)
+            x_temporal = nn.tanh(x_temporal)
+            logger.debug("⚠️  Using legacy Dense temporal processor")
         
-        # Process temporal features without checkpointing to avoid state issues
-        x_gru = temporal_processor(x_features)
+        outputs['temporal'] = x_temporal
         
-        # Apply temporal activation
-        x_gru = nn.tanh(x_gru)
-        
-        outputs['gru'] = x_gru
-        
-        # 🚨 FIXED: Final projection to latent space - using standard Dense for stability
+        # 🚨 FIXED: Final projection with He initialization and smaller scale
         z = nn.Dense(
             self.config.latent_dim,
-            kernel_init=nn.initializers.xavier_uniform(),
+            kernel_init=nn.initializers.he_normal(in_axis=1, out_axis=0),  # ✅ He for final layer
             bias_init=nn.initializers.zeros,
             name='projection'
-        )(x_gru)
+        )(x_temporal)
         
         # 🚨 CRITICAL: L2 normalization for stable contrastive learning
         z_norm = jnp.linalg.norm(z, axis=-1, keepdims=True)
@@ -374,7 +512,7 @@ class ExperimentConfig:
     temperature: float = 0.1
     num_negatives: int = 8
     use_hard_negatives: bool = False
-    input_scaling: float = 1e20
+    input_scaling: float = 1.0  # ✅ MEMORY BANK COMPLIANCE: Fixed from 1e20
     sequence_length: int = 4096
     use_equinox_gru: bool = True
     use_gradient_checkpointing: bool = True
@@ -382,20 +520,89 @@ class ExperimentConfig:
 
 
 class EnhancedCPCEncoder(nn.Module):
-    """⚠️ DEPRECATED: Use RealCPCEncoder instead."""
-    config: ExperimentConfig
+    """
+    🚀 ENHANCED CPC Encoder with Temporal Transformer support.
+    
+    Features:
+    - Optional Temporal Transformer integration
+    - Multi-scale temporal processing
+    - Self-attention for long-range dependencies
+    - Flexible architecture configuration
+    """
+    latent_dim: int = 256
+    transformer_config: Optional[TemporalTransformerConfig] = None
+    use_temporal_transformer: bool = False
+    conv_channels: Tuple[int, ...] = (32, 64, 128)
+    downsample_factor: int = 4
+    dropout_rate: float = 0.1
     
     @nn.compact  
-    def __call__(self, x: jnp.ndarray, train: bool = False) -> jnp.ndarray:
-        # Redirect to real implementation
-        real_config = RealCPCConfig(
-            latent_dim=self.config.latent_dim,
-            conv_channels=self.config.conv_channels,
-            downsample_factor=4,  # Fixed
-            context_length=256,   # Fixed
-        )
-        real_encoder = RealCPCEncoder(config=real_config)
-        return real_encoder(x, train=train)
+    def __call__(self, x: jnp.ndarray, training: bool = False, return_intermediates: bool = False) -> Union[jnp.ndarray, Dict[str, jnp.ndarray]]:
+        """
+        Enhanced CPC encoder forward pass.
+        
+        Args:
+            x: Input signals [batch, sequence_length]
+            training: Training mode flag
+            return_intermediates: Whether to return intermediate outputs
+            
+        Returns:
+            Latent features or dict with intermediates
+        """
+        # Convert to 2D if needed: [batch, seq_len] -> [batch, seq_len, 1]
+        if len(x.shape) == 2:
+            x = jnp.expand_dims(x, axis=-1)
+        
+        # 🔧 1. Convolutional Feature Extraction
+        x_conv = x
+        for i, channels in enumerate(self.conv_channels):
+            x_conv = nn.Conv(
+                features=channels,
+                kernel_size=(9,),
+                strides=(2,) if i < len(self.conv_channels) - 1 else (1,),
+                padding='SAME',
+                name=f'conv_{i}'
+            )(x_conv)
+            x_conv = nn.BatchNorm(use_running_average=not training, name=f'bn_{i}')(x_conv)
+            x_conv = nn.gelu(x_conv)
+            
+            if self.dropout_rate > 0:
+                x_conv = nn.Dropout(rate=self.dropout_rate, deterministic=not training)(x_conv)
+        
+        # 🚀 2. Optional Temporal Transformer Processing
+        if self.use_temporal_transformer and self.transformer_config is not None:
+            temporal_processor = TemporalTransformerCPC(
+                transformer_config=self.transformer_config,
+                name='temporal_transformer'
+            )
+            temporal_output = temporal_processor(x_conv, training=training)
+            x_processed = temporal_output['processed_features']
+            attention_weights = temporal_output.get('attention_weights', None)
+        else:
+            # Standard processing without transformer
+            x_processed = x_conv
+            attention_weights = None
+        
+        # 🎯 3. Final projection to latent dimension
+        latent_features = nn.Dense(
+            features=self.latent_dim,
+            name='latent_projection'
+        )(x_processed)
+        
+        # Apply tanh activation for stable training
+        latent_features = nn.tanh(latent_features)
+        
+        # Prepare output
+        if return_intermediates:
+            return {
+                'latent_features': latent_features,
+                'conv_features': x_conv,
+                'processed_features': x_processed,
+                'attention_weights': attention_weights,
+                'use_temporal_transformer': self.use_temporal_transformer
+            }
+        else:
+            return latent_features
 
 
 class CPCEncoder(nn.Module):

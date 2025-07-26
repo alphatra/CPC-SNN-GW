@@ -20,7 +20,7 @@ from dataclasses import dataclass
 import logging
 from pathlib import Path
 
-from data.gw_data_sources import QualityMetrics, ProcessingResult
+from data.readligo_data_sources import QualityMetrics, ProcessingResult
 from data.cache_manager import create_professional_cache
 
 logger = logging.getLogger(__name__)

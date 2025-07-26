@@ -1,0 +1,422 @@
+21:02:04 |     INFO | W&B tracking initialized
+2025-07-25 21:02:04,644 - training.training_metrics - INFO - W&B tracking initialized
+21:02:04 |     INFO | TensorBoard logging to: outputs/tensorboard
+2025-07-25 21:02:04,647 - training.training_metrics - INFO - TensorBoard logging to: outputs/tensorboard
+21:02:04 |     INFO | Using basic experiment tracker
+2025-07-25 21:02:04,647 - training.base_trainer - INFO - Using basic experiment tracker
+21:02:04 |     INFO | Configuration saved to outputs/config.json
+2025-07-25 21:02:04,649 - training.training_utils - INFO - Configuration saved to outputs/config.json
+21:02:04 |     INFO | Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+2025-07-25 21:02:04,651 - training.base_trainer - INFO - Initialized CompleteEnhancedTrainer with config: cpc_snn_gw
+21:02:04 |     INFO | 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+2025-07-25 21:02:04,652 - training.complete_enhanced_training - INFO - 🚀 Complete Enhanced Trainer initialized with ALL 5 improvements:
+21:02:04 |     INFO |    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+2025-07-25 21:02:04,653 - training.complete_enhanced_training - INFO -    1. Adaptive Surrogate: SurrogateGradientType.ADAPTIVE_MULTI_SCALE
+21:02:04 |     INFO |    2. Temporal Transformer: True
+2025-07-25 21:02:04,653 - training.complete_enhanced_training - INFO -    2. Temporal Transformer: True
+21:02:04 |     INFO |    3. Learnable Thresholds: True
+2025-07-25 21:02:04,653 - training.complete_enhanced_training - INFO -    3. Learnable Thresholds: True
+21:02:04 |     INFO |    4. Enhanced LIF: True
+2025-07-25 21:02:04,654 - training.complete_enhanced_training - INFO -    4. Enhanced LIF: True
+21:02:04 |     INFO |    5. Momentum InfoNCE: True
+2025-07-25 21:02:04,654 - training.complete_enhanced_training - INFO -    5. Momentum InfoNCE: True
+21:02:04 |     INFO | 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+2025-07-25 21:02:04,654 - training.complete_enhanced_training - INFO - 🚀 STARTING COMPLETE ENHANCED TRAINING - ALL 5 IMPROVEMENTS ACTIVE
+21:02:04 |     INFO | ================================================================================
+2025-07-25 21:02:04,655 - training.complete_enhanced_training - INFO - ================================================================================
+21:02:04 |     INFO | 📡 Loading real LIGO GW150914 data...
+2025-07-25 21:02:04,655 - training.complete_enhanced_training - INFO - 📡 Loading real LIGO GW150914 data...
+21:02:04 |  WARNING | Real LIGO data unavailable: create_real_ligo_dataset() got an unexpected keyword argument 'sequence_length'
+2025-07-25 21:02:04,655 - training.complete_enhanced_training - WARNING - Real LIGO data unavailable: create_real_ligo_dataset() got an unexpected keyword argument 'sequence_length'
+21:02:04 |     INFO | 🔄 Generating synthetic data for demonstration...
+2025-07-25 21:02:04,655 - training.complete_enhanced_training - INFO - 🔄 Generating synthetic data for demonstration...
+21:02:15 |     INFO | 🎯 Training for 2 epochs (10 steps/epoch)
+2025-07-25 21:02:15,090 - training.complete_enhanced_training - INFO - 🎯 Training for 2 epochs (10 steps/epoch)
+21:02:15 |     INFO | 📊 Total training steps: 20
+2025-07-25 21:02:15,091 - training.complete_enhanced_training - INFO - 📊 Total training steps: 20
+Traceback (most recent call last):
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 572, in <module>
+    final_results = run_comprehensive_test_suite()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 479, in run_comprehensive_test_suite
+    results_4 = test_complete_training_integration()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 315, in test_complete_training_integration
+    results = run_complete_enhanced_experiment(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 774, in run_complete_enhanced_experiment
+    results = trainer.run_complete_enhanced_training()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 614, in run_complete_enhanced_training
+    self.train_state, metrics = self.train_step(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 451, in train_step
+    (loss, metrics), grads = jax.value_and_grad(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 452, in <lambda>
+    lambda params: self.enhanced_loss_fn(train_state, params, micro_batch, rng_key), has_aux=True
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 368, in enhanced_loss_fn
+    model_output, new_batch_stats = train_state.apply_fn(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 227, in __call__
+    logits = self.snn_classifier(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 358, in __call__
+    x = VectorizedLIFLayer(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 324, in __call__
+    return self.enhanced_lif(spikes, training=training, training_progress=training_progress)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 189, in __call__
+    return self._enhanced_lif_forward(spikes, W, b, time_constants, training, training_progress)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 300, in _enhanced_lif_forward
+    _, output_spikes = jax.lax.scan(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 257, in enhanced_lif_step
+    spikes_out = spike_function_with_enhanced_surrogate(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_utils.py", line 196, in spike_function_with_enhanced_surrogate
+    return spike_function_with_surrogate(v_mem, threshold, surrogate_fn)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_utils.py", line 166, in spike_function_with_surrogate
+    surrogate_grad = surrogate_fn(v_mem - threshold)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_utils.py", line 58, in adaptive_multi_scale_surrogate
+    sigmoid_grad = 10.0 / (1.0 + jnp.abs(10.0 * x))  # Smooth, wide
+jax._src.source_info_util.JaxStackTraceBeforeTransformation: KeyboardInterrupt
+
+The preceding stack trace is the source of the JAX operation that, once transformed by JAX, triggered the following exception.
+
+--------------------
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 572, in <module>
+    final_results = run_comprehensive_test_suite()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 479, in run_comprehensive_test_suite
+    results_4 = test_complete_training_integration()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 315, in test_complete_training_integration
+    results = run_complete_enhanced_experiment(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 774, in run_complete_enhanced_experiment
+    results = trainer.run_complete_enhanced_training()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 614, in run_complete_enhanced_training
+    self.train_state, metrics = self.train_step(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 451, in train_step
+    (loss, metrics), grads = jax.value_and_grad(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/traceback_util.py", line 182, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api.py", line 512, in value_and_grad_f
+    ans, vjp_py, aux = _vjp(f_partial, *dyn_args, has_aux=True)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api.py", line 2183, in _vjp
+    out_primals, vjp, aux = ad.vjp(flat_fun, primals_flat, has_aux=True)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 294, in vjp
+    out_primals, pvals, jaxpr, consts, aux = linearize(traceable, *primals, has_aux=True)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 277, in linearize
+    jaxpr, out_pvals, consts = pe.trace_to_jaxpr_nounits(jvpfun_flat, in_pvals)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/profiler.py", line 354, in wrapper
+    return func(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 614, in trace_to_jaxpr_nounits
+    jaxpr, (out_pvals, consts, env) = fun.call_wrapped(pvals)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 211, in call_wrapped
+    return self.f_transformed(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 628, in trace_to_subjaxpr_nounits
+    out_tracers, jaxpr, out_consts, env = _trace_to_subjaxpr_nounits(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 661, in _trace_to_subjaxpr_nounits
+    ans = f(*in_args)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api_util.py", line 73, in flatten_fun
+    ans = f(*py_args, **py_kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 81, in jvpfun
+    out_primals, out_tangents = f(tag, primals, tangents)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 145, in jvp_subtrace_aux
+    ans, aux = f(*(map(partial(maybe_jvp_tracer, trace), primals, tangents)))
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api_util.py", line 106, in flatten_fun_nokwargs2
+    pair = f(*py_args)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api_util.py", line 288, in _argnums_partial
+    return _fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 396, in _get_result_paths_thunk
+    ans = _fun(*args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 452, in <lambda>
+    lambda params: self.enhanced_loss_fn(train_state, params, micro_batch, rng_key), has_aux=True
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 368, in enhanced_loss_fn
+    model_output, new_batch_stats = train_state.apply_fn(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/traceback_util.py", line 182, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 2240, in apply
+    return apply(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/core/scope.py", line 1079, in wrapper
+    y = fn(root, *args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 3022, in scope_fn
+    return fn(module.clone(parent=scope, _deep_clone=True), *args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 227, in __call__
+    logits = self.snn_classifier(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 358, in __call__
+    x = VectorizedLIFLayer(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 324, in __call__
+    return self.enhanced_lif(spikes, training=training, training_progress=training_progress)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 189, in __call__
+    return self._enhanced_lif_forward(spikes, W, b, time_constants, training, training_progress)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 300, in _enhanced_lif_forward
+    _, output_spikes = jax.lax.scan(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/traceback_util.py", line 182, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/control_flow/loops.py", line 370, in scan
+    out = scan_p.bind(*consts, *in_flat,
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 536, in bind
+    return self._true_bind(*args, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 552, in _true_bind
+    return self.bind_with_trace(prev_trace, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 562, in bind_with_trace
+    return trace.process_primitive(self, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 500, in process_primitive
+    primal_out, tangent_out = jvp(primals_in, tangents_in, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/control_flow/loops.py", line 668, in _scan_jvp
+    jaxpr_jvp, nonzeros_out = ad.jvp_jaxpr(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 1182, in jvp_jaxpr
+    return _jvp_jaxpr(jaxpr, tuple(nonzeros), tuple(instantiate))
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 1195, in _jvp_jaxpr
+    jaxpr_out, avals_out, literals_out, () = pe.trace_to_jaxpr_dynamic(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/profiler.py", line 354, in wrapper
+    return func(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 2292, in trace_to_jaxpr_dynamic
+    ans = fun.call_wrapped(*in_tracers)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 211, in call_wrapped
+    return self.f_transformed(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 1206, in f_jvp_traceable
+    primals_out, tangents_out = f(primals, tangents)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 81, in jvpfun
+    out_primals, out_tangents = f(tag, primals, tangents)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 136, in jvp_subtrace
+    ans = f(*in_tracers)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 296, in jaxpr_as_fun
+    return eval_jaxpr(closed_jaxpr.jaxpr, closed_jaxpr.consts, *args)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 630, in eval_jaxpr
+    ans = eqn.primitive.bind(*subfuns, *map(read, eqn.invars), **bind_params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 536, in bind
+    return self._true_bind(*args, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 552, in _true_bind
+    return self.bind_with_trace(prev_trace, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 562, in bind_with_trace
+    return trace.process_primitive(self, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 500, in process_primitive
+    primal_out, tangent_out = jvp(primals_in, tangents_in, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 1010, in standard_jvp2
+    val_out = primitive.bind(*primals, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 536, in bind
+    return self._true_bind(*args, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 552, in _true_bind
+    return self.bind_with_trace(prev_trace, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 562, in bind_with_trace
+    return trace.process_primitive(self, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 1999, in process_primitive
+    return self.default_process_primitive(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 2005, in default_process_primitive
+    out_avals, effs = primitive.abstract_eval(*aval_qdds, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 597, in abstract_eval_
+    return abstract_eval(*args, **kwargs), no_effects
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/utils.py", line 134, in standard_abstract_eval
+    out_shape, out_dtype, out_sharding = call_shape_dtype_sharding_rule(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/utils.py", line 97, in call_shape_dtype_sharding_rule
+    out_dtypes = dtype_rule(*avals, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/lax.py", line 3889, in unop_dtype_rule
+    return result_dtype(aval.dtype, **kwargs)
+KeyboardInterrupt
+Traceback (most recent call last):
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 572, in <module>
+    final_results = run_comprehensive_test_suite()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 479, in run_comprehensive_test_suite
+    results_4 = test_complete_training_integration()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 315, in test_complete_training_integration
+    results = run_complete_enhanced_experiment(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 774, in run_complete_enhanced_experiment
+    results = trainer.run_complete_enhanced_training()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 614, in run_complete_enhanced_training
+    self.train_state, metrics = self.train_step(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 451, in train_step
+    (loss, metrics), grads = jax.value_and_grad(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 452, in <lambda>
+    lambda params: self.enhanced_loss_fn(train_state, params, micro_batch, rng_key), has_aux=True
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 368, in enhanced_loss_fn
+    model_output, new_batch_stats = train_state.apply_fn(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 227, in __call__
+    logits = self.snn_classifier(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 358, in __call__
+    x = VectorizedLIFLayer(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 324, in __call__
+    return self.enhanced_lif(spikes, training=training, training_progress=training_progress)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 189, in __call__
+    return self._enhanced_lif_forward(spikes, W, b, time_constants, training, training_progress)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 300, in _enhanced_lif_forward
+    _, output_spikes = jax.lax.scan(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 257, in enhanced_lif_step
+    spikes_out = spike_function_with_enhanced_surrogate(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_utils.py", line 196, in spike_function_with_enhanced_surrogate
+    return spike_function_with_surrogate(v_mem, threshold, surrogate_fn)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_utils.py", line 166, in spike_function_with_surrogate
+    surrogate_grad = surrogate_fn(v_mem - threshold)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_utils.py", line 58, in adaptive_multi_scale_surrogate
+    sigmoid_grad = 10.0 / (1.0 + jnp.abs(10.0 * x))  # Smooth, wide
+jax._src.source_info_util.JaxStackTraceBeforeTransformation: KeyboardInterrupt
+
+The preceding stack trace is the source of the JAX operation that, once transformed by JAX, triggered the following exception.
+
+--------------------
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 572, in <module>
+    final_results = run_comprehensive_test_suite()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 479, in run_comprehensive_test_suite
+    results_4 = test_complete_training_integration()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/test_complete_enhanced_integration.py", line 315, in test_complete_training_integration
+    results = run_complete_enhanced_experiment(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 774, in run_complete_enhanced_experiment
+    results = trainer.run_complete_enhanced_training()
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 614, in run_complete_enhanced_training
+    self.train_state, metrics = self.train_step(
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 451, in train_step
+    (loss, metrics), grads = jax.value_and_grad(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/traceback_util.py", line 182, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api.py", line 512, in value_and_grad_f
+    ans, vjp_py, aux = _vjp(f_partial, *dyn_args, has_aux=True)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api.py", line 2183, in _vjp
+    out_primals, vjp, aux = ad.vjp(flat_fun, primals_flat, has_aux=True)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 294, in vjp
+    out_primals, pvals, jaxpr, consts, aux = linearize(traceable, *primals, has_aux=True)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 277, in linearize
+    jaxpr, out_pvals, consts = pe.trace_to_jaxpr_nounits(jvpfun_flat, in_pvals)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/profiler.py", line 354, in wrapper
+    return func(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 614, in trace_to_jaxpr_nounits
+    jaxpr, (out_pvals, consts, env) = fun.call_wrapped(pvals)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 211, in call_wrapped
+    return self.f_transformed(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 628, in trace_to_subjaxpr_nounits
+    out_tracers, jaxpr, out_consts, env = _trace_to_subjaxpr_nounits(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 661, in _trace_to_subjaxpr_nounits
+    ans = f(*in_args)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api_util.py", line 73, in flatten_fun
+    ans = f(*py_args, **py_kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 81, in jvpfun
+    out_primals, out_tangents = f(tag, primals, tangents)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 145, in jvp_subtrace_aux
+    ans, aux = f(*(map(partial(maybe_jvp_tracer, trace), primals, tangents)))
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api_util.py", line 106, in flatten_fun_nokwargs2
+    pair = f(*py_args)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/api_util.py", line 288, in _argnums_partial
+    return _fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 396, in _get_result_paths_thunk
+    ans = _fun(*args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 452, in <lambda>
+    lambda params: self.enhanced_loss_fn(train_state, params, micro_batch, rng_key), has_aux=True
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 368, in enhanced_loss_fn
+    model_output, new_batch_stats = train_state.apply_fn(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/traceback_util.py", line 182, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 2240, in apply
+    return apply(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/core/scope.py", line 1079, in wrapper
+    y = fn(root, *args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 3022, in scope_fn
+    return fn(module.clone(parent=scope, _deep_clone=True), *args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/training/complete_enhanced_training.py", line 227, in __call__
+    logits = self.snn_classifier(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 358, in __call__
+    x = VectorizedLIFLayer(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 324, in __call__
+    return self.enhanced_lif(spikes, training=training, training_progress=training_progress)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 189, in __call__
+    return self._enhanced_lif_forward(spikes, W, b, time_constants, training, training_progress)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 699, in wrapped_module_method
+    return self._call_wrapped_method(fun, args, kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/flax/linen/module.py", line 1216, in _call_wrapped_method
+    y = run_fun(self, *args, **kwargs)
+  File "/teamspace/studios/this_studio/CPC-SNN-GW/models/snn_classifier.py", line 300, in _enhanced_lif_forward
+    _, output_spikes = jax.lax.scan(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/traceback_util.py", line 182, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/control_flow/loops.py", line 370, in scan
+    out = scan_p.bind(*consts, *in_flat,
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 536, in bind
+    return self._true_bind(*args, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 552, in _true_bind
+    return self.bind_with_trace(prev_trace, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 562, in bind_with_trace
+    return trace.process_primitive(self, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 500, in process_primitive
+    primal_out, tangent_out = jvp(primals_in, tangents_in, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/control_flow/loops.py", line 668, in _scan_jvp
+    jaxpr_jvp, nonzeros_out = ad.jvp_jaxpr(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 1182, in jvp_jaxpr
+    return _jvp_jaxpr(jaxpr, tuple(nonzeros), tuple(instantiate))
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 1195, in _jvp_jaxpr
+    jaxpr_out, avals_out, literals_out, () = pe.trace_to_jaxpr_dynamic(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/profiler.py", line 354, in wrapper
+    return func(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 2292, in trace_to_jaxpr_dynamic
+    ans = fun.call_wrapped(*in_tracers)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/linear_util.py", line 211, in call_wrapped
+    return self.f_transformed(*args, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 1206, in f_jvp_traceable
+    primals_out, tangents_out = f(primals, tangents)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 81, in jvpfun
+    out_primals, out_tangents = f(tag, primals, tangents)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 136, in jvp_subtrace
+    ans = f(*in_tracers)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 296, in jaxpr_as_fun
+    return eval_jaxpr(closed_jaxpr.jaxpr, closed_jaxpr.consts, *args)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 630, in eval_jaxpr
+    ans = eqn.primitive.bind(*subfuns, *map(read, eqn.invars), **bind_params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 536, in bind
+    return self._true_bind(*args, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 552, in _true_bind
+    return self.bind_with_trace(prev_trace, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 562, in bind_with_trace
+    return trace.process_primitive(self, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 500, in process_primitive
+    primal_out, tangent_out = jvp(primals_in, tangents_in, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/ad.py", line 1010, in standard_jvp2
+    val_out = primitive.bind(*primals, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 536, in bind
+    return self._true_bind(*args, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 552, in _true_bind
+    return self.bind_with_trace(prev_trace, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 562, in bind_with_trace
+    return trace.process_primitive(self, args, params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 1999, in process_primitive
+    return self.default_process_primitive(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/interpreters/partial_eval.py", line 2005, in default_process_primitive
+    out_avals, effs = primitive.abstract_eval(*aval_qdds, **params)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/core.py", line 597, in abstract_eval_
+    return abstract_eval(*args, **kwargs), no_effects
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/utils.py", line 134, in standard_abstract_eval
+    out_shape, out_dtype, out_sharding = call_shape_dtype_sharding_rule(
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/utils.py", line 97, in call_shape_dtype_sharding_rule
+    out_dtypes = dtype_rule(*avals, **kwargs)
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/jax/_src/lax/lax.py", line 3889, in unop_dtype_rule
+    return result_dtype(aval.dtype, **kwargs)
+KeyboardInterrupt

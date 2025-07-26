@@ -1,31 +1,34 @@
 """
-GWOSC Data Download Pipeline
+✅ FIXED ReadLIGO Data Download Pipeline
 
 Unified interface for gravitational wave data downloading and preprocessing.
-This module provides backward compatibility while delegating functionality
-to specialized modules.
+REPLACED problematic GWOSC API with working ReadLIGO solution.
 
-Refactored into:
-- gw_data_sources.py: Abstract data sources and quality metrics
-- gw_downloader.py: GWOSC downloader implementation  
-- gw_preprocessor.py: Data preprocessing and segment sampling
+Updated modules:
+- readligo_data_sources.py: ReadLIGO data sources and quality metrics ✅
+- readligo_downloader.py: ReadLIGO downloader implementation ✅
+- gw_preprocessor.py: Data preprocessing and segment sampling ✅
 """
 
-# Import core functionality from specialized modules
-from .gw_data_sources import (
-    GWDataSource,
+# ✅ FIXED: Import ReadLIGO functionality instead of GWOSC
+from .readligo_data_sources import (
+    LIGOEventData,
     QualityMetrics,
     ProcessingResult,
-    SmartSegmentSampler,
-    validate_strain_data
+    LIGODataQuality,
+    ReadLIGODataFetcher,
+    LIGODataValidator,
+    create_readligo_fetcher,
+    create_ligo_validator
 )
 
-from .gw_downloader import (
-    ProductionGWOSCDownloader,
+from .readligo_downloader import (
+    ReadLIGODownloader,
     _safe_jax_cpu_context,
     _compute_kurtosis,
     _safe_array_to_jax,
-    _generate_cache_key
+    _generate_cache_key,
+    create_readligo_downloader
 )
 
 from .gw_preprocessor import (
@@ -33,30 +36,56 @@ from .gw_preprocessor import (
     SegmentSampler
 )
 
-# Legacy aliases for backward compatibility
-GWOSCDownloader = ProductionGWOSCDownloader
+# ✅ FIXED: Legacy aliases now point to ReadLIGO
+LIGODownloader = ReadLIGODownloader
 DataPreprocessor = AdvancedDataPreprocessor
 
+# ⚠️ DEPRECATED but kept for backward compatibility
+# These will issue warnings when used
+import warnings
+
+class _DeprecatedGWOSCDownloader:
+    def __init__(self, *args, **kwargs):
+        warnings.warn(
+            "GWOSCDownloader is deprecated and replaced with ReadLIGODownloader. "
+            "Please update your code to use ReadLIGODownloader for reliable LIGO data access.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        self._readligo = ReadLIGODownloader(*args, **kwargs)
+    
+    def __getattr__(self, name):
+        return getattr(self._readligo, name)
+
+GWOSCDownloader = _DeprecatedGWOSCDownloader
+
 __all__ = [
-    # Core classes
-    'ProductionGWOSCDownloader',
+    # ✅ FIXED: Core ReadLIGO classes
+    'ReadLIGODownloader',
+    'LIGODownloader', 
     'AdvancedDataPreprocessor', 
     'SegmentSampler',
     
-    # Data sources
-    'GWDataSource',
+    # ✅ FIXED: ReadLIGO data sources
+    'LIGOEventData',
     'QualityMetrics',
     'ProcessingResult',
-    'SmartSegmentSampler',
+    'LIGODataQuality',
+    'ReadLIGODataFetcher',
+    'LIGODataValidator',
+    
+    # ✅ FIXED: Factory functions
+    'create_readligo_fetcher',
+    'create_ligo_validator',
+    'create_readligo_downloader',
     
     # Utility functions
-    'validate_strain_data',
     '_safe_jax_cpu_context',
     '_compute_kurtosis',
     '_safe_array_to_jax',
     '_generate_cache_key',
     
-    # Legacy aliases
+    # ⚠️ DEPRECATED: Legacy aliases (with warnings)
     'GWOSCDownloader',
     'DataPreprocessor'
 ] 

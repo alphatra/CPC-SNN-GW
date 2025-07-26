@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 
 from .cache_manager import ProfessionalCacheManager
-from .gw_data_sources import ProcessingResult, QualityMetrics
+from .readligo_data_sources import ProcessingResult, QualityMetrics
 
 logger = logging.getLogger(__name__)
 
