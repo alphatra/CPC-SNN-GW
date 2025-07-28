@@ -12,6 +12,7 @@ Key Features:
 
 import logging
 import numpy as np
+import jax
 import jax.numpy as jnp
 from typing import Tuple, Optional
 
@@ -214,6 +215,124 @@ def create_simulated_gw150914_strain() -> np.ndarray:
     logger.info(f"⭐ Simulated masses: {m1:.1f} + {m2:.1f} solar masses")
     
     return strain_final
+
+def create_enhanced_ligo_dataset(num_samples: int = 2000,
+                               window_size: int = 256,
+                               enhanced_overlap: float = 0.9,
+                               data_augmentation: bool = True,
+                               noise_scaling: bool = True) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    """
+    Create ENHANCED dataset with significantly more samples through:
+    - High overlap windowing (90% instead of 50%)
+    - Data augmentation (noise scaling, time shifts)
+    - Synthetic data supplementation
+    
+    Args:
+        num_samples: Target number of total samples
+        window_size: Size of each window
+        enhanced_overlap: High overlap for more windows (0.9 = 90%)
+        data_augmentation: Apply noise/amplitude variations
+        noise_scaling: Add realistic noise variations
+        
+    Returns:
+        Tuple of (signals, labels) with enhanced dataset
+    """
+    logger.info(f"🚀 Creating ENHANCED dataset with {num_samples} target samples")
+    logger.info(f"   Enhanced overlap: {enhanced_overlap:.1%}")
+    logger.info(f"   Data augmentation: {data_augmentation}")
+    
+    all_signals = []
+    all_labels = []
+    
+    # 1. GET REAL LIGO DATA with HIGH OVERLAP
+    real_strain = download_gw150914_data()
+    if real_strain is not None:
+        logger.info("📡 Processing real LIGO data with enhanced windowing...")
+        
+        # Use high overlap (90%) for many more windows
+        signals, labels = create_proper_windows(
+            real_strain, 
+            window_size=window_size, 
+            overlap=enhanced_overlap
+        )
+        
+        logger.info(f"✅ Real LIGO windows: {len(signals)} (vs previous ~15)")
+        all_signals.extend(signals)
+        all_labels.extend(labels)
+        
+        # 2. DATA AUGMENTATION on real data
+        if data_augmentation and len(signals) > 0:
+            logger.info("🔄 Applying data augmentation to real LIGO data...")
+            
+            for amp_factor in [0.8, 1.2, 1.5]:  # Amplitude variations
+                aug_signals = signals * amp_factor
+                all_signals.extend(aug_signals)
+                all_labels.extend(labels)
+                
+            for noise_level in [0.5, 2.0]:  # Noise level variations
+                noise = jax.random.normal(jax.random.PRNGKey(42), signals.shape) * 1e-21
+                aug_signals = signals + noise_level * noise
+                all_signals.extend(aug_signals)
+                all_labels.extend(labels)
+                
+            logger.info(f"✅ Augmented data: +{len(signals) * 5} samples")
+    
+    # 3. SYNTHETIC DATA SUPPLEMENTATION
+    current_samples = len(all_signals)
+    remaining_samples = max(0, num_samples - current_samples)
+    
+    if remaining_samples > 0:
+        logger.info(f"🔄 Generating {remaining_samples} synthetic GW samples...")
+        
+        key = jax.random.PRNGKey(123)
+        time_series = jnp.linspace(0, 4.0, window_size)
+        
+        for i in range(remaining_samples):
+            signal_key, key = jax.random.split(key)
+            
+            if i % 3 == 0:  # 33% GW signals  
+                # Generate realistic chirp signals
+                f0 = 35.0 + jax.random.uniform(signal_key, (), minval=-10, maxval=10)
+                f1 = 350.0 + jax.random.uniform(signal_key, (), minval=-50, maxval=50)
+                chirp_rate = (f1 - f0) / 4.0
+                freq = f0 + chirp_rate * time_series
+                phase = 2 * jnp.pi * jnp.cumsum(freq) / window_size * 4.0
+                amplitude = (1e-21 + jax.random.uniform(signal_key, (), minval=0, maxval=5e-22)) * jnp.exp(-time_series / 2.0)
+                chirp = amplitude * jnp.sin(phase)
+                noise = 1e-21 * jax.random.normal(signal_key, (window_size,))
+                signal = chirp + 0.3 * noise
+                label = 1
+            else:  # 67% noise signals
+                # Realistic colored noise
+                noise = 1e-21 * jax.random.normal(signal_key, (window_size,))
+                # Add 1/f characteristics 
+                freq_noise = jnp.fft.fft(noise)
+                freqs = jnp.fft.fftfreq(window_size)
+                freq_noise = freq_noise / (1 + jnp.abs(freqs) * 100)
+                signal = jnp.real(jnp.fft.ifft(freq_noise))
+                label = 0
+                
+            all_signals.append(signal)
+            all_labels.append(label)
+    
+    # 4. FINAL DATASET
+    final_signals = jnp.array(all_signals)
+    final_labels = jnp.array(all_labels)
+    
+    # Shuffle the dataset
+    key = jax.random.PRNGKey(456)
+    indices = jax.random.permutation(key, len(final_signals))
+    final_signals = final_signals[indices]
+    final_labels = final_labels[indices]
+    
+    logger.info(f"🎯 ENHANCED DATASET CREATED:")
+    logger.info(f"   Total samples: {len(final_signals)}")
+    logger.info(f"   Window size: {final_signals.shape[1]}")
+    logger.info(f"   GW signals: {jnp.sum(final_labels)} ({jnp.mean(final_labels):.1%})")
+    logger.info(f"   Noise samples: {jnp.sum(1 - final_labels)} ({jnp.mean(1 - final_labels):.1%})")
+    
+    return final_signals, final_labels
+
 
 def create_real_ligo_dataset(num_samples: int = 1200, 
                            window_size: int = 512,

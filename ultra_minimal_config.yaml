@@ -1,0 +1,52 @@
+# Ultra-minimal config dla diagnozy freeze issue
+training:
+  batch_size: 1
+  learning_rate: 1e-3
+  epochs: 1
+  gradient_accumulation_steps: 1
+  learning_rate_schedule: "constant"
+  warmup_epochs: 0
+  early_stopping_patience: 0
+  dropout_rate: 0.0
+  gradient_clipping: 1.0
+
+model:
+  cpc_latent_dim: 32
+  snn_hidden_size: 32
+  sequence_length: 64
+  spike_time_steps: 8
+  transformer_num_heads: 2
+  transformer_num_layers: 1
+  multi_scale_kernels: [3]
+  num_threshold_scales: 2
+  refractory_time_constant: 1e-3
+  adaptation_time_constant: 10e-3
+  membrane_noise_std: 0.01
+  surrogate_gradient_beta: 1.0
+
+data:
+  target_samples: 100
+  enhanced_overlap: 0.5
+  window_size: 64
+  
+platform:
+  device: "cpu"
+  jax_memory_fraction: 0.3
+  
+safety:
+  pac_bayes_regularization: false
+  gradient_stability_monitoring: false
+  data_augmentation: false
+  mixed_precision: false
+  momentum_negatives: false
+  temporal_info_nce: false
+  adaptive_temperature: false
+  phase_preserving_encoding: false
+
+logging:
+  level: "INFO"
+  wandb_project: "ultra_minimal_debug"
+  
+evaluation:
+  validation_split: 0.2
+  eval_every_n_epochs: 1 

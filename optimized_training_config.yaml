@@ -1,0 +1,299 @@
+# 🚀 OPTIMIZED TRAINING CONFIGURATION - FAST & EFFICIENT
+# Rozwiązuje problemy wydajnościowe: 19.5s init → <5s init
+# Target: >90% accuracy z szybką wydajnością
+
+# 📊 Experiment Configuration  
+experiment:
+  name: "cpc_snn_gw_optimized_fast"
+  version: "performance_v1.0"
+  description: "Performance-optimized training - fast initialization & efficient memory usage"
+  target_accuracy: 0.90
+  scientific_validation: true
+
+# 🌊 Memory-Optimized Data Configuration
+data:
+  # Real LIGO data - optimized parameters
+  use_real_ligo_data: true
+  sample_rate: 4096
+  sequence_length: 128        # ✅ REDUCED: 256→128 for faster init
+  window_size: 128           # ✅ REDUCED: 256→128 for faster init  
+  enhanced_overlap: 0.7      # ✅ REDUCED: 0.9→0.7 for memory
+  num_samples: 1200          # ✅ REDUCED: 2000→1200 for faster loading
+  data_augmentation: true
+  noise_scaling: false       # ✅ DISABLED: for performance
+  
+  # Quality preprocessing
+  min_snr: 5.0
+  preprocessing:
+    whitening: true
+    bandpass_low: 35.0
+    bandpass_high: 350.0
+    scaling_factor: 1e20
+
+# 🧠 Performance-Optimized Model Architecture
+model:
+  # CPC Encoder - optimized
+  cpc:
+    latent_dim: 128           # ✅ INCREASED: for better representation
+    downsample_factor: 4
+    context_length: 128       # ✅ REDUCED: 256→128
+    prediction_steps: 4       # ✅ REDUCED: 8→4
+    num_negatives: 4          # ✅ REDUCED: 8→4
+    temperature: 0.07
+    conv_channels: [32, 64, 128]  # ✅ REDUCED: smaller channels
+    
+    # Simplified Temporal Transformer
+    use_temporal_transformer: true
+    transformer_num_heads: 2   # ✅ REDUCED: 4→2
+    transformer_num_layers: 1  # ✅ REDUCED: 2→1
+    multi_scale_kernels: [3, 5]  # ✅ REDUCED: [3,5,7]→[3,5]
+    temporal_attention_dropout: 0.1
+    use_attention: true         # ✅ ADDED: Attention mechanism for better context
+    
+  # Optimized Spike Bridge
+  spike_bridge:
+    encoding_strategy: "phase_preserving"
+    use_learnable_thresholds: true
+    num_threshold_scales: 2    # ✅ REDUCED: 4→2
+    threshold_adaptation_rate: 0.01
+    use_phase_preserving_encoding: true
+    edge_detection_thresholds: 2  # ✅ REDUCED: 4→2
+    
+  # Memory-Optimized SNN Classifier
+  snn:
+    hidden_sizes: [64, 32]     # ✅ REDUCED: [128,64]→[64,32]
+    num_classes: 2
+    snn_neurons_per_layer: 128 # ✅ CRITICAL REDUCTION: 512→128
+    snn_num_layers: 2          # ✅ CRITICAL REDUCTION: 4→2
+    
+    # Optimized LIF parameters
+    tau_mem: 20e-3            # ✅ SIMPLIFIED: 50e-6→20e-3
+    tau_syn: 5e-3             # ✅ SIMPLIFIED: 10e-6→5e-3
+    threshold: 1.0
+    use_enhanced_lif: true
+    use_refractory_period: false  # ✅ DISABLED: for performance
+    use_adaptation: false         # ✅ DISABLED: for performance
+    
+    # Simplified surrogate gradients
+    surrogate_gradient_type: "ADAPTIVE_MULTI_SCALE"
+    surrogate_gradient_beta: 2.0  # ✅ REDUCED: 4.0→2.0
+    surrogate_slope: 2.0          # ✅ ADDED: Required for validation
+    curriculum_learning: false    # ✅ DISABLED: for simplicity
+
+# 🎯 Fast Training Configuration
+training:
+  # Core parameters
+  num_epochs: 50
+  batch_size: 1              # ✅ SAFE: batch_size=1 for memory safety
+  learning_rate: 5e-4
+  weight_decay: 1e-4
+  use_focal_loss: true        # ✅ ADDED: Focal loss for class imbalance
+  
+  # Simplified learning rate schedule
+  learning_rate_schedule: "cosine_with_warmup"
+  warmup_epochs: 1           # ✅ REDUCED: 2→1
+  warmup_factor: 0.1
+  min_learning_rate: 1e-6
+  
+  # Optimized gradient settings
+  gradient_clipping: true
+  max_gradient_norm: 1.0
+  gradient_accumulation_steps: 2  # ✅ REDUCED: 4→2 (effective batch=2)
+  
+  # Optimizer
+  optimizer: "adamw"
+  adam_b1: 0.9
+  adam_b2: 0.999
+  adam_eps: 1e-8
+    
+  # Optimized Spike Bridge
+  spike_bridge:
+    encoding_strategy: "phase_preserving"
+    use_learnable_thresholds: true
+    num_threshold_scales: 2    # ✅ REDUCED: 4→2
+    threshold_adaptation_rate: 0.01
+    use_phase_preserving_encoding: true
+    edge_detection_thresholds: 2  # ✅ REDUCED: 4→2
+    
+  # Memory-Optimized SNN Classifier
+  snn:
+    hidden_sizes: [64, 32]     # ✅ REDUCED: [128,64]→[64,32]
+    num_classes: 2
+    snn_neurons_per_layer: 128 # ✅ CRITICAL REDUCTION: 512→128
+    snn_num_layers: 2          # ✅ CRITICAL REDUCTION: 4→2
+    
+    # Optimized LIF parameters
+    tau_mem: 20e-3            # ✅ SIMPLIFIED: 50e-6→20e-3
+    tau_syn: 5e-3             # ✅ SIMPLIFIED: 10e-6→5e-3
+    threshold: 1.0
+    use_enhanced_lif: true
+    use_refractory_period: false  # ✅ DISABLED: for performance
+    use_adaptation: false         # ✅ DISABLED: for performance
+    
+    # Simplified surrogate gradients
+    surrogate_gradient_type: "ADAPTIVE_MULTI_SCALE"
+    surrogate_gradient_beta: 2.0  # ✅ REDUCED: 4.0→2.0
+    surrogate_slope: 2.0          # ✅ ADDED: Required for validation
+    curriculum_learning: false    # ✅ DISABLED: for simplicity
+
+# 🎯 Fast Training Configuration
+training:
+  # Core parameters
+  num_epochs: 50
+  batch_size: 1              # ✅ SAFE: batch_size=1 for memory safety
+  learning_rate: 5e-4
+  weight_decay: 1e-4
+  
+  # Simplified learning rate schedule
+  learning_rate_schedule: "cosine_with_warmup"
+  warmup_epochs: 1           # ✅ REDUCED: 2→1
+  warmup_factor: 0.1
+  min_learning_rate: 1e-6
+  
+  # Optimized gradient settings
+  gradient_clipping: true
+  max_gradient_norm: 1.0
+  gradient_accumulation_steps: 2  # ✅ REDUCED: 4→2 (effective batch=2)
+  
+  # Optimizer
+  optimizer: "adamw"
+  adam_b1: 0.9
+  adam_b2: 0.999
+  adam_eps: 1e-8
+
+# 🧮 Simplified Mathematical Framework
+mathematical_framework:
+  # InfoNCE
+  use_temporal_infonce: true
+  temporal_context_length: 64   # ✅ REDUCED: from higher values
+  temporal_negative_samples: 4  # ✅ REDUCED: 8→4
+  
+  # Temperature
+  use_adaptive_temperature: true
+  initial_temperature: 0.07
+  min_temperature: 0.01
+  max_temperature: 0.20
+  
+  # Simplified SNN simulation
+  simulation_time_steps: 64     # ✅ REDUCED: for performance
+  simulation_dt: 1e-3
+  
+  # Core enhancements only
+  use_pac_bayes_regularization: false  # ✅ DISABLED: for performance
+  gradient_stability_monitoring: true
+
+# 🚀 Performance Enhancements (Simplified)
+enhancements:
+  # Keep core enhancements, simplify complex ones
+  surrogate_adaptivity_factor: 1.5
+  use_momentum_negatives: true
+  negative_momentum: 0.95       # ✅ SIMPLIFIED: 0.999→0.95  
+  hard_negative_ratio: 0.2
+  curriculum_temperature: false # ✅ DISABLED: for simplicity
+
+# 🖥️ Optimized Platform Configuration
+platform:
+  device: "gpu"
+  precision: "float32"
+  memory_fraction: 0.3          # ✅ CONSERVATIVE: prevents memory issues
+  enable_jit: true
+  cache_compilation: true
+
+# 💾 Performance GPU Optimization
+gpu_optimization:
+  memory_fraction: 0.3          # ✅ CONSERVATIVE: 30% GPU memory
+  enable_jit: true
+  cache_compilation: true
+  
+  # Fast warmup
+  comprehensive_gpu_warmup: true
+  warmup_stages: 6
+  
+  # Optimized XLA settings
+  xla_python_client_preallocate: false
+  xla_python_client_mem_fraction: 0.3  # ✅ MATCH memory_fraction
+
+# 📊 Efficient Monitoring
+monitoring:
+  # Basic W&B
+  use_wandb: true
+  wandb_project: "cpc_snn_gw_optimized"
+  wandb_run_name: "fast_performance_training"
+  
+  # Reduced logging frequency
+  log_every_n_steps: 10        # ✅ REDUCED: 5→10
+  eval_every_n_epochs: 5       # ✅ REDUCED: 2→5
+  save_every_n_epochs: 10      # ✅ REDUCED: 5→10
+  
+  # Selective tracking (disable expensive operations)
+  track_gradient_norms: false   # ✅ DISABLED: for performance
+  track_spike_patterns: false  # ✅ DISABLED: for performance
+  track_attention_weights: false # ✅ DISABLED: for performance
+  track_temperature_adaptation: true  # Keep for debugging
+  
+  # Output directory
+  output_dir: "outputs/optimized_fast_training"
+  save_best_model: true
+  save_final_model: true
+
+# 🎯 Realistic Performance Targets
+targets:
+  # Achievable accuracy targets
+  target_train_accuracy: 0.95
+  target_test_accuracy: 0.90
+  target_roc_auc: 0.92
+  
+  # Performance targets
+  target_inference_time: 0.1   # <100ms
+  target_energy_efficiency: 0.001
+  target_spike_rate: 0.02     # 2% average
+  
+  # Quality metrics
+  no_model_collapse: true
+  gradient_flow_healthy: true
+  cpc_loss_working: true
+
+# 🔬 Essential Validation
+validation:
+  # Core test evaluation
+  comprehensive_test_evaluation: true
+  model_collapse_detection: true
+  data_leakage_prevention: true
+  
+  # Minimal statistical validation
+  confidence_intervals: false  # ✅ DISABLED: for performance
+  bootstrap_samples: 0         # ✅ DISABLED: for performance
+  statistical_significance: false # ✅ DISABLED: for performance
+
+# 📊 Minimal Evaluation
+evaluation:
+  metrics: ["accuracy", "roc_auc", "f1"]  # ✅ REDUCED set
+  target_accuracy: 0.90
+  confidence_intervals: false
+  bootstrap_samples: 0
+
+# 📝 Essential Logging
+logging:
+  level: "INFO"
+  use_wandb: true
+  wandb_project: "cpc_snn_gw_optimized"
+  checkpoint_dir: "outputs/optimized_fast_training/checkpoints"
+  save_every_n_epochs: 10
+  log_every_n_steps: 10
+
+# 🚨 Core Safety Features
+safety:
+  # Essential monitoring
+  nan_detection: true
+  inf_detection: true
+  gradient_explosion_detection: true
+  
+  # Memory safety
+  memory_monitoring: true
+  swap_detection: true
+  oom_prevention: true
+  
+  # Core validation
+  parameter_validation: true
+  architecture_validation: false  # ✅ DISABLED: for performance
+  data_quality_validation: true 

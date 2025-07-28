@@ -33,18 +33,20 @@ class AttentionCPCEncoder(nn.Module):
         # Convolutional feature extraction
         self.conv_stack = [
             nn.Conv(64, kernel_size=(7,), strides=(2,), padding='SAME'),
-            nn.BatchNorm(),
+            nn.LayerNorm(),
             nn.Conv(128, kernel_size=(5,), strides=(2,), padding='SAME'), 
-            nn.BatchNorm(),
+            nn.LayerNorm(),
             nn.Conv(self.latent_dim, kernel_size=(3,), strides=(1,), padding='SAME'),
-            nn.BatchNorm()
+            nn.LayerNorm()
         ]
         
         # Multi-head self-attention for temporal modeling
         self.attention = nn.MultiHeadDotProductAttention(
             num_heads=self.num_heads,
             dtype=jnp.float32,
-            dropout_rate=self.dropout_rate
+            dropout_rate=self.dropout_rate,  # Use the configured dropout rate
+            use_bias=False,
+            kernel_init=nn.initializers.xavier_uniform()
         )
         
         # Position encoding
@@ -54,24 +56,23 @@ class AttentionCPCEncoder(nn.Module):
         self.layer_norm1 = nn.LayerNorm()
         self.layer_norm2 = nn.LayerNorm()
         
-        self.feedforward = [
-            nn.Dense(self.latent_dim * 4),
-            nn.gelu,
-            nn.Dropout(self.dropout_rate),
-            nn.Dense(self.latent_dim),
-            nn.Dropout(self.dropout_rate)
-        ]
+        # Feedforward layers
+        self.ff_dense1 = nn.Dense(self.latent_dim * 4)
+        self.ff_dropout1 = nn.Dropout(self.dropout_rate)  # Use the configured dropout rate
+        self.ff_dense2 = nn.Dense(self.latent_dim)
+        self.ff_dropout2 = nn.Dropout(self.dropout_rate)  # Use the configured dropout rate
         
         # Context prediction head
         self.context_predictor = nn.Dense(self.latent_dim)
         
-    def __call__(self, x: jnp.ndarray, training: bool = True) -> Dict[str, jnp.ndarray]:
+    def __call__(self, x: jnp.ndarray, training: bool = True, rngs=None) -> Dict[str, jnp.ndarray]:
         """
         Forward pass with attention-enhanced feature extraction.
         
         Args:
             x: Input strain data [batch_size, seq_len]
             training: Training mode flag
+            rngs: Random number generators for dropout
             
         Returns:
             Dictionary with encoded features and context predictions
@@ -108,13 +109,11 @@ class AttentionCPCEncoder(nn.Module):
         
         # Feedforward layer
         x_norm2 = self.layer_norm2(x)
-        ff_output = x_norm2
-        for layer in self.feedforward:
-            if isinstance(layer, nn.Dropout):
-                ff_output = layer(ff_output, deterministic=not training)
-            else:
-                ff_output = layer(ff_output)
-        
+        ff_output = self.ff_dense1(x_norm2)
+        ff_output = nn.gelu(ff_output)
+        ff_output = self.ff_dropout1(ff_output, deterministic=not training, rngs=rngs)
+        ff_output = self.ff_dense2(ff_output)
+        ff_output = self.ff_dropout2(ff_output, deterministic=not training, rngs=rngs)
         x = x + ff_output  # Residual connection
         
         # Context prediction for CPC loss
@@ -290,11 +289,11 @@ class LIFLayer(nn.Module):
         return output_spikes, states
         
     def _spike_function(self, x: jnp.ndarray) -> jnp.ndarray:
-        """Spike function with surrogate gradient."""
+        """Spike function with surrogate gradient using ATan."""
         # Forward: Heaviside step
         spikes = (x >= 0).astype(jnp.float32)
         
-        # Custom gradient using fast sigmoid surrogate
+        # Custom gradient using ATan surrogate
         @jax.custom_vjp
         def spike_with_grad(x):
             return spikes
@@ -304,9 +303,8 @@ class LIFLayer(nn.Module):
             
         def spike_bwd(res, g):
             x = res
-            # Fast sigmoid surrogate gradient
-            surrogate_grad = self.surrogate_beta * jnp.exp(-self.surrogate_beta * jnp.abs(x)) / \
-                           (2 * (1 + jnp.exp(-self.surrogate_beta * jnp.abs(x)))**2)
+            # ATan surrogate gradient
+            surrogate_grad = 1 / (1 + (self.surrogate_beta * x)**2)
             return g * surrogate_grad,
         
         spike_with_grad.defvjp(spike_fwd, spike_bwd)
@@ -445,6 +443,9 @@ class RealAdvancedGWTrainer:
             tx=self.optimizer
         )
         
+        # Store the key used for initialization
+        self.init_key = key
+        
         logger.info(f"Training state initialized with {self._count_parameters(params)} parameters")
         return self.train_state
         
@@ -563,7 +564,7 @@ class RealAdvancedGWTrainer:
             
             # Forward pass through CPC encoder
             cpc_output = self.cpc_encoder.apply(
-                params['cpc_encoder'], strain, training=True, rngs={'dropout': rng_key}
+                params['cpc_encoder'], strain, training=True, rngs=rngs
             )
             
             # Convert to spikes

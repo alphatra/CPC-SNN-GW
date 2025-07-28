@@ -27,13 +27,13 @@ data:
     psd_length: 4.0
     scaling_factor: 1e20
 
-# Model Architecture Configuration
+  # Model Architecture Configuration
 model:
   # 🚨 CRITICAL FIX: CPC Encoder parameters optimized for GW frequency preservation
   cpc:
     latent_dim: 64   # ✅ ULTRA-MINIMAL: GPU memory optimization to prevent model collapse + memory issues
     downsample_factor: 4  # ✅ CRITICAL FIX: Was 64 (destroyed 99% freq info) → 4
-    context_length: 256  # ✅ INCREASED from 64 for proper GW stationarity window
+    context_length: 128  # ✅ SET to 128 to match current runtime expectation
     prediction_steps: 12  # Keep reasonable for memory
     num_negatives: 128   # ✅ INCREASED for better contrastive learning
     temperature: 0.1

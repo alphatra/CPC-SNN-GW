@@ -15,25 +15,25 @@ from abc import ABC, abstractmethod
 class GlitchParameters:
     """Configuration for different glitch types based on Gravity Spy catalog"""
     # Blip glitches - short duration transients
-    blip_amplitude_range: Tuple[float, float] = (1e-23, 5e-22)
+    blip_amplitude_range: Tuple[float, float] = (0.000000000000000000000001, 0.00000000000000000000005)
     blip_duration_range: Tuple[float, float] = (0.01, 0.1)  # 10ms to 100ms
     blip_central_freq_range: Tuple[float, float] = (50.0, 500.0)
     
     # Whistle glitches - frequency sweeps  
-    whistle_amplitude_range: Tuple[float, float] = (5e-23, 2e-22)
+    whistle_amplitude_range: Tuple[float, float] = (0.000000000000000000000005, 0.000000000000000000000002)
     whistle_duration_range: Tuple[float, float] = (0.1, 1.0)  # 100ms to 1s
     whistle_freq_start_range: Tuple[float, float] = (100.0, 300.0)
     whistle_freq_end_range: Tuple[float, float] = (200.0, 800.0)
     
     # Scattered light glitches - narrow band lines
-    scattered_amplitude_range: Tuple[float, float] = (1e-22, 8e-22)
+    scattered_amplitude_range: Tuple[float, float] = (0.00000000000000000000001, 0.00000000000000000000008)
     scattered_duration_range: Tuple[float, float] = (0.5, 2.0)
     scattered_freq_range: Tuple[float, float] = (60.0, 1000.0)
     scattered_q_factor_range: Tuple[float, float] = (10.0, 100.0)
     
     # Power line harmonics
     power_line_freqs: List[float] = None
-    power_line_amplitude_range: Tuple[float, float] = (1e-22, 3e-22)
+    power_line_amplitude_range: Tuple[float, float] = (0.00000000000000000000001, 0.000000000000000000000003)
     
     def __post_init__(self):
         if self.power_line_freqs is None:
@@ -68,13 +68,13 @@ class BlipGlitchGenerator(GlitchGenerator):
         
         # Random parameters
         amplitude = random.uniform(
-            key1, (), *self.params.blip_amplitude_range
+            key1, (), minval=float(self.params.blip_amplitude_range[0]), maxval=float(self.params.blip_amplitude_range[1])
         )
         glitch_duration = random.uniform(
-            key2, (), *self.params.blip_duration_range  
+            key2, (), minval=float(self.params.blip_duration_range[0]), maxval=float(self.params.blip_duration_range[1])
         )
         central_freq = random.uniform(
-            key3, (), *self.params.blip_central_freq_range
+            key3, (), minval=float(self.params.blip_central_freq_range[0]), maxval=float(self.params.blip_central_freq_range[1])
         )
         
         # Random placement in segment
@@ -113,18 +113,18 @@ class WhistleGlitchGenerator(GlitchGenerator):
         key1, key2, key3, key4, key5 = random.split(key, 5)
         
         amplitude = random.uniform(
-            key1, (), *self.params.whistle_amplitude_range
+            key1, (), minval=float(self.params.whistle_amplitude_range[0]), maxval=float(self.params.whistle_amplitude_range[1])
         )
         glitch_duration = random.uniform(
-            key2, (), *self.params.whistle_duration_range
+            key2, (), minval=float(self.params.whistle_duration_range[0]), maxval=float(self.params.whistle_duration_range[1])
         )
         freq_start = random.uniform(
-            key3, (), *self.params.whistle_freq_start_range
+            key3, (), minval=float(self.params.whistle_freq_start_range[0]), maxval=float(self.params.whistle_freq_start_range[1])
         )
         freq_end = random.uniform(
-            key4, (), *self.params.whistle_freq_end_range
+            key4, (), minval=float(self.params.whistle_freq_end_range[0]), maxval=float(self.params.whistle_freq_end_range[1])
         )
-        start_time = random.uniform(key5, (), 0.0, duration - glitch_duration)
+        start_time = random.uniform(key5, (), minval=0.0, maxval=duration - glitch_duration)
         
         t = jnp.linspace(0, duration, int(duration * sample_rate))
         
@@ -161,18 +161,18 @@ class ScatteredLightGlitchGenerator(GlitchGenerator):
         key1, key2, key3, key4, key5 = random.split(key, 5)
         
         amplitude = random.uniform(
-            key1, (), *self.params.scattered_amplitude_range
+            key1, (), minval=float(self.params.scattered_amplitude_range[0]), maxval=float(self.params.scattered_amplitude_range[1])
         )
         glitch_duration = random.uniform(
-            key2, (), *self.params.scattered_duration_range
+            key2, (), minval=float(self.params.scattered_duration_range[0]), maxval=float(self.params.scattered_duration_range[1])
         )
         central_freq = random.uniform(
-            key3, (), *self.params.scattered_freq_range
+            key3, (), minval=float(self.params.scattered_freq_range[0]), maxval=float(self.params.scattered_freq_range[1])
         )
         q_factor = random.uniform(
-            key4, (), *self.params.scattered_q_factor_range
+            key4, (), minval=float(self.params.scattered_q_factor_range[0]), maxval=float(self.params.scattered_q_factor_range[1])
         )
-        start_time = random.uniform(key5, (), 0.0, duration - glitch_duration)
+        start_time = random.uniform(key5, (), minval=0.0, maxval=duration - glitch_duration)
         
         t = jnp.linspace(0, duration, int(duration * sample_rate))
         
@@ -206,11 +206,11 @@ class PowerLineGlitchGenerator(GlitchGenerator):
         key1, key2 = random.split(key, 2)
         
         amplitude = random.uniform(
-            key1, (), *self.params.power_line_amplitude_range
+            key1, (), minval=float(self.params.power_line_amplitude_range[0]), maxval=float(self.params.power_line_amplitude_range[1])
         )
         
         # Select random harmonic
-        freq_idx = random.randint(key2, (), 0, len(self.params.power_line_freqs))
+        freq_idx = random.randint(key2, (), minval=0, maxval=len(self.params.power_line_freqs))
         frequency = self.params.power_line_freqs[freq_idx]
         
         t = jnp.linspace(0, duration, int(duration * sample_rate))
@@ -374,22 +374,22 @@ def create_ligo_glitch_injector(injection_probability: float = 0.3) -> GlitchInj
     """
     # LIGO-specific parameters based on Gravity Spy characterization
     ligo_params = GlitchParameters(
-        blip_amplitude_range=(1e-23, 5e-22),
+        blip_amplitude_range=(0.000000000000000000000001, 0.00000000000000000000005),
         blip_duration_range=(0.01, 0.1),
         blip_central_freq_range=(50.0, 500.0),
         
-        whistle_amplitude_range=(5e-23, 2e-22), 
+        whistle_amplitude_range=(0.000000000000000000000005, 0.000000000000000000000002), 
         whistle_duration_range=(0.1, 1.0),
         whistle_freq_start_range=(100.0, 300.0),
         whistle_freq_end_range=(200.0, 800.0),
         
-        scattered_amplitude_range=(1e-22, 8e-22),
+        scattered_amplitude_range=(0.00000000000000000000001, 0.00000000000000000000008),
         scattered_duration_range=(0.5, 2.0),
         scattered_freq_range=(60.0, 1000.0),
         scattered_q_factor_range=(10.0, 100.0),
         
         power_line_freqs=[60.0, 120.0, 180.0, 240.0, 300.0, 360.0],
-        power_line_amplitude_range=(1e-22, 3e-22)
+        power_line_amplitude_range=(0.00000000000000000000001, 0.000000000000000000000003)
     )
     
     return GlitchInjector(ligo_params, injection_probability) 

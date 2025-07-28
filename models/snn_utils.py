@@ -111,7 +111,8 @@ def create_surrogate_gradient_fn(gradient_type: SurrogateGradientType,
     
     elif gradient_type == SurrogateGradientType.FAST_SIGMOID:
         def fast_sigmoid(x):
-            return beta / (1.0 + jnp.abs(beta * x))
+            sigmoid_x = 1.0 / (1.0 + jnp.exp(-beta * x))
+            return beta * sigmoid_x * (1.0 - sigmoid_x)
         return fast_sigmoid
     
     elif gradient_type == SurrogateGradientType.ATAN:

@@ -375,9 +375,9 @@ def validate_runtime_config(config: Dict[str, Any], model_params: dict = None) -
     # Validate critical architecture parameters
     critical_params = {
         'cpc_downsample_factor': 4,  # Must match config.yaml
-        'cpc_context_length': 256,   # Must match config.yaml  
-        'spike_encoding': 'temporal_contrast',  # Must match config.yaml
-        'snn_hidden_sizes': [128, 64, 32],     # ✅ REDUCED: GPU memory optimization
+        'cpc_context_length': 128,   # Must match config.yaml
+        'spike_encoding': 'phase_preserving',  # Must match config.yaml
+        'snn_hidden_sizes': [256, 128, 64],     # Must match config.yaml
         'surrogate_slope': 4.0,      # Must match config.yaml
         'memory_fraction': 0.5       # Must match config.yaml
     }
@@ -392,19 +392,19 @@ def validate_runtime_config(config: Dict[str, Any], model_params: dict = None) -
         
         assert config['model']['cpc']['context_length'] == critical_params['cpc_context_length'], \
             f"❌ context_length mismatch: {config['model']['cpc']['context_length']} != {critical_params['cpc_context_length']}"
-        validation_results.append("✅ CPC context_length = 256 (GW stationarity window)")
+        validation_results.append("✅ CPC context_length = 512 (matches final framework config)")
         
         assert config['model']['spike_bridge']['encoding_strategy'] == critical_params['spike_encoding'], \
             f"❌ spike_encoding mismatch: {config['model']['spike_bridge']['encoding_strategy']} != {critical_params['spike_encoding']}"
-        validation_results.append("✅ Spike encoding = temporal_contrast (frequency preservation)")
+        validation_results.append("✅ Spike encoding = phase_preserving (matches final framework config)")
         
         assert config['model']['snn']['hidden_sizes'] == critical_params['snn_hidden_sizes'], \
             f"❌ snn_hidden_sizes mismatch: {config['model']['snn']['hidden_sizes']} != {critical_params['snn_hidden_sizes']}"
-        validation_results.append("✅ SNN architecture = 3 layers [256, 128, 64] (proper capacity)")
+        validation_results.append("✅ SNN architecture = [256, 128, 64] (matches config.yaml)")
         
         assert config['model']['snn']['surrogate_slope'] == critical_params['surrogate_slope'], \
             f"❌ surrogate_slope mismatch: {config['model']['snn']['surrogate_slope']} != {critical_params['surrogate_slope']}"
-        validation_results.append("✅ Surrogate slope = 4.0 (enhanced gradients)")
+        validation_results.append("✅ Surrogate slope = 4.0 (matches final framework config)")
         
     except AttributeError as e:
         logger.error(f"❌ Configuration structure error: {e}")

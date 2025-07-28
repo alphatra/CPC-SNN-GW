@@ -413,17 +413,27 @@ def run_complete_enhanced_training(config, args):
         from training.complete_enhanced_training import CompleteEnhancedTrainer, CompleteEnhancedConfig
         from models.snn_utils import SurrogateGradientType
         
-        # Create complete enhanced config from base config
+        # Create complete enhanced config with OPTIMIZED hyperparameters
         complete_config = CompleteEnhancedConfig(
-            # Core training parameters
+            # Core training parameters - ENHANCED for stability
             num_epochs=args.epochs,
-            batch_size=config['training'].get('batch_size', 32),
-            learning_rate=config['training'].get('cpc_lr', 1e-3),
-            sequence_length=config['model'].get('sequence_length', 1024),
+            batch_size=min(args.batch_size, 16),  # Cap batch size for stability
+            learning_rate=5e-4,  # Lower LR for stability (was 1e-3)
+            sequence_length=256,  # Optimized window size
             
-            # Model architecture
-            cpc_latent_dim=config['model'].get('cpc_latent_dim', 256),
-            snn_hidden_sizes=tuple(config['model'].get('snn_layer_sizes', [128, 64])),
+            # Model architecture - BALANCED for stability vs performance
+            cpc_latent_dim=128,  # Optimized size
+            snn_hidden_size=96,  # Optimized size
+            
+            # 🔧 STABILITY ENHANCEMENTS
+            gradient_clipping=True,
+            max_gradient_norm=1.0,
+            weight_decay=1e-4,
+            dropout_rate=0.15,  # Increased for regularization
+            learning_rate_schedule="cosine",
+            warmup_epochs=2,
+            early_stopping_patience=8,
+            gradient_accumulation_steps=4,  # Higher for stability
             
             # 🚀 ALL 5 REVOLUTIONARY IMPROVEMENTS ENABLED
             # 1. Adaptive Multi-Scale Surrogate Gradients
@@ -452,7 +462,6 @@ def run_complete_enhanced_training(config, args):
             
             # Advanced training features
             use_mixed_precision=True,
-            gradient_accumulation_steps=1,
             curriculum_temperature=True,
             
             # Output configuration
@@ -470,15 +479,17 @@ def run_complete_enhanced_training(config, args):
         # Create and run complete enhanced trainer
         trainer = CompleteEnhancedTrainer(complete_config)
         
-        # Use real LIGO data if available, fallback to synthetic
+        # Use ENHANCED real LIGO data with augmentation
         try:
-            from data.real_ligo_integration import create_real_ligo_dataset
-            logger.info("📡 Loading real LIGO GW150914 data...")
+            from data.real_ligo_integration import create_enhanced_ligo_dataset
+            logger.info("🚀 Loading ENHANCED LIGO dataset with augmentation...")
             
-            train_data = create_real_ligo_dataset(
-                batch_size=complete_config.batch_size,
-                sequence_length=complete_config.sequence_length,
-                num_samples=1000
+            train_data = create_enhanced_ligo_dataset(
+                num_samples=2000,  # Significantly more samples
+                window_size=complete_config.sequence_length,
+                enhanced_overlap=0.9,  # 90% overlap for more windows
+                data_augmentation=True,  # Apply augmentation
+                noise_scaling=True  # Realistic noise variations
             )
         except Exception as e:
             logger.warning(f"Real LIGO data unavailable: {e}")
@@ -491,7 +502,7 @@ def run_complete_enhanced_training(config, args):
             key = random.PRNGKey(42)
             signals = random.normal(key, (1000, complete_config.sequence_length))
             labels = random.randint(random.split(key)[0], (1000,), 0, 2)
-            train_data = [(signals, labels)]
+            train_data = (signals, labels)
         
         # Run complete enhanced training
         logger.info("🎯 Starting complete enhanced training with all improvements...")
@@ -821,9 +832,15 @@ def train_cmd():
     try:
         # Implement proper training with ExperimentConfig and training modes
         logger.info(f"🎯 Starting {args.mode} training mode...")
-        logger.info(f"📋 Configuration loaded: {config['platform']['device']} device, {config['model']['cpc_latent_dim']} latent dim")
-        logger.info(f"📋 Spike encoding: {config['model']['spike_encoding']}")
-        logger.info(f"📋 SNN hidden size: {config['model']['snn_layer_sizes'][0]}")
+        
+        # Extract model parameters with safe access
+        cpc_latent_dim = config.get('model', {}).get('cpc', {}).get('latent_dim', 'N/A')
+        spike_encoding = config.get('model', {}).get('spike_bridge', {}).get('encoding_strategy', 'N/A')
+        snn_hidden_size = config.get('model', {}).get('snn', {}).get('hidden_sizes', [0])[0]
+        
+        logger.info(f"📋 Configuration loaded: {config.get('platform', {}).get('device', 'N/A')} device, {cpc_latent_dim} latent dim")
+        logger.info(f"📋 Spike encoding: {spike_encoding}")
+        logger.info(f"📋 SNN hidden size: {snn_hidden_size}")
         
         # Training result tracking
         training_result = None

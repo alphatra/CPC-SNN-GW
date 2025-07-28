@@ -1,0 +1,124 @@
+# Final Framework Configuration
+# Aligned with the "Neuromorphic Gravitational-Wave Detection" mathematical framework
+
+# Data Pipeline Configuration  
+data:
+  sample_rate: 4096  # Hz - LIGO standard
+  sequence_length: 512  # L_c ∈ [256, 512] is adequate
+  segment_duration: 0.125  # 512 / 4096 = 0.125 seconds
+  detectors: ["H1", "L1"]
+  
+  # Quality validation
+  min_snr: 8.0
+  max_kurtosis: 3.0
+  min_quality: 0.8
+  
+  # Preprocessing pipeline
+  preprocessing:
+    whitening: true
+    bandpass_low: 20.0
+    bandpass_high: 1024.0
+    psd_length: 4.0
+    scaling_factor: 1e20
+
+# Model Architecture Configuration
+model:
+  # CPC Encoder parameters
+  cpc:
+    latent_dim: 128   # d=128 → τ = 1/√128 ≈ 0.089
+    downsample_factor: 4  
+    context_length: 512  # L_c = 512 (framework recommendation)
+    prediction_steps: 12  
+    num_negatives: 128   
+    temperature: 0.06    # τ = 0.06 for stability (d=128)
+    conv_channels: [64, 128, 256, 512]  # Progressive depth
+    
+  # Spike Bridge with phase-preserving encoding
+  spike_bridge:
+    encoding_strategy: "phase_preserving"  # Temporal-contrast coding
+    threshold_pos: 0.1
+    threshold_neg: -0.1
+    time_steps: 4096  # T' ≥ 4000 for f_max = 2kHz
+    preserve_frequency: true  # Preserve >200Hz content
+    
+  # Enhanced SNN Classifier with framework-compliant architecture
+  snn:
+    hidden_sizes: [512, 512, 512, 512]  # N≥512 per layer, L≥4 depth
+    num_classes: 3  # continuous_gw, binary_merger, noise_only
+    tau_mem: 50e-6  # τ_m = 50μs (optimal frequency response)
+    tau_syn: 25e-6   # τ_syn = 25μs (optimal frequency response)
+    threshold: 1.0
+    surrogate_gradient: "symmetric_hard_sigmoid"
+    surrogate_slope: 4.0  # β = 4 for L≤4 (gradient flow analysis)
+    use_layer_norm: true  # Training stability
+
+# Training Configuration
+training:
+  # Phase 1: CPC Pretraining
+  cpc_pretrain:
+    learning_rate: 1e-4  
+    batch_size: 1  # Memory optimization
+    num_epochs: 50
+    warmup_epochs: 5
+    weight_decay: 0.01
+    use_cosine_scheduling: true
+    
+  # Phase 2: SNN Training
+  snn_train:
+    learning_rate: 5e-4  
+    batch_size: 1  # Memory optimization
+    num_epochs: 100
+    focal_loss_alpha: 0.25
+    focal_loss_gamma: 2.0
+    mixup_alpha: 0.2
+    early_stopping_patience: 10
+    
+  # Phase 3: Joint Fine-tuning
+  joint_finetune:
+    learning_rate: 1e-5  
+    batch_size: 1  # Memory optimization
+    num_epochs: 25
+    enable_cpc_gradients: true  # Enable end-to-end gradients
+
+# Platform Configuration
+platform:
+  device: "auto"  # Auto-detect
+  precision: "float32"
+  memory_fraction: 0.5  # Memory optimization
+  enable_jit: true
+  cache_compilation: true  # 10x speedup after setup
+
+# Evaluation Configuration
+evaluation:
+  metrics: ["roc_auc", "precision", "recall", "f1", "far"]
+  target_accuracy: 0.95  # 95%+ target
+  confidence_intervals: true
+  bootstrap_samples: 1000
+  statistical_tests: ["mcnemar", "wilcoxon"]
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  use_wandb: true
+  wandb_project: "ligo-cpc-snn-final-framework"
+  checkpoint_dir: "./checkpoints"
+  save_every_n_epochs: 5
+  log_every_n_steps: 100
+
+# HPO Configuration
+hpo:
+  search_space:
+    learning_rate: [1e-5, 3e-5, 1e-4, 3e-4, 1e-3]
+    batch_size: [1, 2, 4]  # Memory optimization
+    cpc_latent_dim: [128, 256, 512]
+    context_length: [256, 512]  # Framework-compliant ranges
+    weight_decay: [0.001, 0.01, 0.1]
+  max_trials: 50
+  early_stopping: true
+
+# Scientific Validation
+baselines:
+  pycbc_template_bank: true  # ENABLE real PyCBC comparison
+  matched_filtering: true
+  statistical_significance: true
+  confidence_level: 0.95

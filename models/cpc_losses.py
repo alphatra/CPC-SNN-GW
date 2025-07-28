@@ -5,13 +5,15 @@ Loss functions for Contrastive Predictive Coding:
 - enhanced_info_nce_loss: Advanced InfoNCE with hard negatives and numerical stability
 - info_nce_loss: Standard InfoNCE implementation
 - 🚀 NEW: Momentum-based hard negative mining with curriculum learning
+- 🧮 NEW: Temporal InfoNCE (Equation 1) - mathematically proven for small batches
+- 🌡️ NEW: Adaptive Temperature Control (Section I) - online τ optimization
 - Additional contrastive learning utilities
 """
 
 import jax
 import jax.numpy as jnp
 import optax  # ✅ Added for cross_entropy function
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
@@ -595,3 +597,187 @@ def momentum_enhanced_info_nce_loss(
         return fallback_loss
     
     return final_loss 
+
+
+# 🧮 MATHEMATICAL FRAMEWORK: Temporal InfoNCE Implementation
+def temporal_info_nce_loss(cpc_features: jnp.ndarray,
+                          temperature: float = 0.06,
+                          K: int = 8,
+                          eps: float = 1e-8) -> jnp.ndarray:
+    """
+    🧮 TEMPORAL InfoNCE LOSS (Equation 1 from Mathematical Framework)
+    
+    Implements mathematically proven temporal contrastive learning for small batches:
+    L_tNCE = -1/(T-K+1) Σ_{t=1}^{T-K+1} log(exp(⟨c_t, c_{t+1}⟩/τ) / Σ_{k=1}^K exp(⟨c_t, c_{t+k}⟩/τ))
+    
+    This is NOT a hack - it's a valid contrastive loss under Markov assumption:
+    If c_t is sufficient statistic of the past, then c_{t+1} is conditionally 
+    independent of {c_{t+k}}_{k>1} given c_t. Thus c_{t+k} for k≥2 act as temporal negatives.
+    
+    Args:
+        cpc_features: [batch_size, time_steps, feature_dim] CPC context vectors
+        temperature: τ ≈ 1/√d for d-dimensional features (framework recommends τ=0.06)
+        K: Number of temporal negative samples (framework recommends K=8)
+        eps: Numerical stability epsilon
+        
+    Returns:
+        Temporal InfoNCE loss scalar
+        
+    Mathematical Foundation:
+        - Resolves InfoNCE degeneracy for batch_size=1 (Claim in Section 1.1)
+        - Captures one-step predictive structure essential for GW chirp dynamics
+        - Ensures gradient flow even with single trajectory (proven in Section 1.2)
+    """
+    if cpc_features is None:
+        return jnp.array(0.0)
+    
+    batch_size, time_steps, feature_dim = cpc_features.shape
+    
+    # Need at least K+1 time steps for temporal negatives
+    if time_steps <= K:
+        # Fallback: use all available steps minus 1
+        K = max(1, time_steps - 1)
+    
+    if time_steps <= 1:
+        return jnp.array(0.0)
+    
+    # Extract context and targets for temporal contrastive learning
+    # c_t: context at time t, c_{t+k}: targets at time t+k
+    valid_length = time_steps - K
+    
+    total_loss = 0.0
+    valid_samples = 0
+    
+    for t in range(valid_length):
+        # Context vector c_t
+        context = cpc_features[:, t, :]  # [batch_size, feature_dim]
+        
+        # Positive sample: c_{t+1} (immediate future)
+        positive = cpc_features[:, t+1, :]  # [batch_size, feature_dim]
+        
+        # Negative samples: c_{t+2}, c_{t+3}, ..., c_{t+K}
+        negatives = []
+        for k in range(2, min(K+1, time_steps-t)):
+            negatives.append(cpc_features[:, t+k, :])
+        
+        if len(negatives) == 0:
+            continue
+            
+        negatives = jnp.stack(negatives, axis=1)  # [batch_size, num_negatives, feature_dim]
+        
+        # Normalize features for stable similarity computation
+        context_norm = context / (jnp.linalg.norm(context, axis=-1, keepdims=True) + eps)
+        positive_norm = positive / (jnp.linalg.norm(positive, axis=-1, keepdims=True) + eps)
+        negatives_norm = negatives / (jnp.linalg.norm(negatives, axis=-1, keepdims=True) + eps)
+        
+        # Compute similarities
+        pos_sim = jnp.sum(context_norm * positive_norm, axis=-1)  # [batch_size]
+        neg_sim = jnp.einsum('bd,bnd->bn', context_norm, negatives_norm)  # [batch_size, num_negatives]
+        
+        # Temporal InfoNCE loss for this time step
+        pos_exp = jnp.exp(pos_sim / temperature)
+        neg_exp = jnp.exp(neg_sim / temperature)
+        denominator = pos_exp + jnp.sum(neg_exp, axis=-1) + eps
+        
+        step_loss = -jnp.mean(jnp.log(pos_exp / denominator + eps))
+        total_loss += step_loss
+        valid_samples += 1
+    
+    if valid_samples == 0:
+        return jnp.array(0.0)
+    
+    return total_loss / valid_samples
+
+
+# 🌡️ MATHEMATICAL FRAMEWORK: Adaptive Temperature Control
+class AdaptiveTemperatureController:
+    """
+    🌡️ ADAPTIVE TEMPERATURE CONTROL (Section I from Mathematical Framework)
+    
+    Implements online temperature optimization based on mutual information estimation:
+    τ* = argmax_τ I_tNCE(τ)
+    
+    Uses exponential moving average update:
+    τ_{t+1} = τ_t * exp(η_τ * (Î_t - τ_t))
+    
+    Features:
+    - MINE estimator for mutual information (Equation 40)
+    - Temperature bounds to prevent instability (Equation 41)
+    - Slow adaptation (η_τ = 0.001) for stability
+    """
+    
+    def __init__(self,
+                 initial_temperature: float = 0.06,
+                 learning_rate: float = 0.001,
+                 bounds: Tuple[float, float] = (0.01, 0.16),
+                 update_frequency: int = 100):
+        """
+        Initialize adaptive temperature controller.
+        
+        Args:
+            initial_temperature: τ_0 = 1/√d (framework: τ=0.06 for d=256)
+            learning_rate: η_τ for slow adaptation (framework: η_τ=0.001)
+            bounds: [τ_min, τ_max] = [1/(10√d), 1/√d] for stability
+            update_frequency: Update temperature every N steps
+        """
+        self.temperature = initial_temperature
+        self.learning_rate = learning_rate
+        self.bounds = bounds
+        self.update_frequency = update_frequency
+        self.step_count = 0
+        
+    def estimate_mutual_information(self, 
+                                  pos_similarities: jnp.ndarray,
+                                  neg_similarities: jnp.ndarray) -> float:
+        """
+        Estimate mutual information using MINE estimator (Equation 40).
+        
+        Args:
+            pos_similarities: Positive pair similarities
+            neg_similarities: Negative pair similarities
+            
+        Returns:
+            Estimated mutual information
+        """
+        # MINE estimator: Î = E[T(x,y)] - log E[exp(T(x',y))]
+        pos_term = jnp.mean(pos_similarities)
+        neg_term = jnp.log(jnp.mean(jnp.exp(neg_similarities)) + 1e-8)
+        
+        mutual_info = pos_term - neg_term
+        return float(mutual_info)
+    
+    def update_temperature(self, 
+                          pos_similarities: jnp.ndarray,
+                          neg_similarities: jnp.ndarray) -> float:
+        """
+        Update temperature based on mutual information estimation.
+        
+        Args:
+            pos_similarities: Positive pair similarities
+            neg_similarities: Negative pair similarities
+            
+        Returns:
+            Updated temperature value
+        """
+        self.step_count += 1
+        
+        # Update every update_frequency steps
+        if self.step_count % self.update_frequency != 0:
+            return self.temperature
+        
+        # Estimate mutual information
+        mutual_info = self.estimate_mutual_information(pos_similarities, neg_similarities)
+        
+        # Exponential moving average update (Equation 39)
+        # τ_{t+1} = τ_t * exp(η_τ * (Î_t - τ_t))
+        update_factor = self.learning_rate * (mutual_info - self.temperature)
+        new_temperature = self.temperature * jnp.exp(update_factor)
+        
+        # Apply bounds (Equation 41)
+        self.temperature = float(jnp.clip(new_temperature, self.bounds[0], self.bounds[1]))
+        
+        return self.temperature
+    
+    def get_temperature(self) -> float:
+        """Get current temperature value."""
+        return self.temperature 

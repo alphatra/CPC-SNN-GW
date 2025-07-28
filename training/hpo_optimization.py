@@ -18,7 +18,7 @@ import numpy as np
 from concurrent.futures import ProcessPoolExecutor
 import pickle
 
-from .advanced_training import AdvancedTrainingConfig, AdvancedGWTrainer
+from .advanced_training import create_real_advanced_trainer, RealAdvancedGWTrainer
 from .training_utils import setup_training_environment
 from utils.config import apply_performance_optimizations
 
@@ -60,20 +60,20 @@ class HPOConfiguration:
             self.cpc_latent_dim_options = [128, 256, 512]
             
         if self.snn_hidden_sizes_options is None:
-            self.snn_hidden_sizes_options = [
+            self.snn_hidden_sizes_options = (
                 (128, 64),      # Shallow
                 (256, 128, 64), # Standard  
                 (512, 256, 128, 64),  # Deep
                 (256, 256, 128),      # Wide
                 (128, 128, 128, 64)   # Uniform
-            ]
+            )
 
 class HPOSearchSpace:
     """Defines search space for hyperparameter optimization"""
     
     @staticmethod
     def suggest_hyperparameters(trial: optuna.Trial, 
-                               hpo_config: HPOConfiguration) -> AdvancedTrainingConfig:
+                               hpo_config: HPOConfiguration) -> Dict[str, Any]:
         """
         Suggest hyperparameters for a single trial
         
@@ -82,7 +82,7 @@ class HPOSearchSpace:
             hpo_config: HPO configuration
             
         Returns:
-            AdvancedTrainingConfig with suggested hyperparameters
+            Dictionary with suggested hyperparameters
         """
         
         # Core optimization parameters
@@ -159,35 +159,35 @@ class HPOSearchSpace:
             'spike_time_steps', [50, 100, 200]
         )
         
-        # Create configuration
-        config = AdvancedTrainingConfig(
+        # Create configuration dictionary
+        config = {
             # Basic training
-            num_epochs=hpo_config.max_epochs_per_trial,
-            learning_rate=learning_rate,
-            batch_size=batch_size,
+            'num_epochs': hpo_config.max_epochs_per_trial,
+            'learning_rate': learning_rate,
+            'batch_size': batch_size,
             
             # Model architecture
-            cpc_latent_dim=cpc_latent_dim,
-            snn_hidden_sizes=snn_hidden_sizes,
-            spike_time_steps=spike_time_steps,
+            'cpc_latent_dim': cpc_latent_dim,
+            'snn_hidden_sizes': snn_hidden_sizes,
+            'spike_time_steps': spike_time_steps,
             
             # Advanced techniques
-            use_attention=use_attention,
-            use_focal_loss=use_focal_loss,
-            use_mixup=use_mixup,
-            mixup_alpha=mixup_alpha,
+            'use_attention': use_attention,
+            'use_focal_loss': use_focal_loss,
+            'use_mixup': use_mixup,
+            'mixup_alpha': mixup_alpha,
             
             # Regularization
-            weight_decay=weight_decay,
-            dropout_rate=dropout_rate,
+            'weight_decay': weight_decay,
+            'dropout_rate': dropout_rate,
             
             # Scheduling
-            use_cosine_scheduling=use_cosine_scheduling,
-            warmup_epochs=warmup_epochs,
+            'use_cosine_scheduling': use_cosine_scheduling,
+            'warmup_epochs': warmup_epochs,
             
             # Output
-            output_dir=f"hpo_trial_{trial.number}"
-        )
+            'output_dir': f"hpo_trial_{trial.number}"
+        }
         
         return config
 
@@ -231,10 +231,10 @@ class HPOObjective:
             config = HPOSearchSpace.suggest_hyperparameters(trial, self.hpo_config)
             
             logger.info(f"🔬 Starting HPO Trial {trial.number}")
-            logger.info(f"Parameters: {asdict(config)}")
+            logger.info(f"Parameters: {config}")
             
             # Create and run trainer
-            trainer = AdvancedGWTrainer(config)
+            trainer = create_real_advanced_trainer(config)
             
             # Run training with early stopping
             results = self._run_training_trial(trainer, trial)
@@ -260,7 +260,7 @@ class HPOObjective:
             # Return poor score instead of crashing
             return 0.0
     
-    def _run_training_trial(self, trainer: AdvancedGWTrainer, trial: optuna.Trial) -> Dict[str, Any]:
+    def _run_training_trial(self, trainer: RealAdvancedGWTrainer, trial: optuna.Trial) -> Dict[str, Any]:
         """Run training for a single trial with early stopping"""
         
         best_val_accuracy = 0.0
@@ -271,37 +271,46 @@ class HPOObjective:
         logger.info("🚀 Starting REAL HPO training loop...")
         
         # Create real trainer with trial parameters
-        from training.advanced_training import create_advanced_trainer, AdvancedTrainingConfig
+        from training.advanced_training import create_real_advanced_trainer
         
         try:
-            # Setup training config from trial parameters
-            training_config = AdvancedTrainingConfig(
-                learning_rate=trial.params.get('learning_rate', 1e-4),
-                batch_size=trial.params.get('batch_size', 1),  # ✅ MEMORY FIX: Default ultra-small batch
-                cpc_latent_dim=trial.params.get('cpc_latent_dim', 512),
-                snn_hidden_sizes=trial.params.get('snn_hidden_sizes', [256, 128, 64]),
-                weight_decay=trial.params.get('weight_decay', 0.01),
-                use_attention=trial.params.get('use_attention', True),
-                use_focal_loss=trial.params.get('use_focal_loss', True),
-                num_epochs=self.hpo_config.max_epochs_per_trial,
-                output_dir=f"hpo_trial_{trial.number}"
-            )
+            # Use trial parameters directly as config dictionary
+            training_config = {
+                'learning_rate': trial.params.get('learning_rate', 1e-4),
+                'batch_size': trial.params.get('batch_size', 1),  # ✅ MEMORY FIX: Default ultra-small batch
+                'cpc_latent_dim': trial.params.get('cpc_latent_dim', 512),
+                'snn_hidden_sizes': list(trial.params.get('snn_hidden_sizes', (256, 128, 64))),  # Already a list after conversion
+                'weight_decay': trial.params.get('weight_decay', 0.01),
+                'use_attention': trial.params.get('use_attention', True),
+                'use_focal_loss': trial.params.get('use_focal_loss', True),
+                'num_epochs': self.hpo_config.max_epochs_per_trial,
+                'output_dir': f"hpo_trial_{trial.number}"
+            }
             
             # Create and run real trainer
-            trainer = create_advanced_trainer(training_config)
+            trainer = create_real_advanced_trainer(training_config)
             
             # ✅ REAL TRAINING: Execute actual training with pruning
             for epoch in range(self.hpo_config.max_epochs_per_trial):
                 
                 # Run real training epoch
-                epoch_result = trainer.train_single_epoch(epoch)
+                # Create dataloader for this trial
+                from training.training_utils import OptimizedDataLoader
+                dataloader = OptimizedDataLoader(dataset_size=1000, batch_size=trial.params.get('batch_size', 1))
+                # Create random key for training
+                key = jax.random.PRNGKey(trial.number)
+                # Get a sample batch to initialize the training state
+                sample_batch = next(iter(dataloader))
+                # Initialize training state
+                trainer.initialize_training_state(sample_batch, key)
+                epoch_result = trainer.train_epoch(dataloader, key)
                 
                 # Extract real validation accuracy
                 val_accuracy = epoch_result.get('val_accuracy', 0.0)
                 train_loss = epoch_result.get('train_loss', float('inf'))
                 
                 # Report real intermediate value for pruning
-                trial.report(val_accuracy, epoch)
+                trial.report(val_accuracy, epoch + 1)  # Use epoch+1 to ensure step >= 1
                 if trial.should_prune():
                     logger.info(f"   🔪 Trial pruned at epoch {epoch} (val_accuracy={val_accuracy:.3f})")
                     raise optuna.TrialPruned()
@@ -342,16 +351,17 @@ class HPOObjective:
     
     def _save_trial_results(self, trial: optuna.Trial, 
                            results: Dict[str, Any],
-                           config: AdvancedTrainingConfig):
+                           config: Dict[str, Any]):
         """Save detailed results for a trial"""
         results_dir = Path(self.hpo_config.results_dir) / f"trial_{trial.number}"
         results_dir.mkdir(parents=True, exist_ok=True)
         
         # Save trial parameters and results
+        # 'config' is already a dict, no need for asdict
         trial_data = {
             'trial_number': trial.number,
             'objective_value': results['best_val_accuracy'],
-            'hyperparameters': asdict(config),
+            'hyperparameters': config,
             'results': results,
             'timestamp': time.time()
         }

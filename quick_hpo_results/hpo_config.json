@@ -1,0 +1,54 @@
+{
+  "study_name": "ligo_cpc_snn_hpo",
+  "n_trials": 10,
+  "timeout": null,
+  "learning_rate_range": [
+    1e-05,
+    0.01
+  ],
+  "batch_size_options": [
+    1,
+    2,
+    4
+  ],
+  "cpc_latent_dim_options": [
+    128,
+    256,
+    512
+  ],
+  "snn_hidden_sizes_options": [
+    [
+      128,
+      64
+    ],
+    [
+      256,
+      128,
+      64
+    ],
+    [
+      512,
+      256,
+      128,
+      64
+    ],
+    [
+      256,
+      256,
+      128
+    ],
+    [
+      128,
+      128,
+      128,
+      64
+    ]
+  ],
+  "max_epochs_per_trial": 10,
+  "early_stopping_patience": 5,
+  "min_accuracy_threshold": 0.6,
+  "use_distributed": false,
+  "max_parallel_trials": 4,
+  "results_dir": "quick_hpo_results",
+  "save_intermediate_results": true
+}

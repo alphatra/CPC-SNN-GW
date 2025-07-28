@@ -246,8 +246,43 @@ class RealPyCBCDetector:
             delta_t=1.0/self.sample_rate
         )
         
-        # Whiten the data using REAL PSD
-        strain_whitened = strain_ts.whiten(4.0, 4.0, psd=self.psd)
+        # Manually whiten the data using the pre-computed PSD
+        # Get the frequency series of the strain data and ensure double precision
+        strain_fft = strain_ts.to_frequencyseries().astype(pycbc.types.complex128)
+        
+        # Resample the PSD to match the frequency resolution of the strain data
+        # Get the delta_f of the strain data
+        target_delta_f = strain_fft.delta_f
+        
+        # Create a new frequency series for the PSD with the target delta_f
+        # Use the same length as strain_fft for simplicity
+        n_samples = len(strain_fft)
+        freqs = np.arange(n_samples) * target_delta_f
+        
+        # Interpolate the PSD values to the new frequency array
+        # Use the original PSD (self.psd) for interpolation
+        original_freqs = np.arange(len(self.psd)) * self.psd.delta_f
+        # Ensure the frequency arrays are compatible
+        max_freq = min(freqs[-1], original_freqs[-1])
+        common_freqs = freqs[freqs <= max_freq]
+        
+        # Interpolate PSD values
+        psd_interp = np.interp(common_freqs, original_freqs, self.psd)
+        
+        # Create a new PSD FrequencySeries with the correct delta_f and double precision
+        psd_values = pycbc.types.FrequencySeries(
+            np.pad(psd_interp, (0, n_samples - len(psd_interp))), # Pad if necessary
+            delta_f=target_delta_f,
+            dtype=np.complex128
+        )
+        
+        # Perform whitening in the frequency domain
+        # Avoid division by zero
+        safe_psd = psd_values + 1e-100
+        strain_whitened_fft = strain_fft / (safe_psd ** 0.5)
+        
+        # Convert back to time domain
+        strain_whitened = strain_whitened_fft.to_timeseries()
         
         detections = []
         max_snr = 0.0
