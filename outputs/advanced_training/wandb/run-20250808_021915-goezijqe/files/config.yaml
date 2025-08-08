@@ -1,0 +1,112 @@
+_wandb:
+    value:
+        cli_version: 0.21.1
+        e:
+            effdmn034chaymecxd4qaysam6800gc6:
+                args:
+                    - --mode
+                    - advanced
+                    - --epochs
+                    - "1"
+                    - --batch-size
+                    - "1"
+                    - --learning-rate
+                    - "2e-4"
+                    - --gpu
+                codePath: cli.py
+                codePathLocal: cli.py
+                email: alpphatra@gmail.com
+                executable: /Users/gracjan/Documents/machinelearning/.venv/bin/python3
+                git:
+                    commit: 4399c96d213b981db79bd8113b210c78d2e579b1
+                    remote: https://github.com/alphatra/CPC-SNN-GW.git
+                host: Gracjans-MacBook-Pro.local
+                os: macOS-26.0-arm64-arm-64bit
+                program: /Users/gracjan/Documents/machinelearning/cli.py
+                python: CPython 3.12.9
+                root: outputs/advanced_training
+                startedAt: "2025-08-08T00:19:15.104792Z"
+                writerId: effdmn034chaymecxd4qaysam6800gc6
+        m: []
+        python_version: 3.12.9
+        t:
+            "1":
+                - 12
+                - 45
+            "2":
+                - 12
+                - 45
+            "3":
+                - 13
+                - 15
+                - 16
+            "4": 3.12.9
+            "5": 0.21.1
+            "12": 0.21.1
+            "13": darwin-arm64
+batch_size:
+    value: 1
+compute_detailed_metrics:
+    value: true
+early_stopping_metric:
+    value: loss
+early_stopping_mode:
+    value: min
+early_stopping_patience:
+    value: 10
+enable_profiling:
+    value: false
+eval_every:
+    value: 100
+eval_split:
+    value: 0.2
+gradient_accumulation_steps:
+    value: 4
+gradient_clipping:
+    value: 1
+gwosc_detector:
+    value: H1
+gwosc_duration:
+    value: 32
+gwosc_start_time:
+    value: 1126259462
+learning_rate:
+    value: 0.0002
+log_every:
+    value: 10
+max_memory_gb:
+    value: 8
+mixed_precision:
+    value: true
+model_name:
+    value: cpc_snn_gw
+num_binary_signals:
+    value: 500
+num_classes:
+    value: 2
+num_continuous_signals:
+    value: 500
+num_epochs:
+    value: 100
+num_noise_samples:
+    value: 500
+optimizer:
+    value: sgd
+output_dir:
+    value: outputs/advanced_training
+project_name:
+    value: cpc-snn-gw
+save_every:
+    value: 1000
+scheduler:
+    value: cosine
+use_mixed_precision:
+    value: true
+use_real_gwosc_data:
+    value: true
+use_tensorboard:
+    value: true
+use_wandb:
+    value: true
+weight_decay:
+    value: 0.0001

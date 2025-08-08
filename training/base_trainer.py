@@ -52,6 +52,8 @@ class TrainingConfig:
     weight_decay: float = 1e-4
     num_epochs: int = 100
     num_classes: int = 2  # ✅ CONFIGURABLE: Binary classification by default
+    label_smoothing: float = 0.1
+    use_class_weighting: bool = True
     
     # Training optimization - MEMORY OPTIMIZED
     optimizer: str = "sgd"  # ✅ FIX: SGD uses 2x less GPU memory than Adam
@@ -331,10 +333,23 @@ class CPCSNNTrainer(TrainerBase):
         def loss_fn(params):
             # Forward pass with spike collection
             logits = train_state.apply_fn(
-                params, x, train=True, 
+                params, x, train=True,
                 rngs={'spike_bridge': jax.random.PRNGKey(int(time.time()))}
             )
-            loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
+            # Label smoothing
+            epsilon = jnp.asarray(self.config.label_smoothing)
+            num_classes = self.config.num_classes
+            y_smooth = (1.0 - epsilon) * jax.nn.one_hot(y, num_classes) + epsilon / num_classes
+            per_example_loss = optax.softmax_cross_entropy(logits, y_smooth)
+            # Class weighting (inverse frequency within batch)
+            if self.config.use_class_weighting:
+                counts = jnp.bincount(y, length=num_classes).astype(jnp.float32)
+                counts = jnp.maximum(counts, 1.0)
+                weights = jnp.sum(counts) / (counts * num_classes)
+                sample_weights = weights[y]
+                loss = jnp.mean(per_example_loss * sample_weights)
+            else:
+                loss = jnp.mean(per_example_loss)
             accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
             return loss, accuracy
         

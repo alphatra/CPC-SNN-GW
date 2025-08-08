@@ -32,7 +32,7 @@ logging:
   random_seed: 42
   save_every_n_epochs: 5
   use_wandb: true
-  wandb_project: cpc-snn-training
+  wandb_project: ligo-cpc-snn-critical-fixed
 model:
   batch_size_auto_adjust: true
   cpc_context_length: 64
@@ -71,12 +71,12 @@ platform:
   precision: float32
   random_seed: 42
 training:
-  batch_size: 2
+  batch_size: 1
   batch_size_auto_adjust: true
   bootstrap_samples: 100
   compute_roc_auc: true
-  cpc_epochs: 1
-  cpc_lr: 0.001
+  cpc_epochs: 5
+  cpc_lr: 0.0005
   enable_cpc_finetuning_stage2: true
   enable_performance_optimizations: true
   eval_every_epochs: 5
@@ -116,7 +116,7 @@ wandb:
   max_memory_fraction: 0.5
   memory_metrics: true
   monitor_memory: true
-  name: neuromorphic-gw-1753337486
+  name: neuromorphic-gw-1754614416
   neuromorphic_metrics: true
   notes: Enhanced neuromorphic GW detection with comprehensive monitoring
   output_dir: wandb_outputs

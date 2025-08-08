@@ -201,7 +201,6 @@ def setup_optimized_environment(memory_fraction: float = 0.5) -> None:
     # JAX configuration optimizations
     import jax
     jax.config.update('jax_enable_x64', False)  # Use float32 for speed
-    jax.config.update('jax_platform_name', 'metal')  # Force Metal backend
     
     logger.info("✅ Optimized JAX environment configured:")
     logger.info(f"   Memory fraction: {memory_fraction}")
@@ -455,8 +454,7 @@ def setup_training_environment(memory_fraction: float = 0.5) -> None:
     # Step 1: Setup optimized JAX environment
     setup_optimized_environment(memory_fraction)
     
-    # Step 2: Pre-compile all JIT functions  
-    precompile_training_functions()
+    # Step 2: (disabled) Legacy JIT pre-compilation stubs are not used
     
     # Step 3: Monitor initial memory state
     memory_info = monitor_memory_usage()

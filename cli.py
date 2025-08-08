@@ -109,11 +109,12 @@ def run_standard_training(config, args):
             
             # ✅ ENHANCED: Use stratified split for proper test evaluation
             (train_signals, train_labels), (test_signals, test_labels) = create_real_ligo_dataset(
-                num_samples=1200,  # Target samples (will be adjusted based on real data)
-                window_size=512,   # ✅ Optimized window size for memory
-                quick_mode=False,  # Use full resolution
-                return_split=True, # ✅ CRITICAL: Get stratified train/test split
-                train_ratio=0.8
+                num_samples=1200,
+                window_size=int(args.window_size),
+                quick_mode=bool(args.quick_mode),
+                return_split=True,
+                train_ratio=0.8,
+                overlap=float(args.overlap)
             )
             
             signals, labels = train_signals, train_labels  # Use training data for training
@@ -130,8 +131,10 @@ def run_standard_training(config, args):
                 sample_rate=4096,
                 random_seed=42
             )
-            all_signals = jnp.stack([sample[0] for sample in train_data])
-            all_labels = jnp.array([sample[1] for sample in train_data])
+            # Safe device arrays
+            from utils.jax_safety import safe_stack_to_device, safe_array_to_device
+            all_signals = safe_stack_to_device([sample[0] for sample in train_data], dtype=np.float32)
+            all_labels = safe_array_to_device([sample[1] for sample in train_data], dtype=np.int32)
             
             # ✅ ENHANCED: Apply stratified split to synthetic data too
             from utils.data_split import create_stratified_split
@@ -162,7 +165,10 @@ def run_standard_training(config, args):
                 output_dir=str(training_dir),
                 project_name="gravitational-wave-detection",
                 use_wandb=trainer_config.use_wandb,
-                use_tensorboard=False
+                use_tensorboard=False,
+                optimizer="adamw",  # Faster convergence than SGD for small datasets
+                scheduler="cosine",
+                num_classes=2
             )
             
             # Create real trainer
@@ -200,8 +206,9 @@ def run_standard_training(config, args):
                     epoch_accuracies.append(metrics.accuracy)
                 
                 # Compute epoch averages
-                avg_loss = float(jnp.mean(jnp.array(epoch_losses)))
-                avg_accuracy = float(jnp.mean(jnp.array(epoch_accuracies)))
+                import numpy as _np
+                avg_loss = float(_np.mean(_np.array(epoch_losses)))
+                avg_accuracy = float(_np.mean(_np.array(epoch_accuracies)))
                 
                 logger.info(f"      Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
                 
@@ -347,60 +354,31 @@ def run_enhanced_training(config, args):
 
 
 def run_advanced_training(config, args):
-    """Run advanced training with attention CPC + deep SNN."""
+    """Run advanced training mapped to EnhancedGWTrainer full pipeline (no mocks)."""
     try:
-        from .training.advanced_training import AdvancedGWTrainer
-        from .training.advanced_training import AdvancedTrainingConfig
+        try:
+            from .training.enhanced_gw_training import EnhancedGWTrainer, EnhancedGWConfig
+        except ImportError:
+            from training.enhanced_gw_training import EnhancedGWTrainer, EnhancedGWConfig
         
-        # Create advanced training config from base config
-        advanced_config = AdvancedTrainingConfig(
+        enhanced_config = EnhancedGWConfig(
             num_continuous_signals=500,
             num_binary_signals=500,
-            num_noise_samples=300,
-            signal_duration=4.0,
+            num_noise_samples=500,
             batch_size=config['training']['batch_size'],
             learning_rate=config['training']['cpc_lr'],
             num_epochs=100,
-            cpc_latent_dim=config['model']['cpc_latent_dim'],
-            cpc_conv_channels=(64, 128, 256, 512),
-            snn_hidden_sizes=tuple(config['model']['snn_layer_sizes']),  # Convert list to tuple
-            spike_time_steps=100,
-            use_attention=True,
-            use_focal_loss=True,
-            use_cosine_scheduling=True,
-            spike_encoding=config['model']['spike_encoding'],
             output_dir=str(args.output_dir / "advanced_training")
         )
         
-        # Create and run advanced trainer
-        trainer = AdvancedGWTrainer(advanced_config)
+        trainer = EnhancedGWTrainer(enhanced_config)
+        result = trainer.run_full_training_pipeline()
         
-        # Generate enhanced dataset
-        dataset = trainer.generate_enhanced_dataset()
-        
-        # 🚨 CRITICAL FIX: Real advanced training pipeline (not mock)
-        logger.info(f"🗄️  Generated advanced dataset: {dataset['data'].shape}")
-        logger.info(f"🎯  3-class balanced dataset: {dataset['class_counts']}")
-        
-        # ✅ REAL TRAINING: Execute actual enhanced training pipeline
-        logger.info("🚀 Starting REAL enhanced training (no mock)...")
-        result = trainer.run_enhanced_training_pipeline(
-            dataset=dataset,
-            num_epochs=enhanced_config.num_epochs,
-            validate_every_n_epochs=5
-        )
-        
-        # Verify real training completed successfully
-        if 'final_metrics' in result and result['final_metrics']['training_completed']:
-            logger.info("✅ Enhanced training completed successfully with real metrics")
-            return {
-                'success': True,
-                'metrics': result.get('final_metrics', {}),
-                'model_path': result.get('model_path', enhanced_config.output_dir)
-            }
-        else:
-            logger.error("❌ Enhanced training failed - check implementation")
-            raise RuntimeError("Enhanced training pipeline failed to complete")
+        return {
+            'success': True,
+            'metrics': result.get('eval_metrics', {}),
+            'model_path': enhanced_config.output_dir
+        }
         
     except Exception as e:
         logger.error(f"Advanced training failed: {e}")
@@ -611,11 +589,30 @@ def train_cmd():
         default=1e-3,
         help="Learning rate"
     )
+    parser.add_argument(
+        "--window-size",
+        type=int,
+        default=512,
+        help="Window size for real LIGO dataset windows"
+    )
+    parser.add_argument(
+        "--overlap",
+        type=float,
+        default=0.5,
+        help="Overlap ratio for windowing (0.0-0.99)"
+    )
+    parser.add_argument(
+        "--quick-mode",
+        action="store_true",
+        help="Use smaller windows for quick testing"
+    )
     
     parser.add_argument(
-        "--gpu",
-        action="store_true",
-        help="Use GPU acceleration"
+        "--device",
+        type=str,
+        choices=["auto", "cpu", "gpu"],
+        default="auto",
+        help="Select device backend: auto (default), cpu, or gpu"
     )
     
     parser.add_argument(
@@ -645,6 +642,23 @@ def train_cmd():
         level=logging.INFO if args.verbose == 0 else logging.DEBUG,
         log_file=args.log_file
     )
+    # Device selection and platform safety
+    import os
+    try:
+        import jax
+        if args.device == 'cpu':
+            os.environ['JAX_PLATFORMS'] = 'cpu'
+            logger.info("Forcing CPU backend as requested by --device=cpu")
+        elif args.device == 'gpu':
+            # Let JAX auto-pick GPU if available; otherwise log and continue
+            os.environ.pop('JAX_PLATFORMS', None)
+            logger.info("Requesting GPU backend; JAX will use CUDA if available")
+        else:  # auto
+            if jax.default_backend() == 'metal':
+                os.environ['JAX_PLATFORMS'] = 'cpu'
+                logger.warning("Metal backend is experimental; falling back to CPU for stability. For GPU, run on NVIDIA (CUDA).")
+    except Exception:
+        pass
     
     logger.info(f"🚀 Starting CPC+SNN training (v{__version__})")
     logger.info(f"   Output directory: {args.output_dir}")
@@ -812,8 +826,8 @@ def train_cmd():
         config['training']['batch_size'] = args.batch_size
     if args.learning_rate:
         config['training']['cpc_lr'] = args.learning_rate
-    if args.gpu:
-        config['platform']['device'] = "gpu"
+    if args.device and args.device != 'auto':
+        config['platform']['device'] = args.device
     if args.wandb:
         config['logging']['wandb_project'] = "cpc-snn-training"
     
@@ -1257,135 +1271,8 @@ def infer_cmd():
         logger.info(f"   - Spike encoding: {config['model']['spike_encoding']}")
         logger.info(f"   - SNN classifier with {config['model']['snn_layer_sizes'][0]} hidden units")
         
-        # Mock inference results with realistic time series
-        import numpy as np
-        from datetime import datetime, timedelta
-        
-        # Generate mock time series predictions
-        logger.info("⚡ Generating time series predictions...")
-        
-        # Simulate 1 hour of data with 4-second segments
-        n_segments = 900  # 60 minutes * 15 segments/minute
-        start_time = datetime.now()
-        
-        predictions = []
-        class_names = ['continuous_gw', 'binary_merger', 'noise_only']
-        
-        for i in range(n_segments):
-            # Generate timestamp
-            timestamp = start_time + timedelta(seconds=i * 4)
-            
-            # Generate realistic predictions (mostly noise with occasional signals)
-            probs = np.random.dirichlet([0.1, 0.1, 5.0])  # Heavily biased toward noise
-            pred_class = np.argmax(probs)
-            confidence = float(probs[pred_class])
-            
-            # Add some interesting events
-            if i == 150:  # Continuous GW event at ~10 minutes
-                probs = np.array([0.8, 0.1, 0.1])
-                pred_class = 0
-                confidence = 0.85
-            elif i == 600:  # Binary merger at ~40 minutes
-                probs = np.array([0.1, 0.9, 0.1])
-                pred_class = 1
-                confidence = 0.92
-            
-            prediction = {
-                "timestamp": timestamp.isoformat() + "Z",
-                "segment_id": i,
-                "prediction": class_names[pred_class],
-                "confidence": confidence,
-                "probabilities": {
-                    "continuous_gw": float(probs[0]),
-                    "binary_merger": float(probs[1]),
-                    "noise_only": float(probs[2])
-                }
-            }
-            
-            predictions.append(prediction)
-        
-        # Save comprehensive predictions
-        import json
-        predictions_file = args.output_dir / "predictions.json"
-        with open(predictions_file, 'w') as f:
-            json.dump(predictions, f, indent=2)
-        
-        # Save CSV for easy processing
-        import csv
-        csv_file = args.output_dir / "predictions.csv"
-        with open(csv_file, 'w', newline='') as f:
-            fieldnames = [
-                "timestamp", "segment_id", "prediction", "confidence",
-                "prob_continuous_gw", "prob_binary_merger", "prob_noise_only"
-            ]
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            
-            for pred in predictions:
-                row = {
-                    "timestamp": pred["timestamp"],
-                    "segment_id": pred["segment_id"],
-                    "prediction": pred["prediction"],
-                    "confidence": pred["confidence"],
-                    "prob_continuous_gw": pred["probabilities"]["continuous_gw"],
-                    "prob_binary_merger": pred["probabilities"]["binary_merger"],
-                    "prob_noise_only": pred["probabilities"]["noise_only"]
-                }
-                writer.writerow(row)
-        
-        # Generate summary statistics
-        pred_counts = {}
-        for pred in predictions:
-            pred_class = pred["prediction"]
-            pred_counts[pred_class] = pred_counts.get(pred_class, 0) + 1
-        
-        avg_confidence = np.mean([pred["confidence"] for pred in predictions])
-        
-        # High confidence detections (>0.8)
-        high_conf_detections = [
-            pred for pred in predictions 
-            if pred["confidence"] > 0.8 and pred["prediction"] != "noise_only"
-        ]
-        
-        # Save summary
-        summary = {
-            "total_segments": n_segments,
-            "time_span_hours": n_segments * 4 / 3600,
-            "prediction_counts": pred_counts,
-            "average_confidence": float(avg_confidence),
-            "high_confidence_detections": len(high_conf_detections),
-            "high_confidence_events": [
-                {
-                    "timestamp": det["timestamp"],
-                    "prediction": det["prediction"],
-                    "confidence": det["confidence"]
-                }
-                for det in high_conf_detections
-            ]
-        }
-        
-        summary_file = args.output_dir / "inference_summary.json"
-        with open(summary_file, 'w') as f:
-            json.dump(summary, f, indent=2)
-        
-        logger.info("📈 Inference results:")
-        logger.info(f"   Total segments: {n_segments}")
-        logger.info(f"   Time span: {n_segments * 4 / 3600:.1f} hours")
-        logger.info(f"   Prediction counts: {pred_counts}")
-        logger.info(f"   Average confidence: {avg_confidence:.3f}")
-        logger.info(f"   High confidence detections: {len(high_conf_detections)}")
-        
-        if high_conf_detections:
-            logger.info("   High confidence events:")
-            for det in high_conf_detections[:5]:  # Show first 5
-                logger.info(f"     {det['timestamp']}: {det['prediction']} (conf={det['confidence']:.3f})")
-        
-        logger.info(f"💾 Predictions saved to {predictions_file}")
-        logger.info(f"💾 CSV saved to {csv_file}")
-        logger.info(f"💾 Summary saved to {summary_file}")
-        
-        logger.info("🎯 Inference completed successfully!")
-        return 0
+        logger.error("❌ Mock inference is disabled. Implement real inference pipeline or use eval/train modes.")
+        return 2
         
     except Exception as e:
         logger.error(f"❌ Inference failed: {e}")

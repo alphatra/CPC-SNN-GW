@@ -1,0 +1,866 @@
+2025-08-08 02:23:00,206 - training.training_utils - INFO - JAX devices: [METAL(id=0)]
+2025-08-08 02:23:00,206 - training.training_utils - INFO - JAX platform: METAL
+2025-08-08 02:23:00,206 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:23:00,206 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:23:00,206 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:23:00,206 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-08 02:23:00,207 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-08 02:23:00,208 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-08 02:23:00,208 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-08 02:23:00,208 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+2025-08-08 02:23:00,208 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-08-08 02:23:00,208 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:23:00,208 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:23:00,238 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+2025-08-08 02:23:00,238 - data.real_ligo_integration - INFO -    H1: 131072 samples
+2025-08-08 02:23:00,238 - data.real_ligo_integration - INFO -    L1: 131072 samples
+2025-08-08 02:23:00,238 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+2025-08-08 02:23:00,239 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+2025-08-08 02:23:00,243 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-08-08 02:23:00,243 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-08 02:23:00,243 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-08-08 02:23:00,243 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+2025-08-08 02:23:00,254 - __main__ - ERROR - Standard training failed: UNIMPLEMENTED: default_memory_space is not supported.
+2025-08-08 02:23:00,255 - __main__ - ERROR - ❌ Training failed!
+2025-08-08 02:25:00,053 - training.training_utils - INFO - JAX devices: [METAL(id=0)]
+2025-08-08 02:25:00,054 - training.training_utils - INFO - JAX platform: METAL
+2025-08-08 02:25:00,054 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:25:00,054 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:25:00,054 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:25:00,054 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-08 02:25:00,055 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-08 02:25:00,056 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-08 02:25:00,056 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-08 02:25:00,060 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+2025-08-08 02:25:00,060 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-08-08 02:25:00,060 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:25:00,060 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:25:00,090 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+2025-08-08 02:25:00,090 - data.real_ligo_integration - INFO -    H1: 131072 samples
+2025-08-08 02:25:00,090 - data.real_ligo_integration - INFO -    L1: 131072 samples
+2025-08-08 02:25:00,090 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+2025-08-08 02:25:00,090 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+2025-08-08 02:25:00,095 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-08-08 02:25:00,095 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-08 02:25:00,095 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-08-08 02:25:00,095 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+2025-08-08 02:25:00,097 - __main__ - ERROR - Standard training failed: UNIMPLEMENTED: default_memory_space is not supported.
+2025-08-08 02:25:00,101 - __main__ - ERROR - ❌ Training failed!
+2025-08-08 02:31:11,545 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:31:11,545 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:31:11,545 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:31:11,545 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:31:11,545 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:31:11,545 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-08 02:31:11,546 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-08 02:31:11,547 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-08 02:31:11,548 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-08 02:31:11,553 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+2025-08-08 02:31:11,553 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-08-08 02:31:11,553 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:31:11,553 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:31:11,610 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+2025-08-08 02:31:11,610 - data.real_ligo_integration - INFO -    H1: 131072 samples
+2025-08-08 02:31:11,610 - data.real_ligo_integration - INFO -    L1: 131072 samples
+2025-08-08 02:31:11,610 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+2025-08-08 02:31:11,610 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+2025-08-08 02:31:11,621 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-08-08 02:31:11,621 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-08 02:31:11,621 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-08-08 02:31:11,621 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+2025-08-08 02:31:11,623 - data.real_ligo_integration - INFO - 🌊 Created proper windowed dataset:
+2025-08-08 02:31:11,623 - data.real_ligo_integration - INFO -    Total windows: 7
+2025-08-08 02:31:11,623 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-08 02:31:11,636 - data.real_ligo_integration - INFO -    Signal windows (label=1): 3
+2025-08-08 02:31:11,648 - data.real_ligo_integration - INFO -    Noise windows (label=0): 4
+2025-08-08 02:31:11,664 - data.real_ligo_integration - INFO -    Class balance: 42.9% positive
+2025-08-08 02:31:12,012 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-08 02:31:12,013 - utils.data_split - INFO -    Class 0 samples: 4
+2025-08-08 02:31:12,013 - utils.data_split - INFO -    Class 1 samples: 3
+2025-08-08 02:31:12,487 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-08 02:31:12,487 - utils.data_split - INFO -    Train: 5 samples
+2025-08-08 02:31:12,487 - utils.data_split - INFO -    Test: 2 samples
+2025-08-08 02:31:12,500 - utils.data_split - INFO -    Train class balance: 40.0% positive
+2025-08-08 02:31:12,513 - utils.data_split - INFO -    Test class balance: 50.0% positive
+2025-08-08 02:31:12,538 - utils.data_split - INFO - ✅ Balanced test set: 50.0% positive
+2025-08-08 02:31:12,538 - __main__ - INFO -    Generated 5 REAL LIGO training samples
+2025-08-08 02:31:12,538 - __main__ - INFO -    Test set: 2 samples for evaluation
+2025-08-08 02:31:12,538 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-08 02:31:12,538 - __main__ - INFO -    Training data shape: (5, 512)
+2025-08-08 02:31:12,538 - __main__ - INFO -    Labels shape: (5,)
+2025-08-08 02:31:12,538 - __main__ - INFO -    Running 1 epochs...
+2025-08-08 02:31:12,538 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-08 02:31:12,539 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:31:12,539 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:31:12,539 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:31:12,539 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:31:12,539 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:31:12,539 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:31:12,539 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:31:12,539 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:31:12,539 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:31:12,539 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:31:15,468 - __main__ - INFO -    🔥 Epoch 1/1
+2025-08-08 02:31:15,468 - __main__ - INFO -    🔥 Epoch 1/1
+2025-08-08 02:31:25,531 - __main__ - INFO -       Loss: 0.6995, Accuracy: 0.6000
+2025-08-08 02:31:25,531 - __main__ - INFO -       Loss: 0.6995, Accuracy: 0.6000
+2025-08-08 02:31:25,532 - __main__ - INFO - 🎉 REAL Training completed in 13.0s!
+2025-08-08 02:31:25,532 - __main__ - INFO - 🎉 REAL Training completed in 13.0s!
+2025-08-08 02:31:25,533 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:31:25,533 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:31:26,164 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:31:26,164 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:31:26,165 - training.test_evaluation - INFO -    Test samples: 2
+2025-08-08 02:31:26,165 - training.test_evaluation - INFO -    Test samples: 2
+2025-08-08 02:31:26,165 - training.test_evaluation - INFO -    True labels - Class 0: 1, Class 1: 1
+2025-08-08 02:31:26,165 - training.test_evaluation - INFO -    True labels - Class 0: 1, Class 1: 1
+2025-08-08 02:31:26,165 - training.test_evaluation - INFO -    Predictions - Class 0: 2, Class 1: 0
+2025-08-08 02:31:26,165 - training.test_evaluation - INFO -    Predictions - Class 0: 2, Class 1: 0
+2025-08-08 02:31:26,165 - training.test_evaluation - INFO -    Test accuracy: 50.0%
+2025-08-08 02:31:26,165 - training.test_evaluation - INFO -    Test accuracy: 50.0%
+2025-08-08 02:31:26,268 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:31:26,268 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:31:26,268 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:31:26,268 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:31:26,268 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:31:26,268 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:31:26,292 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:31:26,292 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:31:26,292 - training.test_evaluation - INFO -    Test 1: Pred=0, True=1 ❌
+2025-08-08 02:31:26,292 - training.test_evaluation - INFO -    Test 1: Pred=0, True=1 ❌
+2025-08-08 02:31:26,305 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 60.0%
+Test Accuracy: 50.0% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 1
+======================================================================
+2025-08-08 02:31:26,305 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 60.0%
+Test Accuracy: 50.0% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 1
+======================================================================
+2025-08-08 02:31:26,305 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:31:26,305 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Total epochs: 1
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Total epochs: 1
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Final loss: 0.6995
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Final loss: 0.6995
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Training accuracy: 0.6000
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Training accuracy: 0.6000
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Test accuracy: 0.5000 (REAL accuracy)
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Test accuracy: 0.5000 (REAL accuracy)
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Training time: 13.0s
+2025-08-08 02:31:26,306 - __main__ - INFO -    - Training time: 13.0s
+2025-08-08 02:31:26,306 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:31:26,306 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:31:26,306 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:31:26,306 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:31:26,306 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6995493769645691, 'final_train_accuracy': 0.6000000238418579, 'final_test_accuracy': 0.5, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 1, 'total_steps': 5, 'best_metric': 0.5, 'training_time_seconds': 12.993639707565308, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 1, 1: 1}, 'class_counts_pred': {0: 2, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0], 'true_labels': [0, 1]}}
+2025-08-08 02:31:26,306 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6995493769645691, 'final_train_accuracy': 0.6000000238418579, 'final_test_accuracy': 0.5, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 1, 'total_steps': 5, 'best_metric': 0.5, 'training_time_seconds': 12.993639707565308, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 1, 1: 1}, 'class_counts_pred': {0: 2, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0], 'true_labels': [0, 1]}}
+2025-08-08 02:31:26,306 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:31:26,306 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:36:21,268 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:36:21,268 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:36:21,268 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:36:21,270 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:36:21,270 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:36:21,270 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-08 02:36:21,271 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-08 02:36:21,273 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-08 02:36:21,273 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-08 02:36:21,274 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+2025-08-08 02:36:21,274 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-08-08 02:36:21,274 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:36:21,274 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:36:21,330 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+2025-08-08 02:36:21,330 - data.real_ligo_integration - INFO -    H1: 131072 samples
+2025-08-08 02:36:21,330 - data.real_ligo_integration - INFO -    L1: 131072 samples
+2025-08-08 02:36:21,330 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+2025-08-08 02:36:21,330 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+2025-08-08 02:36:21,336 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-08-08 02:36:21,337 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-08 02:36:21,337 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-08-08 02:36:21,337 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+2025-08-08 02:36:21,338 - data.real_ligo_integration - INFO - 🌊 Created proper windowed dataset:
+2025-08-08 02:36:21,338 - data.real_ligo_integration - INFO -    Total windows: 7
+2025-08-08 02:36:21,338 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-08 02:36:21,352 - data.real_ligo_integration - INFO -    Signal windows (label=1): 3
+2025-08-08 02:36:21,365 - data.real_ligo_integration - INFO -    Noise windows (label=0): 4
+2025-08-08 02:36:21,380 - data.real_ligo_integration - INFO -    Class balance: 42.9% positive
+2025-08-08 02:36:21,732 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-08 02:36:21,733 - utils.data_split - INFO -    Class 0 samples: 4
+2025-08-08 02:36:21,733 - utils.data_split - INFO -    Class 1 samples: 3
+2025-08-08 02:36:22,211 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-08 02:36:22,211 - utils.data_split - INFO -    Train: 5 samples
+2025-08-08 02:36:22,211 - utils.data_split - INFO -    Test: 2 samples
+2025-08-08 02:36:22,225 - utils.data_split - INFO -    Train class balance: 40.0% positive
+2025-08-08 02:36:22,238 - utils.data_split - INFO -    Test class balance: 50.0% positive
+2025-08-08 02:36:22,263 - utils.data_split - INFO - ✅ Balanced test set: 50.0% positive
+2025-08-08 02:36:22,263 - __main__ - INFO -    Generated 5 REAL LIGO training samples
+2025-08-08 02:36:22,263 - __main__ - INFO -    Test set: 2 samples for evaluation
+2025-08-08 02:36:22,263 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-08 02:36:22,263 - __main__ - INFO -    Training data shape: (5, 512)
+2025-08-08 02:36:22,263 - __main__ - INFO -    Labels shape: (5,)
+2025-08-08 02:36:22,263 - __main__ - INFO -    Running 2 epochs...
+2025-08-08 02:36:22,263 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-08 02:36:22,264 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:36:22,264 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:36:22,264 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:36:22,264 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:36:22,264 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:36:22,264 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:36:22,264 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:36:22,264 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:36:22,264 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:36:22,264 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:36:25,214 - __main__ - INFO -    🔥 Epoch 1/2
+2025-08-08 02:36:25,214 - __main__ - INFO -    🔥 Epoch 1/2
+2025-08-08 02:36:35,762 - __main__ - INFO -       Loss: 0.6995, Accuracy: 0.6000
+2025-08-08 02:36:35,762 - __main__ - INFO -       Loss: 0.6995, Accuracy: 0.6000
+2025-08-08 02:36:35,763 - __main__ - INFO -    🔥 Epoch 2/2
+2025-08-08 02:36:35,763 - __main__ - INFO -    🔥 Epoch 2/2
+2025-08-08 02:36:38,690 - __main__ - INFO -       Loss: 0.6996, Accuracy: 0.6000
+2025-08-08 02:36:38,690 - __main__ - INFO -       Loss: 0.6996, Accuracy: 0.6000
+2025-08-08 02:36:38,690 - __main__ - INFO - 🎉 REAL Training completed in 16.4s!
+2025-08-08 02:36:38,690 - __main__ - INFO - 🎉 REAL Training completed in 16.4s!
+2025-08-08 02:36:38,691 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:36:38,691 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:36:39,332 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:36:39,332 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:36:39,333 - training.test_evaluation - INFO -    Test samples: 2
+2025-08-08 02:36:39,333 - training.test_evaluation - INFO -    Test samples: 2
+2025-08-08 02:36:39,333 - training.test_evaluation - INFO -    True labels - Class 0: 1, Class 1: 1
+2025-08-08 02:36:39,333 - training.test_evaluation - INFO -    True labels - Class 0: 1, Class 1: 1
+2025-08-08 02:36:39,333 - training.test_evaluation - INFO -    Predictions - Class 0: 2, Class 1: 0
+2025-08-08 02:36:39,333 - training.test_evaluation - INFO -    Predictions - Class 0: 2, Class 1: 0
+2025-08-08 02:36:39,333 - training.test_evaluation - INFO -    Test accuracy: 50.0%
+2025-08-08 02:36:39,333 - training.test_evaluation - INFO -    Test accuracy: 50.0%
+2025-08-08 02:36:39,436 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:36:39,436 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:36:39,437 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:36:39,437 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:36:39,437 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:36:39,437 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:36:39,460 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:36:39,460 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:36:39,460 - training.test_evaluation - INFO -    Test 1: Pred=0, True=1 ❌
+2025-08-08 02:36:39,460 - training.test_evaluation - INFO -    Test 1: Pred=0, True=1 ❌
+2025-08-08 02:36:39,473 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 60.0%
+Test Accuracy: 50.0% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 2
+======================================================================
+2025-08-08 02:36:39,473 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 60.0%
+Test Accuracy: 50.0% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 2
+======================================================================
+2025-08-08 02:36:39,473 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:36:39,473 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Total epochs: 2
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Total epochs: 2
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Final loss: 0.6996
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Final loss: 0.6996
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Training accuracy: 0.6000
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Training accuracy: 0.6000
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Test accuracy: 0.5000 (REAL accuracy)
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Test accuracy: 0.5000 (REAL accuracy)
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Training time: 16.4s
+2025-08-08 02:36:39,473 - __main__ - INFO -    - Training time: 16.4s
+2025-08-08 02:36:39,473 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:36:39,473 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:36:39,474 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:36:39,474 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:36:39,474 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6995857357978821, 'final_train_accuracy': 0.6000000238418579, 'final_test_accuracy': 0.5, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 2, 'total_steps': 10, 'best_metric': 0.5, 'training_time_seconds': 16.426655054092407, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 1, 1: 1}, 'class_counts_pred': {0: 2, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0], 'true_labels': [0, 1]}}
+2025-08-08 02:36:39,474 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6995857357978821, 'final_train_accuracy': 0.6000000238418579, 'final_test_accuracy': 0.5, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 2, 'total_steps': 10, 'best_metric': 0.5, 'training_time_seconds': 16.426655054092407, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 1, 1: 1}, 'class_counts_pred': {0: 2, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0], 'true_labels': [0, 1]}}
+2025-08-08 02:36:39,474 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:36:39,474 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:40:46,571 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:40:46,571 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:40:46,571 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:40:46,572 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:40:46,572 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:40:46,572 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-08 02:40:46,573 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-08 02:40:46,575 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-08 02:40:46,576 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-08 02:40:46,577 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+2025-08-08 02:40:46,577 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-08-08 02:40:46,577 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:40:46,577 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:40:46,640 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+2025-08-08 02:40:46,640 - data.real_ligo_integration - INFO -    H1: 131072 samples
+2025-08-08 02:40:46,640 - data.real_ligo_integration - INFO -    L1: 131072 samples
+2025-08-08 02:40:46,640 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+2025-08-08 02:40:46,640 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+2025-08-08 02:40:46,649 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-08-08 02:40:46,650 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-08 02:40:46,650 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-08-08 02:40:46,650 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+2025-08-08 02:40:46,652 - data.real_ligo_integration - INFO - 🌊 Created proper windowed dataset:
+2025-08-08 02:40:46,652 - data.real_ligo_integration - INFO -    Total windows: 7
+2025-08-08 02:40:46,652 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-08 02:40:46,665 - data.real_ligo_integration - INFO -    Signal windows (label=1): 3
+2025-08-08 02:40:46,678 - data.real_ligo_integration - INFO -    Noise windows (label=0): 4
+2025-08-08 02:40:46,693 - data.real_ligo_integration - INFO -    Class balance: 42.9% positive
+2025-08-08 02:40:47,033 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-08 02:40:47,033 - utils.data_split - INFO -    Class 0 samples: 4
+2025-08-08 02:40:47,033 - utils.data_split - INFO -    Class 1 samples: 3
+2025-08-08 02:40:47,512 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-08 02:40:47,512 - utils.data_split - INFO -    Train: 5 samples
+2025-08-08 02:40:47,512 - utils.data_split - INFO -    Test: 2 samples
+2025-08-08 02:40:47,526 - utils.data_split - INFO -    Train class balance: 40.0% positive
+2025-08-08 02:40:47,538 - utils.data_split - INFO -    Test class balance: 50.0% positive
+2025-08-08 02:40:47,562 - utils.data_split - INFO - ✅ Balanced test set: 50.0% positive
+2025-08-08 02:40:47,562 - __main__ - INFO -    Generated 5 REAL LIGO training samples
+2025-08-08 02:40:47,562 - __main__ - INFO -    Test set: 2 samples for evaluation
+2025-08-08 02:40:47,562 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-08 02:40:47,562 - __main__ - INFO -    Training data shape: (5, 512)
+2025-08-08 02:40:47,562 - __main__ - INFO -    Labels shape: (5,)
+2025-08-08 02:40:47,562 - __main__ - INFO -    Running 1 epochs...
+2025-08-08 02:40:47,562 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-08 02:40:47,563 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:40:47,563 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:40:47,563 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:40:47,563 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:40:47,563 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:40:47,563 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:40:47,563 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:40:47,563 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:40:47,563 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:40:47,563 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:40:50,636 - __main__ - INFO -    🔥 Epoch 1/1
+2025-08-08 02:40:50,636 - __main__ - INFO -    🔥 Epoch 1/1
+2025-08-08 02:41:00,978 - __main__ - INFO -       Loss: 0.6995, Accuracy: 0.6000
+2025-08-08 02:41:00,978 - __main__ - INFO -       Loss: 0.6995, Accuracy: 0.6000
+2025-08-08 02:41:00,978 - __main__ - INFO - 🎉 REAL Training completed in 13.4s!
+2025-08-08 02:41:00,978 - __main__ - INFO - 🎉 REAL Training completed in 13.4s!
+2025-08-08 02:41:00,980 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:41:00,980 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO -    Test samples: 2
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO -    Test samples: 2
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO -    True labels - Class 0: 1, Class 1: 1
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO -    True labels - Class 0: 1, Class 1: 1
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO -    Predictions - Class 0: 2, Class 1: 0
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO -    Predictions - Class 0: 2, Class 1: 0
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO -    Test accuracy: 50.0%
+2025-08-08 02:41:01,635 - training.test_evaluation - INFO -    Test accuracy: 50.0%
+2025-08-08 02:41:01,744 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:41:01,744 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:41:01,744 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:41:01,744 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:41:01,744 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:41:01,744 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:41:01,768 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:41:01,768 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:41:01,768 - training.test_evaluation - INFO -    Test 1: Pred=0, True=1 ❌
+2025-08-08 02:41:01,768 - training.test_evaluation - INFO -    Test 1: Pred=0, True=1 ❌
+2025-08-08 02:41:01,781 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 60.0%
+Test Accuracy: 50.0% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 1
+======================================================================
+2025-08-08 02:41:01,781 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 60.0%
+Test Accuracy: 50.0% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 1
+======================================================================
+2025-08-08 02:41:01,781 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:41:01,781 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:41:01,781 - __main__ - INFO -    - Total epochs: 1
+2025-08-08 02:41:01,781 - __main__ - INFO -    - Total epochs: 1
+2025-08-08 02:41:01,781 - __main__ - INFO -    - Final loss: 0.6995
+2025-08-08 02:41:01,781 - __main__ - INFO -    - Final loss: 0.6995
+2025-08-08 02:41:01,782 - __main__ - INFO -    - Training accuracy: 0.6000
+2025-08-08 02:41:01,782 - __main__ - INFO -    - Training accuracy: 0.6000
+2025-08-08 02:41:01,782 - __main__ - INFO -    - Test accuracy: 0.5000 (REAL accuracy)
+2025-08-08 02:41:01,782 - __main__ - INFO -    - Test accuracy: 0.5000 (REAL accuracy)
+2025-08-08 02:41:01,782 - __main__ - INFO -    - Training time: 13.4s
+2025-08-08 02:41:01,782 - __main__ - INFO -    - Training time: 13.4s
+2025-08-08 02:41:01,782 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:41:01,782 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:41:01,783 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:41:01,783 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:41:01,783 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6995493799448014, 'final_train_accuracy': 0.6, 'final_test_accuracy': 0.5, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 1, 'total_steps': 5, 'best_metric': 0.5, 'training_time_seconds': 13.41613483428955, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 1, 1: 1}, 'class_counts_pred': {0: 2, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0], 'true_labels': [0, 1]}}
+2025-08-08 02:41:01,783 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6995493799448014, 'final_train_accuracy': 0.6, 'final_test_accuracy': 0.5, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 1, 'total_steps': 5, 'best_metric': 0.5, 'training_time_seconds': 13.41613483428955, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 1, 1: 1}, 'class_counts_pred': {0: 2, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0], 'true_labels': [0, 1]}}
+2025-08-08 02:41:01,783 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:41:01,783 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:42:38,406 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:42:38,406 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:42:38,406 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:42:38,407 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:42:38,407 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:42:38,407 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-08 02:42:38,407 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-08 02:42:38,409 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-08 02:42:38,410 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-08 02:42:38,414 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+2025-08-08 02:42:38,414 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-08-08 02:42:38,414 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:42:38,414 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:42:38,470 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+2025-08-08 02:42:38,470 - data.real_ligo_integration - INFO -    H1: 131072 samples
+2025-08-08 02:42:38,470 - data.real_ligo_integration - INFO -    L1: 131072 samples
+2025-08-08 02:42:38,470 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+2025-08-08 02:42:38,470 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+2025-08-08 02:42:38,482 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-08-08 02:42:38,482 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-08 02:42:38,482 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-08-08 02:42:38,482 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+2025-08-08 02:42:38,485 - data.real_ligo_integration - INFO - 🌊 Created proper windowed dataset:
+2025-08-08 02:42:38,485 - data.real_ligo_integration - INFO -    Total windows: 31
+2025-08-08 02:42:38,485 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-08 02:42:38,499 - data.real_ligo_integration - INFO -    Signal windows (label=1): 14
+2025-08-08 02:42:38,515 - data.real_ligo_integration - INFO -    Noise windows (label=0): 17
+2025-08-08 02:42:38,530 - data.real_ligo_integration - INFO -    Class balance: 45.2% positive
+2025-08-08 02:42:38,932 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-08 02:42:38,932 - utils.data_split - INFO -    Class 0 samples: 17
+2025-08-08 02:42:38,933 - utils.data_split - INFO -    Class 1 samples: 14
+2025-08-08 02:42:39,471 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-08 02:42:39,471 - utils.data_split - INFO -    Train: 24 samples
+2025-08-08 02:42:39,471 - utils.data_split - INFO -    Test: 7 samples
+2025-08-08 02:42:39,485 - utils.data_split - INFO -    Train class balance: 45.8% positive
+2025-08-08 02:42:39,500 - utils.data_split - INFO -    Test class balance: 42.9% positive
+2025-08-08 02:42:39,527 - utils.data_split - INFO - ✅ Balanced test set: 42.9% positive
+2025-08-08 02:42:39,528 - __main__ - INFO -    Generated 24 REAL LIGO training samples
+2025-08-08 02:42:39,528 - __main__ - INFO -    Test set: 7 samples for evaluation
+2025-08-08 02:42:39,528 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-08 02:42:39,528 - __main__ - INFO -    Training data shape: (24, 512)
+2025-08-08 02:42:39,528 - __main__ - INFO -    Labels shape: (24,)
+2025-08-08 02:42:39,528 - __main__ - INFO -    Running 3 epochs...
+2025-08-08 02:42:39,528 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-08 02:42:39,528 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:42:39,528 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:42:39,528 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:42:39,528 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:42:39,528 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:42:39,528 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:42:39,529 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:42:39,529 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:42:39,529 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:42:39,529 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:42:42,601 - __main__ - INFO -    🔥 Epoch 1/3
+2025-08-08 02:42:42,601 - __main__ - INFO -    🔥 Epoch 1/3
+2025-08-08 02:43:04,311 - __main__ - INFO -       Loss: 0.6844, Accuracy: 0.5417
+2025-08-08 02:43:04,311 - __main__ - INFO -       Loss: 0.6844, Accuracy: 0.5417
+2025-08-08 02:43:04,314 - __main__ - INFO -    🔥 Epoch 2/3
+2025-08-08 02:43:04,314 - __main__ - INFO -    🔥 Epoch 2/3
+2025-08-08 02:43:18,585 - __main__ - INFO -       Loss: 0.6845, Accuracy: 0.5417
+2025-08-08 02:43:18,585 - __main__ - INFO -       Loss: 0.6845, Accuracy: 0.5417
+2025-08-08 02:43:18,586 - __main__ - INFO -    🔥 Epoch 3/3
+2025-08-08 02:43:18,586 - __main__ - INFO -    🔥 Epoch 3/3
+2025-08-08 02:43:33,288 - __main__ - INFO -       Loss: 0.6845, Accuracy: 0.5417
+2025-08-08 02:43:33,288 - __main__ - INFO -       Loss: 0.6845, Accuracy: 0.5417
+2025-08-08 02:43:33,291 - __main__ - INFO - 🎉 REAL Training completed in 53.8s!
+2025-08-08 02:43:33,291 - __main__ - INFO - 🎉 REAL Training completed in 53.8s!
+2025-08-08 02:43:33,294 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:43:33,294 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO -    Test samples: 7
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO -    Test samples: 7
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO -    True labels - Class 0: 4, Class 1: 3
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO -    True labels - Class 0: 4, Class 1: 3
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO -    Predictions - Class 0: 7, Class 1: 0
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO -    Predictions - Class 0: 7, Class 1: 0
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO -    Test accuracy: 57.1%
+2025-08-08 02:43:35,331 - training.test_evaluation - INFO -    Test accuracy: 57.1%
+2025-08-08 02:43:35,463 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:43:35,463 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:43:35,463 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:43:35,463 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:43:35,463 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:43:35,463 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:43:35,492 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:43:35,492 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:43:35,492 - training.test_evaluation - INFO -    Test 1: Pred=0, True=0 ✅
+2025-08-08 02:43:35,492 - training.test_evaluation - INFO -    Test 1: Pred=0, True=0 ✅
+2025-08-08 02:43:35,493 - training.test_evaluation - INFO -    Test 2: Pred=0, True=0 ✅
+2025-08-08 02:43:35,493 - training.test_evaluation - INFO -    Test 2: Pred=0, True=0 ✅
+2025-08-08 02:43:35,493 - training.test_evaluation - INFO -    Test 3: Pred=0, True=1 ❌
+2025-08-08 02:43:35,493 - training.test_evaluation - INFO -    Test 3: Pred=0, True=1 ❌
+2025-08-08 02:43:35,493 - training.test_evaluation - INFO -    Test 4: Pred=0, True=1 ❌
+2025-08-08 02:43:35,493 - training.test_evaluation - INFO -    Test 4: Pred=0, True=1 ❌
+2025-08-08 02:43:35,493 - training.test_evaluation - INFO -    Test 5: Pred=0, True=1 ❌
+2025-08-08 02:43:35,493 - training.test_evaluation - INFO -    Test 5: Pred=0, True=1 ❌
+2025-08-08 02:43:35,494 - training.test_evaluation - INFO -    Test 6: Pred=0, True=0 ✅
+2025-08-08 02:43:35,494 - training.test_evaluation - INFO -    Test 6: Pred=0, True=0 ✅
+2025-08-08 02:43:35,510 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 54.2%
+Test Accuracy: 57.1% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 3
+======================================================================
+2025-08-08 02:43:35,510 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 54.2%
+Test Accuracy: 57.1% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 3
+======================================================================
+2025-08-08 02:43:35,510 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:43:35,510 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Total epochs: 3
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Total epochs: 3
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Final loss: 0.6845
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Final loss: 0.6845
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Training accuracy: 0.5417
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Training accuracy: 0.5417
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Test accuracy: 0.5714 (REAL accuracy)
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Test accuracy: 0.5714 (REAL accuracy)
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Training time: 53.8s
+2025-08-08 02:43:35,510 - __main__ - INFO -    - Training time: 53.8s
+2025-08-08 02:43:35,511 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:43:35,511 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:43:35,512 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:43:35,512 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:43:35,512 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6845274505515894, 'final_train_accuracy': 0.5416666666666666, 'final_test_accuracy': 0.5714285969734192, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 3, 'total_steps': 72, 'best_metric': 0.5714285969734192, 'training_time_seconds': 53.763614892959595, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5714285969734192, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 4, 1: 3}, 'class_counts_pred': {0: 7, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0, 0, 0, 0, 0, 0], 'true_labels': [0, 0, 0, 1, 1, 1, 0]}}
+2025-08-08 02:43:35,512 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6845274505515894, 'final_train_accuracy': 0.5416666666666666, 'final_test_accuracy': 0.5714285969734192, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 3, 'total_steps': 72, 'best_metric': 0.5714285969734192, 'training_time_seconds': 53.763614892959595, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5714285969734192, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 4, 1: 3}, 'class_counts_pred': {0: 7, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0, 0, 0, 0, 0, 0], 'true_labels': [0, 0, 0, 1, 1, 1, 0]}}
+2025-08-08 02:43:35,512 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:43:35,512 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:48:41,094 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:48:41,095 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:48:41,095 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:48:41,095 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:48:41,095 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:48:41,095 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-08 02:48:41,096 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-08 02:48:41,098 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-08 02:48:41,098 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-08 02:48:41,103 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+2025-08-08 02:48:41,103 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-08-08 02:48:41,103 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:48:41,103 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:48:41,160 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+2025-08-08 02:48:41,160 - data.real_ligo_integration - INFO -    H1: 131072 samples
+2025-08-08 02:48:41,160 - data.real_ligo_integration - INFO -    L1: 131072 samples
+2025-08-08 02:48:41,160 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+2025-08-08 02:48:41,160 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+2025-08-08 02:48:41,171 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-08-08 02:48:41,171 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-08 02:48:41,171 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-08-08 02:48:41,171 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+2025-08-08 02:48:41,175 - data.real_ligo_integration - INFO - 🌊 Created proper windowed dataset:
+2025-08-08 02:48:41,176 - data.real_ligo_integration - INFO -    Total windows: 31
+2025-08-08 02:48:41,176 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-08 02:48:41,193 - data.real_ligo_integration - INFO -    Signal windows (label=1): 14
+2025-08-08 02:48:41,210 - data.real_ligo_integration - INFO -    Noise windows (label=0): 17
+2025-08-08 02:48:41,226 - data.real_ligo_integration - INFO -    Class balance: 45.2% positive
+2025-08-08 02:48:41,646 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-08 02:48:41,647 - utils.data_split - INFO -    Class 0 samples: 17
+2025-08-08 02:48:41,647 - utils.data_split - INFO -    Class 1 samples: 14
+2025-08-08 02:48:42,240 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-08 02:48:42,240 - utils.data_split - INFO -    Train: 24 samples
+2025-08-08 02:48:42,240 - utils.data_split - INFO -    Test: 7 samples
+2025-08-08 02:48:42,256 - utils.data_split - INFO -    Train class balance: 45.8% positive
+2025-08-08 02:48:42,271 - utils.data_split - INFO -    Test class balance: 42.9% positive
+2025-08-08 02:48:42,298 - utils.data_split - INFO - ✅ Balanced test set: 42.9% positive
+2025-08-08 02:48:42,298 - __main__ - INFO -    Generated 24 REAL LIGO training samples
+2025-08-08 02:48:42,298 - __main__ - INFO -    Test set: 7 samples for evaluation
+2025-08-08 02:48:42,298 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-08 02:48:42,298 - __main__ - INFO -    Training data shape: (24, 512)
+2025-08-08 02:48:42,298 - __main__ - INFO -    Labels shape: (24,)
+2025-08-08 02:48:42,298 - __main__ - INFO -    Running 5 epochs...
+2025-08-08 02:48:42,299 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-08 02:48:42,299 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:48:42,299 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:48:42,299 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:48:42,299 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:48:42,299 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:48:42,299 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:48:42,299 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:48:42,299 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:48:42,299 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:48:42,299 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:48:45,926 - __main__ - INFO -    🔥 Epoch 1/5
+2025-08-08 02:48:45,926 - __main__ - INFO -    🔥 Epoch 1/5
+2025-08-08 02:49:13,294 - __main__ - INFO -       Loss: 0.6943, Accuracy: 0.5417
+2025-08-08 02:49:13,294 - __main__ - INFO -       Loss: 0.6943, Accuracy: 0.5417
+2025-08-08 02:49:13,295 - __main__ - INFO -    🔥 Epoch 2/5
+2025-08-08 02:49:13,295 - __main__ - INFO -    🔥 Epoch 2/5
+2025-08-08 02:49:32,366 - __main__ - INFO -       Loss: 0.6975, Accuracy: 0.5417
+2025-08-08 02:49:32,366 - __main__ - INFO -       Loss: 0.6975, Accuracy: 0.5417
+2025-08-08 02:49:32,368 - __main__ - INFO -    🔥 Epoch 3/5
+2025-08-08 02:49:32,368 - __main__ - INFO -    🔥 Epoch 3/5
+2025-08-08 02:49:57,816 - __main__ - INFO -       Loss: 0.6970, Accuracy: 0.5417
+2025-08-08 02:49:57,816 - __main__ - INFO -       Loss: 0.6970, Accuracy: 0.5417
+2025-08-08 02:49:57,826 - __main__ - INFO -    🔥 Epoch 4/5
+2025-08-08 02:49:57,826 - __main__ - INFO -    🔥 Epoch 4/5
+2025-08-08 02:50:25,806 - __main__ - INFO -       Loss: 0.6982, Accuracy: 0.5417
+2025-08-08 02:50:25,806 - __main__ - INFO -       Loss: 0.6982, Accuracy: 0.5417
+2025-08-08 02:50:25,808 - __main__ - INFO -    🔥 Epoch 5/5
+2025-08-08 02:50:25,808 - __main__ - INFO -    🔥 Epoch 5/5
+2025-08-08 02:50:46,960 - __main__ - INFO -       Loss: 0.6968, Accuracy: 0.5417
+2025-08-08 02:50:46,960 - __main__ - INFO -       Loss: 0.6968, Accuracy: 0.5417
+2025-08-08 02:50:46,962 - __main__ - INFO - 🎉 REAL Training completed in 124.7s!
+2025-08-08 02:50:46,962 - __main__ - INFO - 🎉 REAL Training completed in 124.7s!
+2025-08-08 02:50:46,965 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:50:46,965 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO -    Test samples: 7
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO -    Test samples: 7
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO -    True labels - Class 0: 4, Class 1: 3
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO -    True labels - Class 0: 4, Class 1: 3
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO -    Predictions - Class 0: 7, Class 1: 0
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO -    Predictions - Class 0: 7, Class 1: 0
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO -    Test accuracy: 57.1%
+2025-08-08 02:50:49,053 - training.test_evaluation - INFO -    Test accuracy: 57.1%
+2025-08-08 02:50:49,201 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:50:49,201 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:50:49,201 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:50:49,201 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:50:49,201 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:50:49,201 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:50:49,231 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:50:49,231 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:50:49,232 - training.test_evaluation - INFO -    Test 1: Pred=0, True=0 ✅
+2025-08-08 02:50:49,232 - training.test_evaluation - INFO -    Test 1: Pred=0, True=0 ✅
+2025-08-08 02:50:49,232 - training.test_evaluation - INFO -    Test 2: Pred=0, True=0 ✅
+2025-08-08 02:50:49,232 - training.test_evaluation - INFO -    Test 2: Pred=0, True=0 ✅
+2025-08-08 02:50:49,232 - training.test_evaluation - INFO -    Test 3: Pred=0, True=1 ❌
+2025-08-08 02:50:49,232 - training.test_evaluation - INFO -    Test 3: Pred=0, True=1 ❌
+2025-08-08 02:50:49,233 - training.test_evaluation - INFO -    Test 4: Pred=0, True=1 ❌
+2025-08-08 02:50:49,233 - training.test_evaluation - INFO -    Test 4: Pred=0, True=1 ❌
+2025-08-08 02:50:49,233 - training.test_evaluation - INFO -    Test 5: Pred=0, True=1 ❌
+2025-08-08 02:50:49,233 - training.test_evaluation - INFO -    Test 5: Pred=0, True=1 ❌
+2025-08-08 02:50:49,233 - training.test_evaluation - INFO -    Test 6: Pred=0, True=0 ✅
+2025-08-08 02:50:49,233 - training.test_evaluation - INFO -    Test 6: Pred=0, True=0 ✅
+2025-08-08 02:50:49,251 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 54.2%
+Test Accuracy: 57.1% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 5
+======================================================================
+2025-08-08 02:50:49,251 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 54.2%
+Test Accuracy: 57.1% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 5
+======================================================================
+2025-08-08 02:50:49,251 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:50:49,251 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Total epochs: 5
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Total epochs: 5
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Final loss: 0.6968
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Final loss: 0.6968
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Training accuracy: 0.5417
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Training accuracy: 0.5417
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Test accuracy: 0.5714 (REAL accuracy)
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Test accuracy: 0.5714 (REAL accuracy)
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Training time: 124.7s
+2025-08-08 02:50:49,251 - __main__ - INFO -    - Training time: 124.7s
+2025-08-08 02:50:49,252 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:50:49,252 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:50:49,254 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:50:49,254 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:50:49,255 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6967857194443544, 'final_train_accuracy': 0.5416666666666666, 'final_test_accuracy': 0.5714285969734192, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 5, 'total_steps': 120, 'best_metric': 0.5714285969734192, 'training_time_seconds': 124.66373801231384, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5714285969734192, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 4, 1: 3}, 'class_counts_pred': {0: 7, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0, 0, 0, 0, 0, 0], 'true_labels': [0, 0, 0, 1, 1, 1, 0]}}
+2025-08-08 02:50:49,255 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.6967857194443544, 'final_train_accuracy': 0.5416666666666666, 'final_test_accuracy': 0.5714285969734192, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 5, 'total_steps': 120, 'best_metric': 0.5714285969734192, 'training_time_seconds': 124.66373801231384, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5714285969734192, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 4, 1: 3}, 'class_counts_pred': {0: 7, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0, 0, 0, 0, 0, 0], 'true_labels': [0, 0, 0, 1, 1, 1, 0]}}
+2025-08-08 02:50:49,255 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:50:49,255 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:53:36,873 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:53:36,873 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:53:36,873 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:53:36,874 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:53:36,874 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:53:36,874 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-08 02:53:36,875 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-08 02:53:36,877 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-08 02:53:36,877 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-08 02:53:36,878 - data.real_ligo_integration - INFO - 🌊 Attempting to download real GW150914 data...
+2025-08-08 02:53:36,878 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-08-08 02:53:36,878 - data.real_ligo_integration - INFO - 🌊 Loading strain data from H1: H-H1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:53:36,879 - data.real_ligo_integration - INFO - 🌊 Loading strain data from L1: L-L1_LOSC_4_V2-1126259446-32.hdf5
+2025-08-08 02:53:36,912 - data.real_ligo_integration - INFO - ✅ Real GW150914 strain loaded:
+2025-08-08 02:53:36,912 - data.real_ligo_integration - INFO -    H1: 131072 samples
+2025-08-08 02:53:36,912 - data.real_ligo_integration - INFO -    L1: 131072 samples
+2025-08-08 02:53:36,912 - data.real_ligo_integration - INFO -    Time span: 1126259446.000 to 1126259478.000 GPS
+2025-08-08 02:53:36,912 - data.real_ligo_integration - INFO -    Sample rate: 4096 Hz
+2025-08-08 02:53:36,918 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data: 2048 samples
+2025-08-08 02:53:36,919 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-08 02:53:36,919 - data.real_ligo_integration - INFO - 🔧 Applied 100x normalization for realistic LIGO strain levels
+2025-08-08 02:53:36,919 - data.real_ligo_integration - INFO - ✅ GW150914 strain data obtained: 2048 samples
+2025-08-08 02:53:36,920 - data.real_ligo_integration - INFO - 🌊 Created proper windowed dataset:
+2025-08-08 02:53:36,920 - data.real_ligo_integration - INFO -    Total windows: 31
+2025-08-08 02:53:36,920 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-08 02:53:36,935 - data.real_ligo_integration - INFO -    Signal windows (label=1): 14
+2025-08-08 02:53:36,951 - data.real_ligo_integration - INFO -    Noise windows (label=0): 17
+2025-08-08 02:53:36,966 - data.real_ligo_integration - INFO -    Class balance: 45.2% positive
+2025-08-08 02:53:37,364 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-08 02:53:37,365 - utils.data_split - INFO -    Class 0 samples: 17
+2025-08-08 02:53:37,365 - utils.data_split - INFO -    Class 1 samples: 14
+2025-08-08 02:53:37,887 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-08 02:53:37,887 - utils.data_split - INFO -    Train: 24 samples
+2025-08-08 02:53:37,887 - utils.data_split - INFO -    Test: 7 samples
+2025-08-08 02:53:37,901 - utils.data_split - INFO -    Train class balance: 45.8% positive
+2025-08-08 02:53:37,915 - utils.data_split - INFO -    Test class balance: 42.9% positive
+2025-08-08 02:53:37,939 - utils.data_split - INFO - ✅ Balanced test set: 42.9% positive
+2025-08-08 02:53:37,939 - __main__ - INFO -    Generated 24 REAL LIGO training samples
+2025-08-08 02:53:37,939 - __main__ - INFO -    Test set: 7 samples for evaluation
+2025-08-08 02:53:37,939 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-08 02:53:37,939 - __main__ - INFO -    Training data shape: (24, 512)
+2025-08-08 02:53:37,939 - __main__ - INFO -    Labels shape: (24,)
+2025-08-08 02:53:37,940 - __main__ - INFO -    Running 5 epochs...
+2025-08-08 02:53:37,940 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-08 02:53:37,940 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:53:37,940 - training.training_utils - INFO - JAX devices: [CpuDevice(id=0)]
+2025-08-08 02:53:37,940 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:53:37,940 - training.training_utils - INFO - JAX platform: cpu
+2025-08-08 02:53:37,940 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:53:37,940 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-08 02:53:37,941 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:53:37,941 - training.training_utils - INFO - Configuration saved to outputs/standard_training_1bs/config.json
+2025-08-08 02:53:37,941 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:53:37,941 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-08 02:53:41,290 - __main__ - INFO -    🔥 Epoch 1/5
+2025-08-08 02:53:41,290 - __main__ - INFO -    🔥 Epoch 1/5
+2025-08-08 02:54:06,637 - __main__ - INFO -       Loss: 0.6998, Accuracy: 0.5417
+2025-08-08 02:54:06,637 - __main__ - INFO -       Loss: 0.6998, Accuracy: 0.5417
+2025-08-08 02:54:06,637 - __main__ - INFO -    🔥 Epoch 2/5
+2025-08-08 02:54:06,637 - __main__ - INFO -    🔥 Epoch 2/5
+2025-08-08 02:54:23,934 - __main__ - INFO -       Loss: 0.7024, Accuracy: 0.5417
+2025-08-08 02:54:23,934 - __main__ - INFO -       Loss: 0.7024, Accuracy: 0.5417
+2025-08-08 02:54:23,935 - __main__ - INFO -    🔥 Epoch 3/5
+2025-08-08 02:54:23,935 - __main__ - INFO -    🔥 Epoch 3/5
+2025-08-08 02:54:41,435 - __main__ - INFO -       Loss: 0.7017, Accuracy: 0.5417
+2025-08-08 02:54:41,435 - __main__ - INFO -       Loss: 0.7017, Accuracy: 0.5417
+2025-08-08 02:54:41,436 - __main__ - INFO -    🔥 Epoch 4/5
+2025-08-08 02:54:41,436 - __main__ - INFO -    🔥 Epoch 4/5
+2025-08-08 02:55:00,337 - __main__ - INFO -       Loss: 0.7026, Accuracy: 0.5417
+2025-08-08 02:55:00,337 - __main__ - INFO -       Loss: 0.7026, Accuracy: 0.5417
+2025-08-08 02:55:00,338 - __main__ - INFO -    🔥 Epoch 5/5
+2025-08-08 02:55:00,338 - __main__ - INFO -    🔥 Epoch 5/5
+2025-08-08 02:55:19,943 - __main__ - INFO -       Loss: 0.7012, Accuracy: 0.5417
+2025-08-08 02:55:19,943 - __main__ - INFO -       Loss: 0.7012, Accuracy: 0.5417
+2025-08-08 02:55:19,944 - __main__ - INFO - 🎉 REAL Training completed in 102.0s!
+2025-08-08 02:55:19,944 - __main__ - INFO - 🎉 REAL Training completed in 102.0s!
+2025-08-08 02:55:19,947 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:55:19,947 - training.test_evaluation - INFO - 
+🧪 Evaluating on test set...
+2025-08-08 02:55:22,253 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:55:22,253 - training.test_evaluation - INFO - 📊 TEST SET ANALYSIS:
+2025-08-08 02:55:22,253 - training.test_evaluation - INFO -    Test samples: 7
+2025-08-08 02:55:22,253 - training.test_evaluation - INFO -    Test samples: 7
+2025-08-08 02:55:22,253 - training.test_evaluation - INFO -    True labels - Class 0: 4, Class 1: 3
+2025-08-08 02:55:22,253 - training.test_evaluation - INFO -    True labels - Class 0: 4, Class 1: 3
+2025-08-08 02:55:22,254 - training.test_evaluation - INFO -    Predictions - Class 0: 7, Class 1: 0
+2025-08-08 02:55:22,254 - training.test_evaluation - INFO -    Predictions - Class 0: 7, Class 1: 0
+2025-08-08 02:55:22,254 - training.test_evaluation - INFO -    Test accuracy: 57.1%
+2025-08-08 02:55:22,254 - training.test_evaluation - INFO -    Test accuracy: 57.1%
+2025-08-08 02:55:22,344 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:55:22,344 - training.test_evaluation - WARNING - 🚨 MODEL ALWAYS PREDICTS CLASS 0 ON TEST SET!
+2025-08-08 02:55:22,344 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:55:22,344 - training.test_evaluation - WARNING -    This suggests the model didn't learn properly
+2025-08-08 02:55:22,344 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:55:22,344 - training.test_evaluation - INFO - 🔍 TEST PREDICTIONS vs LABELS:
+2025-08-08 02:55:22,376 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:55:22,376 - training.test_evaluation - INFO -    Test 0: Pred=0, True=0 ✅
+2025-08-08 02:55:22,377 - training.test_evaluation - INFO -    Test 1: Pred=0, True=0 ✅
+2025-08-08 02:55:22,377 - training.test_evaluation - INFO -    Test 1: Pred=0, True=0 ✅
+2025-08-08 02:55:22,377 - training.test_evaluation - INFO -    Test 2: Pred=0, True=0 ✅
+2025-08-08 02:55:22,377 - training.test_evaluation - INFO -    Test 2: Pred=0, True=0 ✅
+2025-08-08 02:55:22,377 - training.test_evaluation - INFO -    Test 3: Pred=0, True=1 ❌
+2025-08-08 02:55:22,377 - training.test_evaluation - INFO -    Test 3: Pred=0, True=1 ❌
+2025-08-08 02:55:22,377 - training.test_evaluation - INFO -    Test 4: Pred=0, True=1 ❌
+2025-08-08 02:55:22,377 - training.test_evaluation - INFO -    Test 4: Pred=0, True=1 ❌
+2025-08-08 02:55:22,378 - training.test_evaluation - INFO -    Test 5: Pred=0, True=1 ❌
+2025-08-08 02:55:22,378 - training.test_evaluation - INFO -    Test 5: Pred=0, True=1 ❌
+2025-08-08 02:55:22,378 - training.test_evaluation - INFO -    Test 6: Pred=0, True=0 ✅
+2025-08-08 02:55:22,378 - training.test_evaluation - INFO -    Test 6: Pred=0, True=0 ✅
+2025-08-08 02:55:22,398 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 54.2%
+Test Accuracy: 57.1% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 5
+======================================================================
+2025-08-08 02:55:22,398 - __main__ - INFO - ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 54.2%
+Test Accuracy: 57.1% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 0
+Data Source: Real LIGO GW150914
+Epochs: 5
+======================================================================
+2025-08-08 02:55:22,398 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:55:22,398 - __main__ - INFO - 🎉 Training completed successfully!
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Total epochs: 5
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Total epochs: 5
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Final loss: 0.7012
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Final loss: 0.7012
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Training accuracy: 0.5417
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Training accuracy: 0.5417
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Test accuracy: 0.5714 (REAL accuracy)
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Test accuracy: 0.5714 (REAL accuracy)
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Training time: 102.0s
+2025-08-08 02:55:22,398 - __main__ - INFO -    - Training time: 102.0s
+2025-08-08 02:55:22,399 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:55:22,399 - __main__ - INFO -    Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:55:22,401 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:55:22,401 - __main__ - INFO - ✅ Training completed successfully!
+2025-08-08 02:55:22,401 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.7011666881541411, 'final_train_accuracy': 0.5416666666666666, 'final_test_accuracy': 0.5714285969734192, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 5, 'total_steps': 120, 'best_metric': 0.5714285969734192, 'training_time_seconds': 102.00377798080444, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5714285969734192, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 4, 1: 3}, 'class_counts_pred': {0: 7, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0, 0, 0, 0, 0, 0], 'true_labels': [0, 0, 0, 1, 1, 1, 0]}}
+2025-08-08 02:55:22,401 - __main__ - INFO - 📊 Final metrics: {'final_train_loss': 0.7011666881541411, 'final_train_accuracy': 0.5416666666666666, 'final_test_accuracy': 0.5714285969734192, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 5, 'total_steps': 120, 'best_metric': 0.5714285969734192, 'training_time_seconds': 102.00377798080444, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.5714285969734192, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 0, 'class_counts_true': {0: 4, 1: 3}, 'class_counts_pred': {0: 7, 1: 0}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 0.0, 'specificity': 1.0, 'precision': 0.0, 'recall': 0.0, 'f1_score': 0.0, 'predictions': [0, 0, 0, 0, 0, 0, 0], 'true_labels': [0, 0, 0, 1, 1, 1, 0]}}
+2025-08-08 02:55:22,402 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax
+2025-08-08 02:55:22,402 - __main__ - INFO - 💾 Model saved to: /Users/gracjan/Documents/machinelearning/outputs/standard_training_1bs/final_model.orbax

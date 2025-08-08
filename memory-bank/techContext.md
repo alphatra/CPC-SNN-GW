@@ -6,6 +6,8 @@
 **Last Updated**: 2025-07-24  
 **Achievement**: **6 CRITICAL MODULES MIGRATED** - Complete technical enhancement from real_ligo_test.py
 
+> Sync Advisory (2025-07-28): Repository synced with `origin/main`. Verified modules exist and paths used here match the codebase (`data/real_ligo_integration.py`, `training/cpc_loss_fixes.py`, `training/test_evaluation.py`, `utils/data_split.py`).
+
 ## 🏆 REVOLUTIONARY TECHNICAL ACHIEVEMENTS
 
 ### ✅ **TECHNICAL BREAKTHROUGH 1: REAL LIGO DATA INTEGRATION**

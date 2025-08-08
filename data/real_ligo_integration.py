@@ -138,7 +138,14 @@ def create_proper_windows(strain_data: np.ndarray,
         windows.append(window)
         labels.append(label)
     
-    return jnp.array(windows), jnp.array(labels)
+    # Convert using NumPy first to avoid Metal default_memory_space issues
+    from utils.jax_safety import safe_stack_to_device, safe_array_to_device
+    if len(windows) > 0:
+        windows_dev = safe_stack_to_device(windows, dtype=np.float32)
+    else:
+        windows_dev = safe_array_to_device(np.zeros((0, window_size), dtype=np.float32))
+    labels_dev = safe_array_to_device(np.array(labels, dtype=np.int32))
+    return windows_dev, labels_dev
 
 def create_simulated_gw150914_strain() -> np.ndarray:
     """
@@ -338,7 +345,8 @@ def create_real_ligo_dataset(num_samples: int = 1200,
                            window_size: int = 512,
                            quick_mode: bool = False,
                            return_split: bool = False,
-                           train_ratio: float = 0.8) -> Tuple[jnp.ndarray, jnp.ndarray]:
+                           train_ratio: float = 0.8,
+                           overlap: float = 0.5) -> Tuple[jnp.ndarray, jnp.ndarray]:
     """
     Create dataset using real LIGO data with proper windowing and optional stratified split
     
@@ -363,7 +371,7 @@ def create_real_ligo_dataset(num_samples: int = 1200,
         
         # ✅ MEMORY-OPTIMIZED: Create smaller windowed dataset
         window_size = 256 if quick_mode else window_size
-        signals, labels = create_proper_windows(real_strain, window_size=window_size)
+        signals, labels = create_proper_windows(real_strain, window_size=window_size, overlap=overlap)
         
         logger.info(f"🌊 Created proper windowed dataset:")
         logger.info(f"   Total windows: {len(signals)}")
@@ -402,8 +410,9 @@ def create_real_ligo_dataset(num_samples: int = 1200,
             random_seed=42
         )
         
-        signals = jnp.stack([sample[0] for sample in synthetic_data])
-        labels = jnp.array([sample[1] for sample in synthetic_data])
+        from utils.jax_safety import safe_stack_to_device, safe_array_to_device
+        signals = safe_stack_to_device([sample[0] for sample in synthetic_data], dtype=np.float32)
+        labels = safe_array_to_device([sample[1] for sample in synthetic_data], dtype=np.int32)
         
         # ✅ OPTIONAL: Apply stratified split if requested
         if return_split:

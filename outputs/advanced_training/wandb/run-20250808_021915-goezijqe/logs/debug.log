@@ -1,0 +1,23 @@
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_setup.py:_flush():80] Current SDK version is 0.21.1
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_setup.py:_flush():80] Configure stats pid to 59273
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_setup.py:_flush():80] Loading settings from /Users/gracjan/.config/wandb/settings
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_setup.py:_flush():80] Loading settings from /Users/gracjan/Documents/machinelearning/wandb/settings
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_setup.py:_flush():80] Loading settings from environment variables
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_init.py:setup_run_log_directory():703] Logging user logs to outputs/advanced_training/wandb/run-20250808_021915-goezijqe/logs/debug.log
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_init.py:setup_run_log_directory():704] Logging internal logs to outputs/advanced_training/wandb/run-20250808_021915-goezijqe/logs/debug-internal.log
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_init.py:init():830] calling init triggers
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_init.py:init():835] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-08-08 02:19:15,107 INFO    MainThread:59273 [wandb_init.py:init():871] starting backend
+2025-08-08 02:19:19,195 INFO    MainThread:59273 [wandb_init.py:init():874] sending inform_init request
+2025-08-08 02:19:19,222 INFO    MainThread:59273 [wandb_init.py:init():882] backend started and connected
+2025-08-08 02:19:19,225 INFO    MainThread:59273 [wandb_init.py:init():953] updated telemetry
+2025-08-08 02:19:19,239 INFO    MainThread:59273 [wandb_init.py:init():977] communicating run to backend with 90.0 second timeout
+2025-08-08 02:19:20,482 INFO    MainThread:59273 [wandb_init.py:init():1029] starting run threads in backend
+2025-08-08 02:19:20,571 INFO    MainThread:59273 [wandb_run.py:_console_start():2494] atexit reg
+2025-08-08 02:19:20,571 INFO    MainThread:59273 [wandb_run.py:_redirect():2342] redirect: wrap_raw
+2025-08-08 02:19:20,572 INFO    MainThread:59273 [wandb_run.py:_redirect():2411] Wrapping output streams.
+2025-08-08 02:19:20,572 INFO    MainThread:59273 [wandb_run.py:_redirect():2434] Redirects installed.
+2025-08-08 02:19:20,574 INFO    MainThread:59273 [wandb_init.py:init():1075] run started, returning control to user process
+2025-08-08 02:19:20,575 INFO    MainThread:59273 [wandb_run.py:_config_callback():1380] config_cb None None {'model_name': 'cpc_snn_gw', 'batch_size': 1, 'learning_rate': 0.0002, 'weight_decay': 0.0001, 'num_epochs': 100, 'num_classes': 2, 'optimizer': 'sgd', 'scheduler': 'cosine', 'gradient_clipping': 1.0, 'mixed_precision': True, 'log_every': 10, 'eval_every': 100, 'save_every': 1000, 'output_dir': 'outputs/advanced_training', 'use_wandb': True, 'use_tensorboard': True, 'project_name': 'cpc-snn-gw', 'max_memory_gb': 8.0, 'enable_profiling': False, 'early_stopping_patience': 10, 'early_stopping_metric': 'loss', 'early_stopping_mode': 'min', 'use_real_gwosc_data': True, 'gwosc_detector': 'H1', 'gwosc_start_time': 1126259462, 'gwosc_duration': 32, 'num_continuous_signals': 500, 'num_binary_signals': 500, 'num_noise_samples': 500, 'gradient_accumulation_steps': 4, 'use_mixed_precision': True, 'eval_split': 0.2, 'compute_detailed_metrics': True}
+2025-08-08 02:19:20,750 INFO    MsgRouterThr:59273 [mailbox.py:close():129] [no run ID] Closing mailbox, abandoning 1 handles.
