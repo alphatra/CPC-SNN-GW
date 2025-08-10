@@ -1,0 +1,169 @@
+baselines:
+  confidence_level: 0.95
+  matched_filtering: true
+  pycbc_template_bank: true
+  statistical_significance: true
+data:
+  detectors:
+  - H1
+  - L1
+  max_kurtosis: 3.0
+  min_quality: 0.8
+  min_snr: 8.0
+  preprocessing:
+    bandpass_high: 1024.0
+    bandpass_low: 20.0
+    psd_length: 4.0
+    scaling_factor: 1e20
+    whitening: true
+  sample_rate: 4096
+  segment_duration: 0.125
+  sequence_length: 512
+evaluation:
+  bootstrap_samples: 1000
+  confidence_intervals: true
+  metrics:
+  - roc_auc
+  - precision
+  - recall
+  - f1
+  - far
+  statistical_tests:
+  - mcnemar
+  - wilcoxon
+  target_accuracy: 0.95
+hpo:
+  early_stopping: true
+  max_trials: 50
+  search_space:
+    batch_size:
+    - 1
+    - 2
+    - 4
+    context_length:
+    - 256
+    - 512
+    cpc_latent_dim:
+    - 128
+    - 256
+    - 512
+    learning_rate:
+    - 1e-5
+    - 3e-5
+    - 1e-4
+    - 3e-4
+    - 1e-3
+    weight_decay:
+    - 0.001
+    - 0.01
+    - 0.1
+logging:
+  checkpoint_dir: outputs/sanity_2ep_cpu_synth
+  level: INFO
+  log_every_n_steps: 100
+  save_every_n_epochs: 5
+  use_wandb: true
+  wandb_project: ligo-cpc-snn-final-framework
+model:
+  cpc:
+    context_length: 512
+    conv_channels:
+    - 64
+    - 128
+    - 256
+    - 512
+    downsample_factor: 4
+    latent_dim: 128
+    num_negatives: 128
+    prediction_steps: 12
+    temperature: 0.06
+  snn:
+    hidden_sizes:
+    - 512
+    - 512
+    - 512
+    - 512
+    num_classes: 3
+    surrogate_gradient: symmetric_hard_sigmoid
+    surrogate_slope: 4.0
+    tau_mem: 50e-6
+    tau_syn: 25e-6
+    threshold: 1.0
+    use_layer_norm: true
+  spike_bridge:
+    encoding_strategy: phase_preserving
+    preserve_frequency: true
+    threshold_neg: -0.1
+    threshold_pos: 0.1
+    time_steps: 4096
+platform:
+  cache_compilation: true
+  device: cpu
+  enable_jit: true
+  memory_fraction: 0.5
+  precision: float32
+training:
+  batch_size: 1
+  cpc_epochs: 2
+  cpc_lr: 0.001
+  cpc_pretrain:
+    batch_size: 1
+    learning_rate: 0.001
+    num_epochs: 2
+    use_cosine_scheduling: true
+    warmup_epochs: 5
+    weight_decay: 0.01
+  joint_finetune:
+    batch_size: 1
+    enable_cpc_gradients: true
+    learning_rate: 1e-5
+    num_epochs: 25
+  snn_train:
+    batch_size: 1
+    early_stopping_patience: 10
+    focal_loss_alpha: 0.25
+    focal_loss_gamma: 2.0
+    learning_rate: 5e-4
+    mixup_alpha: 0.2
+    num_epochs: 100
+wandb:
+  batch_size_auto_adjust: true
+  contrastive_metrics: true
+  create_summary_dashboard: true
+  dashboard_update_frequency: 100
+  detection_metrics: true
+  enable_alerts: true
+  enable_gradients: true
+  enable_hardware_monitoring: true
+  enable_model_artifacts: true
+  enable_performance_optimizations: true
+  enable_performance_profiling: true
+  enable_spike_tracking: true
+  enable_visualizations: true
+  enabled: true
+  entity: null
+  latency_metrics: true
+  local_backup: true
+  log_code: true
+  log_frequency: 10
+  log_graph: true
+  log_model_frequency: 500
+  max_memory_fraction: 0.5
+  memory_metrics: true
+  monitor_memory: true
+  name: neuromorphic-gw-1754840279
+  neuromorphic_metrics: true
+  notes: Enhanced neuromorphic GW detection with comprehensive monitoring
+  output_dir: wandb_outputs
+  pre_compile_models: true
+  project: neuromorphic-gw-detection
+  random_seed: 42
+  save_code: true
+  save_frequency: 100
+  tags:
+  - neuromorphic
+  - gravitational-waves
+  - snn
+  - cpc
+  - jax
+  watch_model: all

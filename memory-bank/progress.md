@@ -1,10 +1,11 @@
 # 🚀 PROJECT PROGRESS TRACKING
 
-## 🔄 SYNC STATUS (2025-07-28)
+## 🔄 SYNC STATUS (2025-08-08)
 - Local `main` vs `origin/main`: ahead 0, behind 0 → repository is synced.
-- Performed code inventory and confirmed presence of modules referenced by Memory Bank (real LIGO integration, stratified split, CPC loss fixes, test evaluation, enhanced CLI, advanced pipeline).
+- Confirmed presence of migrated modules (real LIGO integration, stratified split, CPC loss fixes, test evaluation, enhanced CLI, advanced pipeline).
+- New event: Advanced training attempted on METAL backend; failed with "UNIMPLEMENTED: default_memory_space is not supported." → mitigation plan prepared.
 
-## 🎉 LATEST MILESTONE: COMPLETE FUNCTIONALITY MIGRATION FROM REAL_LIGO_TEST.PY
+## 🎉 LATEST MILESTONE: FUNCTIONALITY MIGRATION + TRAINING EXTENSIONS
 
 **Date**: 2025-07-24  
 **Achievement**: **REVOLUTIONARY MIGRATION 100% COMPLETE** - All critical functions migrated to main system
@@ -66,12 +67,14 @@
   - Test evaluation in phase_3_advanced_training
   - Clean glitch injection pipeline
 
-### **🚀 INTEGRATION STATUS**
+### **🚀 INTEGRATION STATUS** (UPDATED 2025-08-10)
 
 #### **Main CLI (`cli.py`)**
 - ✅ 6-stage GPU warmup
 - ✅ Real LIGO data with stratified split  
-- ✅ Test evaluation with comprehensive summary
+- ✅ Test evaluation: ROC/PR AUC, ECE, optimal threshold, event-level
+- ✅ Orbax checkpoints: latest (każda epoka), best (po ewaluacji)
+- ✅ W&B logging: ROC/PR/CM po epokach (jeśli `--wandb`)
 
 #### **Enhanced CLI (`enhanced_cli.py`)**  
 - ✅ 6-stage GPU warmup
@@ -85,7 +88,7 @@
 - ✅ Test evaluation in phase_3
 - ✅ Clean architecture without GWOSC legacy code
 
-### **📊 TECHNICAL ACHIEVEMENTS**
+### **📊 TECHNICAL ACHIEVEMENTS** (UPDATED)
 
 #### **Critical Problems RESOLVED**:
 - **GPU Timing Issues**: ELIMINATED (6-stage warmup)
@@ -99,6 +102,8 @@
 - **Proper Test Evaluation**: Real accuracy measurement
 - **Model Collapse Detection**: Identifies always-same-class predictions
 - **Comprehensive GPU Warmup**: Eliminates CUDA timing issues
+- **Orbax Checkpointing**: best/latest z metrykami i progiem
+- **HPO (Optuna)**: szkic `training/hpo_optuna.py` (balanced accuracy)
 - **Scientific Quality**: Professional test reporting
 
 ### **🌟 BREAKTHROUGH RESULT**
@@ -110,6 +115,34 @@
 4. ✅ GPU timing issues eliminated
 5. ✅ Professional test evaluation
 6. ✅ Production-ready quality
+
+---
+
+## ⚠️ LATEST ATTEMPT: ADVANCED TRAINING ON METAL (FAILED) + MITIGATION PLAN
+
+**Date**: 2025-08-08  
+**Status**: ❌ Failed during initialization
+
+### 🔎 Details
+- Backend detected: `METAL(id=0)` (JAX platform: METAL)
+- Error: `UNIMPLEMENTED: default_memory_space is not supported.`
+- Config snapshot (`outputs/advanced_training/config.json`):
+  - `batch_size`: 1, `num_epochs`: 100, `optimizer`: sgd, `scheduler`: cosine
+  - `use_real_gwosc_data`: true, `gradient_accumulation_steps`: 4
+  - `use_wandb/tensorboard`: true, `early_stopping_patience`: 10
+
+### 🛠️ Mitigation Plan
+- Immediate workaround on macOS/Metal runs: force CPU backend to bypass Metal limitation.
+  - Env: `JAX_PLATFORM_NAME=cpu` (set before Python/JAX import)
+- Recommended on Windows/WSL with NVIDIA: use CUDA backend.
+  - Env: `JAX_PLATFORM_NAME=cuda` with CUDA-enabled JAX installed
+- Keep existing XLA memory safety flags:
+  - `XLA_PYTHON_CLIENT_PREALLOCATE=false`, `XLA_PYTHON_CLIENT_MEM_FRACTION=0.15`
+
+### ✅ Next Actions
+1. Re-run advanced training with `JAX_PLATFORM_NAME=cpu` on macOS OR on WSL with CUDA.
+2. Verify initialization passes; collect first metrics (loss, CPC loss, accuracy).
+3. If CPU is slow, pivot to WSL/CUDA and keep config identical for comparability.
 
 ---
 
@@ -281,3 +314,36 @@
 
 *Last Updated: 2025-07-24 - COMPLETE REAL_LIGO_TEST.PY MIGRATION ACHIEVED*  
 *Status: REVOLUTIONARY NEUROMORPHIC GW SYSTEM WITH REAL DATA - READY FOR SCIENTIFIC BREAKTHROUGH* 
+
+---
+
+## 🗓️ 2025-08-10 CPU sanity – status i TODO
+
+### Co działa
+- CPU-only quick-mode, wymuszenie backendu CPU
+- Wyłączony Orbax w quick-mode (mniej logów/narzutu)
+- Nowe flagi CLI (spike/SNN/CPC/balanced/threshold/overlap/synthetic)
+- Routing synthetic-quick (wymusza syntetyczny dataset w quick-mode)
+
+### Co wymaga uwagi
+- `pip` w venv uszkodzony (brak `pip.__main__`) → brak `scikit-learn` (metryki lecą fallbackiem)
+- Ewaluacja dużych test setów na CPU → ryzyko LLVM OOM (należy ograniczyć batch/rozmiar testu)
+- Collapsing na małych real quick zestawach (rozważyć class weights/focal)
+
+### Następny run – plan
+1) Napraw pip i zainstaluj scikit-learn:
+   - `python -m ensurepip --upgrade`
+   - `python -m pip install -U pip setuptools wheel`
+   - `python -m pip install scikit-learn`
+   - (fallback) `get-pip.py` jeśli ensurepip zawiedzie
+2) Krótki sanity synthetic (2 epoki) – szybki i tani na CPU:
+   ```bash
+   python cli.py train --mode standard --epochs 2 --batch-size 1 \
+     --quick-mode --synthetic-quick --synthetic-samples 60 \
+     --spike-time-steps 8 --snn-hidden 32 --cpc-layers 2 --cpc-heads 2 \
+     --balanced-early-stop --opt-threshold \
+     --output-dir outputs/sanity_2ep_cpu_synth --device cpu
+   ```
+3) Dodatkowo (opcjonalnie dla CPU):
+   - Obniżyć eval batch (np. 16) i limit kroków quick (np. 40) – dodać flagi w CLI
+4) Po sanity: przejść na GPU, przywrócić Orbax, zwiększyć batch i długość sekwencji

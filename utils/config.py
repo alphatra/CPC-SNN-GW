@@ -33,32 +33,43 @@ def apply_performance_optimizations():
     - Enable JIT caching and partitionable RNG
     - Optimized XLA flags for Apple Silicon
     """
-    logger.info("✅ Applying critical Metal backend optimizations...")
+    logger.info("✅ Applying runtime performance optimizations...")
     
-    # ✅ CRITICAL FIX 1: Memory management (prevent swap on 16GB)
-    os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = '0.5'  # Down from 0.9
-    os.environ['XLA_PYTHON_CLIENT_PREALLOCATE'] = 'false'  # Dynamic allocation
-    os.environ['JAX_THREEFRY_PARTITIONABLE'] = 'true'    # Better RNG performance
+    # ✅ Memory management (respect existing settings; choose safer lower fraction)
+    try:
+        current_fraction = float(os.environ.get('XLA_PYTHON_CLIENT_MEM_FRACTION', '0.35'))
+    except Exception:
+        current_fraction = 0.35
+    safe_fraction = min(current_fraction, 0.35)
+    os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = f"{safe_fraction}"
+    os.environ.setdefault('XLA_PYTHON_CLIENT_PREALLOCATE', 'false')  # Dynamic allocation
+    os.environ.setdefault('JAX_THREEFRY_PARTITIONABLE', 'true')
     
-    # ✅ CRITICAL FIX 2: JIT compilation optimization
-    # Enable persistent caching for SpikeBridge and other functions
-    # (Individual functions will use @jax.jit(cache=True))
-    
-    # ✅ CRITICAL FIX 3: Basic XLA optimizations (removed problematic GPU flags)
-    os.environ['XLA_FLAGS'] = '--xla_force_host_platform_device_count=1'
+    # ✅ XLA flags: only force host device on CPU; on GPU, prefer lowering autotune
+    platform = jax.lib.xla_bridge.get_backend().platform
+    xla_flags = os.environ.get('XLA_FLAGS', '')
+    if platform == 'cpu':
+        if '--xla_force_host_platform_device_count=1' not in xla_flags:
+            xla_flags = (xla_flags + ' --xla_force_host_platform_device_count=1').strip()
+    else:
+        if '--xla_gpu_autotune_level=0' not in xla_flags:
+            xla_flags = (xla_flags + ' --xla_gpu_autotune_level=0').strip()
+    os.environ['XLA_FLAGS'] = xla_flags
     
     # Platform verification
-    logger.info(f"JAX platform: {jax.lib.xla_bridge.get_backend().platform}")
+    logger.info(f"JAX platform: {platform}")
     logger.info(f"JAX devices: {jax.devices()}")
     logger.info(f"Memory fraction: {os.environ.get('XLA_PYTHON_CLIENT_MEM_FRACTION')}")
     
-    # Memory monitoring
-    import psutil
-    memory = psutil.virtual_memory()
-    logger.info(f"System memory: {memory.total / 1e9:.1f}GB total, {memory.available / 1e9:.1f}GB available")
-    
-    if memory.percent > 85:
-        logger.warning("⚠️  HIGH MEMORY USAGE - Consider reducing batch sizes")
+    # Memory monitoring (optional)
+    try:
+        import psutil  # Optional dependency
+        memory = psutil.virtual_memory()
+        logger.info(f"System memory: {memory.total / 1e9:.1f}GB total, {memory.available / 1e9:.1f}GB available")
+        if memory.percent > 85:
+            logger.warning("⚠️  HIGH MEMORY USAGE - Consider reducing batch sizes")
+    except Exception:
+        logger.info("psutil not available - skipping system memory diagnostics")
 
 
 def check_memory_usage():
@@ -99,56 +110,8 @@ def setup_training_environment():
     SOLUTION: Compile SpikeBridge and other heavy functions during setup,
     not during training when it causes 4s delays per batch.
     """
-    logger.info("🔧 Pre-compiling JIT functions for optimal training performance...")
-    
-    # Import models for compilation
-    try:
-        from models.spike_bridge import ValidatedSpikeBridge
-        from models.snn_classifier import SNNClassifier
-        from models.cpc_encoder import CPCEncoder
-        
-        # Create dummy models for compilation
-        spike_bridge = ValidatedSpikeBridge()
-        
-        # ✅ SOLUTION: Pre-compile with realistic input shapes
-        dummy_latents = jnp.ones((16, 256, 256))  # Batch, time, features
-        dummy_key = jax.random.PRNGKey(42)
-        
-        logger.info("   Compiling SpikeBridge (may take ~10s one-time)...")
-        start_time = time.perf_counter()
-        
-        # Trigger compilation with dummy forward pass
-        _ = spike_bridge.apply(
-            spike_bridge.init(dummy_key, dummy_latents, dummy_key),
-            dummy_latents, 
-            dummy_key
-        )
-        
-        compile_time = time.perf_counter() - start_time
-        logger.info(f"✅ SpikeBridge compiled in {compile_time:.1f}s")
-        
-        # Pre-compile other models
-        logger.info("   Compiling CPC Encoder...")
-        cpc_encoder = CPCEncoder(latent_dim=64)   # ✅ ULTRA-MEMORY OPTIMIZED
-        dummy_input = jnp.ones((16, 4096))  # Batch, sequence
-        _ = cpc_encoder.apply(
-            cpc_encoder.init(dummy_key, dummy_input),
-            dummy_input
-        )
-        
-        logger.info("   Compiling SNN Classifier...")
-        snn_classifier = SNNClassifier(hidden_size=32, num_classes=3)  # ✅ ULTRA-MEMORY OPTIMIZED
-        dummy_spikes = jnp.ones((16, 256, 256))  # Batch, time, features
-        _ = snn_classifier.apply(
-            snn_classifier.init(dummy_key, dummy_spikes),
-            dummy_spikes
-        )
-        
-        logger.info("✅ All models pre-compiled successfully!")
-        
-    except Exception as e:
-        logger.warning(f"⚠️  Could not pre-compile models: {e}")
-        logger.warning("   Training will include compilation time in first batches")
+    # Zgodnie z Twoim życzeniem: wyłączona prekompilacja na dummy danych (żadnych fikcyjnych wejść)
+    logger.info("⏭️ Skipping JIT pre-compilation on dummy inputs (user preference)")
 
 
 @dataclass

@@ -26,76 +26,71 @@ def download_gw150914_data() -> Optional[np.ndarray]:
         Real strain data as numpy array or None if failed
     """
     try:
-        # ✅ NEW APPROACH: Use ReadLIGO library with local HDF5 files
-        import readligo as rl
+        # ✅ Attempt 1: Read using ReadLIGO (preferred)
+        import readligo as rl  # type: ignore
         import os
-        
-        # Define filenames for GW150914 data (32 seconds around event)
         fn_H1 = 'H-H1_LOSC_4_V2-1126259446-32.hdf5'
         fn_L1 = 'L-L1_LOSC_4_V2-1126259446-32.hdf5'
-        
-        # Check if files exist
-        if not os.path.exists(fn_H1):
-            logger.warning(f"❌ H1 data file not found: {fn_H1}")
-            raise FileNotFoundError(f"Missing {fn_H1}")
-            
-        if not os.path.exists(fn_L1):
-            logger.warning(f"❌ L1 data file not found: {fn_L1}")
-            raise FileNotFoundError(f"Missing {fn_L1}")
-        
+        if not (os.path.exists(fn_H1) and os.path.exists(fn_L1)):
+            raise FileNotFoundError("GW150914 HDF5 files not found in project root")
         logger.info("✅ ReadLIGO available - loading real GW150914 data")
-        logger.info(f"🌊 Loading strain data from H1: {fn_H1}")
-        logger.info(f"🌊 Loading strain data from L1: {fn_L1}")
-        
-        # Load strain data using ReadLIGO
-        strain_H1, time_H1, chan_dict_H1 = rl.loaddata(fn_H1, 'H1')
-        strain_L1, time_L1, chan_dict_L1 = rl.loaddata(fn_L1, 'L1')
-        
-        logger.info(f"✅ Real GW150914 strain loaded:")
-        logger.info(f"   H1: {len(strain_H1)} samples")
-        logger.info(f"   L1: {len(strain_L1)} samples") 
-        logger.info(f"   Time span: {time_H1[0]:.3f} to {time_H1[-1]:.3f} GPS")
-        logger.info(f"   Sample rate: {1.0/(time_H1[1]-time_H1[0]):.0f} Hz")
-        
-        # Combine strain data (H1 + L1 average) 
-        combined_strain = (strain_H1 + strain_L1) / 2.0
-        
-        # Select 2048 samples around the GW150914 event time
-        # GW150914 GPS time: 1126259462.4
-        event_gps_time = 1126259462.4
-        
-        # Find closest index to event time
-        event_idx = np.argmin(np.abs(time_H1 - event_gps_time))
-        
-        # Extract 2048 samples centered on event (±1024 samples)
-        start_idx = max(0, event_idx - 1024)
-        end_idx = min(len(combined_strain), start_idx + 2048)
-        
-        strain_subset = combined_strain[start_idx:end_idx]
-        
-        # Pad with zeros if needed
-        if len(strain_subset) < 2048:
-            strain_padded = np.zeros(2048, dtype=np.float32)
-            strain_padded[:len(strain_subset)] = strain_subset
-            strain_subset = strain_padded
-        
-        # ✅ REALISTIC STRAIN NORMALIZATION: Scale to realistic LIGO levels
-        # LIGO strain sensitivity is around 1e-21 to 1e-23, not 1e-19
-        # Apply 100x reduction to match realistic noise floor
-        strain_subset = strain_subset * 0.01  # Scale down by 100x
-        
-        logger.info(f"✅ Successfully loaded real GW150914 strain data: {len(strain_subset)} samples")
-        logger.info(f"📊 Strain amplitude range: {strain_subset.min():.2e} to {strain_subset.max():.2e}")
-        logger.info(f"🔧 Applied 100x normalization for realistic LIGO strain levels")
-        
-        return strain_subset.astype(np.float32)
-        
-    except Exception as e:
-        logger.warning(f"❌ ReadLIGO loading failed: {type(e).__name__}: {e}")
-        logger.info("🔄 Falling back to simulated GW150914-like data")
-        
-        # ✅ FALLBACK: Create simulated GW150914-like strain data
-        return create_simulated_gw150914_strain()
+        strain_H1, time_H1, _ = rl.loaddata(fn_H1, 'H1')
+        strain_L1, time_L1, _ = rl.loaddata(fn_L1, 'L1')
+        sample_rate = 1.0 / (time_H1[1] - time_H1[0])
+    except Exception as e1:
+        logger.warning(f"❌ ReadLIGO loading failed: {type(e1).__name__}: {e1}")
+        # ✅ Attempt 2: Direct HDF5 read via h5py
+        try:
+            import h5py  # type: ignore
+            import os
+            fn_H1 = 'H-H1_LOSC_4_V2-1126259446-32.hdf5'
+            fn_L1 = 'L-L1_LOSC_4_V2-1126259446-32.hdf5'
+            if not (os.path.exists(fn_H1) and os.path.exists(fn_L1)):
+                raise FileNotFoundError("GW150914 HDF5 files not found in project root")
+            logger.info("✅ Using h5py fallback - loading LOSC HDF5 files directly")
+            with h5py.File(fn_H1, 'r') as fH, h5py.File(fn_L1, 'r') as fL:
+                strain_H1 = fH['strain/Strain'][:]
+                strain_L1 = fL['strain/Strain'][:]
+                # Try to get sample rate from metadata
+                if 'meta' in fH and 'SampleRate' in fH['meta']:
+                    sample_rate = float(fH['meta']['SampleRate'][()])
+                elif 'meta' in fH and 'SamplingRate' in fH['meta']:
+                    sample_rate = float(fH['meta']['SamplingRate'][()])
+                else:
+                    sample_rate = 4096.0
+                # Build time arrays if GPSstart available
+                if 'meta' in fH and 'GPSstart' in fH['meta']:
+                    start = float(fH['meta']['GPSstart'][()])
+                else:
+                    start = 0.0
+                n = strain_H1.shape[0]
+                time_H1 = start + np.arange(n) / sample_rate
+                time_L1 = time_H1  # LOSC files are time-aligned for this segment
+        except Exception as e2:
+            logger.info("🔄 Falling back to simulated GW150914-like data")
+            return create_simulated_gw150914_strain()
+
+    # Combine detectors (H1 + L1 average)
+    combined_strain = (strain_H1 + strain_L1) / 2.0
+
+    # Select 2048 samples around the GW150914 event time
+    event_gps_time = 1126259462.4
+    event_idx = np.argmin(np.abs(time_H1 - event_gps_time))
+    start_idx = max(0, int(event_idx) - 1024)
+    end_idx = min(len(combined_strain), start_idx + 2048)
+    strain_subset = combined_strain[start_idx:end_idx]
+
+    # Pad with zeros if needed
+    if len(strain_subset) < 2048:
+        strain_padded = np.zeros(2048, dtype=np.float32)
+        strain_padded[:len(strain_subset)] = strain_subset
+        strain_subset = strain_padded
+
+    # Realistic normalization
+    strain_subset = strain_subset.astype(np.float32) * 0.01
+    logger.info(f"✅ Successfully loaded real GW150914 strain data (source={'readligo' if 'rl' in locals() else 'h5py'}): {len(strain_subset)} samples")
+    logger.info(f"📊 Strain amplitude range: {strain_subset.min():.2e} to {strain_subset.max():.2e}")
+    return strain_subset
 
 def create_proper_windows(strain_data: np.ndarray, 
                          window_size: int = 512, 
@@ -149,8 +144,10 @@ def create_proper_windows(strain_data: np.ndarray,
 
 def create_simulated_gw150914_strain() -> np.ndarray:
     """
-    Create simulated GW150914-like strain data with realistic parameters
-    Fallback when real data is not available
+    Create simulated GW150914-like strain data (improved baseline).
+    NOTE: For production-quality simulations, prefer PyCBC/Bilby waveforms with
+    detector response (H1/L1), PSD-colored noise and whitening.
+    This baseline adds colored noise shaping and variable chirp.
     """
     from scipy import signal
     
@@ -163,8 +160,7 @@ def create_simulated_gw150914_strain() -> np.ndarray:
     # Create time array
     t = np.linspace(0, duration, int(sample_rate * duration))
     
-    # Simulated chirp signal (simplified inspiral waveform)
-    # This is a very basic approximation of the GW150914 signal
+    # Simulated chirp signal (simplified inspiral waveform baseline)
     
     # Initial frequency and chirp mass
     f_start = 35  # Hz - GW150914 entered LIGO band around 35 Hz
@@ -192,10 +188,16 @@ def create_simulated_gw150914_strain() -> np.ndarray:
     # Plus polarization (main component)
     h_plus = amplitude * np.sin(phase)
     
-    # Add noise (realistic LIGO noise characteristics)
-    # LIGO noise ASD is approximately 1e-23 sqrt(Hz) at 100 Hz
-    noise_level = 1e-23 * np.sqrt(sample_rate / 2)  # Convert to time domain
-    noise = np.random.normal(0, noise_level, len(t))
+    # Add colored noise approximating LIGO PSD (1/f^2 shaping)
+    rng = np.random.default_rng(123)
+    white = rng.normal(0, 1.0, len(t)).astype(np.float32)
+    # Frequency-domain shaping: 1/(1 + (f/f0)^2)
+    f = np.fft.rfftfreq(len(t), d=1.0/sample_rate)
+    shaping = 1.0 / (1.0 + (f / 40.0)**2)
+    shaped = np.fft.irfft(np.fft.rfft(white) * shaping, n=len(t)).astype(np.float32)
+    # Scale to target ASD level
+    noise_level = 5e-23
+    noise = shaped * noise_level
     
     # Combine signal and noise
     strain = h_plus + noise
@@ -227,7 +229,9 @@ def create_enhanced_ligo_dataset(num_samples: int = 2000,
                                window_size: int = 256,
                                enhanced_overlap: float = 0.9,
                                data_augmentation: bool = True,
-                               noise_scaling: bool = True) -> Tuple[jnp.ndarray, jnp.ndarray]:
+                               noise_scaling: bool = True,
+                               target_pos_ratio: float = 0.40,
+                               synthetic_positive_ratio: float = 0.35) -> Tuple[jnp.ndarray, jnp.ndarray]:
     """
     Create ENHANCED dataset with significantly more samples through:
     - High overlap windowing (90% instead of 50%)
@@ -283,6 +287,29 @@ def create_enhanced_ligo_dataset(num_samples: int = 2000,
                 all_labels.extend(labels)
                 
             logger.info(f"✅ Augmented data: +{len(signals) * 5} samples")
+
+            # ✅ Oversample positives to reach target_pos_ratio in training pool
+            try:
+                import numpy as _np
+                labels_np = _np.array(labels)
+                pos_idx = _np.where(labels_np == 1)[0]
+                neg_idx = _np.where(labels_np == 0)[0]
+                total_now = len(all_signals)
+                pos_now = int(_np.sum(_np.array(all_labels) == 1))
+                current_ratio = pos_now / max(1, total_now)
+                if current_ratio < target_pos_ratio and len(pos_idx) > 0:
+                    needed_pos = int(target_pos_ratio * total_now) - pos_now
+                    needed_pos = max(0, needed_pos)
+                    if needed_pos > 0:
+                        # Sample with replacement from positive windows
+                        rng = _np.random.default_rng(123)
+                        sample_indices = rng.choice(pos_idx, size=needed_pos, replace=True)
+                        for si in sample_indices:
+                            all_signals.append(signals[si])
+                            all_labels.append(1)
+                        logger.info(f"✅ Oversampled positives by {needed_pos} to reach ~{target_pos_ratio:.0%}")
+            except Exception as _e:
+                logger.warning(f"Positive oversampling skipped: {_e}")
     
     # 3. SYNTHETIC DATA SUPPLEMENTATION
     current_samples = len(all_signals)
@@ -297,7 +324,9 @@ def create_enhanced_ligo_dataset(num_samples: int = 2000,
         for i in range(remaining_samples):
             signal_key, key = jax.random.split(key)
             
-            if i % 3 == 0:  # 33% GW signals  
+            # ✅ Use target synthetic positive ratio (default 50%)
+            is_positive = jax.random.bernoulli(signal_key, p=synthetic_positive_ratio)
+            if bool(is_positive):
                 # Generate realistic chirp signals
                 f0 = 35.0 + jax.random.uniform(signal_key, (), minval=-10, maxval=10)
                 f1 = 350.0 + jax.random.uniform(signal_key, (), minval=-50, maxval=50)

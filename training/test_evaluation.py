@@ -14,6 +14,15 @@ import logging
 import jax
 import jax.numpy as jnp
 from typing import Dict, Any, List, Tuple, Optional
+import numpy as np
+try:
+    from sklearn.metrics import (
+        roc_auc_score, average_precision_score, roc_curve,
+        precision_recall_curve, confusion_matrix, classification_report
+    )
+    _SKLEARN = True
+except Exception:
+    _SKLEARN = False
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +30,10 @@ def evaluate_on_test_set(trainer_state,
                         test_signals: jnp.ndarray,
                         test_labels: jnp.ndarray,
                         train_signals: jnp.ndarray = None,
-                        verbose: bool = True) -> Dict[str, Any]:
+                        verbose: bool = True,
+                        batch_size: int = 32,
+                        optimize_threshold: bool = False,
+                        event_ids: Optional[List[str]] = None) -> Dict[str, Any]:
     """
     Evaluate model on test set with comprehensive analysis
     
@@ -54,25 +66,25 @@ def evaluate_on_test_set(trainer_state,
     else:
         data_leakage = False
     
-    # Get predictions for each test sample
-    test_predictions = []
-    test_logits_all = []
-    
-    for i in range(len(test_signals)):
-        test_signal = test_signals[i:i+1]
-        
-        # Forward pass
-        test_logits = trainer_state.apply_fn(
+    # Batched predictions for efficiency
+    num_samples = len(test_signals)
+    bs = max(1, int(batch_size))
+    preds_list = []
+    prob_list = []
+    for start in range(0, num_samples, bs):
+        end = min(start + bs, num_samples)
+        batch_x = test_signals[start:end]
+        logits = trainer_state.apply_fn(
             trainer_state.params,
-            test_signal,
-            train=False
+            batch_x,
+            train=False,
+            rngs={'spike_noise': jax.random.PRNGKey(0)}
         )
-        
-        test_pred = jnp.argmax(test_logits, axis=-1)[0]
-        test_predictions.append(int(test_pred))
-        test_logits_all.append(test_logits[0])
-    
-    test_predictions = jnp.array(test_predictions)
+        preds_list.append(jnp.argmax(logits, axis=-1))
+        probs = jax.nn.softmax(logits, axis=-1)
+        prob_list.append(probs[:, 1])
+    test_predictions = jnp.concatenate(preds_list, axis=0)
+    test_prob_class1 = jnp.concatenate(prob_list, axis=0)
     test_accuracy = jnp.mean(test_predictions == test_labels)
     
     # Detailed test analysis
@@ -147,9 +159,78 @@ def evaluate_on_test_set(trainer_state,
         
         # F1 score
         f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+        # ROC/PR / AUC
+        y_true_np = np.array(test_labels)
+        y_score_np = np.array(test_prob_class1)
+        if _SKLEARN:
+            try:
+                auc_roc = roc_auc_score(y_true_np, y_score_np)
+                auc_pr = average_precision_score(y_true_np, y_score_np)
+                fpr, tpr, roc_th = roc_curve(y_true_np, y_score_np)
+                prec, rec, pr_th = precision_recall_curve(y_true_np, y_score_np)
+            except Exception:
+                auc_roc = auc_pr = 0.0
+                fpr = tpr = prec = rec = pr_th = roc_th = np.array([])
+        else:
+            auc_roc = auc_pr = 0.0
+            fpr = tpr = prec = rec = pr_th = roc_th = np.array([])
+        # Threshold optimization (optional)
+        opt_threshold = 0.5
+        if _SKLEARN and optimize_threshold and len(roc_th) > 0:
+            candidates = np.unique(np.concatenate([roc_th, pr_th]))
+            best_f1, best_bacc = -1.0, -1.0
+            for th in candidates:
+                pred_bin = (y_score_np >= th).astype(int)
+                if _SKLEARN:
+                    tn, fp, fn, tp = confusion_matrix(y_true_np, pred_bin).ravel()
+                else:
+                    tp = int(((pred_bin == 1) & (y_true_np == 1)).sum())
+                    tn = int(((pred_bin == 0) & (y_true_np == 0)).sum())
+                    fp = int(((pred_bin == 1) & (y_true_np == 0)).sum())
+                    fn = int(((pred_bin == 0) & (y_true_np == 1)).sum())
+                prec_c = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+                rec_c = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+                f1_c = 2 * prec_c * rec_c / (prec_c + rec_c) if (prec_c + rec_c) > 0 else 0.0
+                spec_c = tn / (tn + fp) if (tn + fp) > 0 else 0.0
+                bacc_c = 0.5 * (rec_c + spec_c)
+                if f1_c > best_f1:
+                    best_f1 = f1_c
+                    opt_threshold = th
+                if bacc_c > best_bacc:
+                    best_bacc = bacc_c
+        # Expected Calibration Error (ECE) with equal-width bins
+        try:
+            num_bins = 15
+            bin_edges = np.linspace(0.0, 1.0, num_bins + 1)
+            bin_indices = np.digitize(y_score_np, bin_edges[:-1], right=False) - 1
+            bin_indices = np.clip(bin_indices, 0, num_bins - 1)
+            ece_accum = 0.0
+            total = len(y_true_np)
+            for b in range(num_bins):
+                mask = (bin_indices == b)
+                if np.any(mask):
+                    conf = float(np.mean(y_score_np[mask]))
+                    acc = float(np.mean((y_true_np[mask] == 1).astype(np.float32)))
+                    weight = float(np.mean(mask))
+                    ece_accum += weight * abs(acc - conf)
+            ece = float(ece_accum)
+        except Exception:
+            ece = 0.0
     else:
         sensitivity = specificity = precision = recall = f1_score = 0.0
+        auc_roc = auc_pr = 0.0
+        fpr = tpr = prec = rec = pr_th = roc_th = np.array([])
+        opt_threshold = 0.5
+        ece = 0.0
     
+    # Optional event-level aggregation
+    event_metrics: Dict[str, Any] = {}
+    try:
+        if event_ids is not None and len(event_ids) == len(test_labels):
+            event_metrics = _aggregate_event_level_metrics(event_ids, np.array(test_labels), np.array(test_prob_class1))
+    except Exception:
+        event_metrics = {}
+
     return {
         'test_accuracy': float(test_accuracy),
         'has_proper_test_set': not data_leakage,
@@ -165,7 +246,40 @@ def evaluate_on_test_set(trainer_state,
         'recall': recall,
         'f1_score': f1_score,
         'predictions': test_predictions.tolist(),
-        'true_labels': test_labels.tolist()
+        'true_labels': test_labels.tolist(),
+        'probabilities': test_prob_class1.tolist() if 'test_prob_class1' in locals() else [],
+        'auc_roc': float(auc_roc),
+        'auc_pr': float(auc_pr),
+        'roc_curve': {'fpr': fpr.tolist(), 'tpr': tpr.tolist(), 'thresholds': roc_th.tolist()} if len(roc_th) else {},
+        'pr_curve': {'precision': prec.tolist(), 'recall': rec.tolist(), 'thresholds': pr_th.tolist()} if len(pr_th) else {},
+        'opt_threshold': float(opt_threshold),
+        'ece': float(ece),
+        'event_level': event_metrics
+    }
+
+
+def _aggregate_event_level_metrics(event_ids: List[str], labels: np.ndarray, probs: np.ndarray) -> Dict[str, Any]:
+    """Aggregate window-level predictions to event-level using mean probability and majority vote."""
+    from collections import defaultdict
+    buckets = defaultdict(list)
+    for eid, lbl, pr in zip(event_ids, labels, probs):
+        buckets[eid].append((int(lbl), float(pr)))
+    event_true: List[int] = []
+    event_pred_mean: List[int] = []
+    event_pred_vote: List[int] = []
+    for eid, items in buckets.items():
+        lbls, prs = zip(*items)
+        mean_prob = float(np.mean(prs))
+        vote = int(np.round(np.mean([1 if p >= 0.5 else 0 for p in prs])))
+        event_true.append(int(np.round(np.mean(lbls))))
+        event_pred_mean.append(1 if mean_prob >= 0.5 else 0)
+        event_pred_vote.append(vote)
+    acc_mean = float(np.mean(np.array(event_pred_mean) == np.array(event_true))) if event_true else 0.0
+    acc_vote = float(np.mean(np.array(event_pred_vote) == np.array(event_true))) if event_true else 0.0
+    return {
+        'num_events': len(buckets),
+        'accuracy_meanprob': acc_mean,
+        'accuracy_vote': acc_vote
     }
 
 def create_test_evaluation_summary(train_accuracy: float,

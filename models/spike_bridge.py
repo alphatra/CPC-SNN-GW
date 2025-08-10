@@ -468,45 +468,20 @@ class LearnableMultiThresholdEncoder(nn.Module):
             )
             spike_channels.append(neg_spikes)
         
-        # 📊 TEMPORAL EXPANSION to match target time steps
-        # Stack all spike channels: [batch, seq_len, num_channels]
+        # 📊 VECTORIZE and EXPAND: stack channels and broadcast without Python loops
+        # Stack channels: [batch, seq_len, feature_dim, num_channels]
         spike_matrix = jnp.stack(spike_channels, axis=-1)
+        # Broadcast along time dimension while preserving feature_dim:
+        # [batch, time_steps, seq_len, feature_dim, num_channels]
+        expanded = jnp.broadcast_to(
+            spike_matrix[:, None, :, :, :],
+            (batch_size, self.time_steps, seq_len, feature_dim, spike_matrix.shape[-1])
+        )
+        # Merge feature_dim and channel dimensions for SNN input compatibility:
+        # [batch, time_steps, seq_len, feature_dim * num_channels]
+        output_spikes = expanded.reshape(batch_size, self.time_steps, seq_len, feature_dim * spike_matrix.shape[-1])
         
-        # Expand to time steps using learned interpolation
-        if self.time_steps != seq_len:
-            # Learnable temporal interpolation
-            time_indices = jnp.linspace(0, seq_len - 1, self.time_steps)
-            
-            # Use JAX's interpolation for smooth temporal expansion
-            # spike_matrix has shape [batch, seq_len, feature_dim, num_spike_channels]  
-            # We want output shape [batch, time_steps, seq_len, num_spike_channels]
-            # So we interpolate spike_matrix from seq_len to time_steps in the temporal dimension
-            
-            # Average across feature dimension first to get [batch, seq_len, num_spike_channels]
-            spike_matrix_pooled = jnp.mean(spike_matrix, axis=2)
-            
-            # Now interpolate temporal dimension
-            expanded_spikes = jnp.array([
-                jnp.interp(time_indices, jnp.arange(seq_len), spike_matrix_pooled[b, :, c])
-                for b in range(batch_size)
-                for c in range(spike_matrix_pooled.shape[-1])  # num_spike_channels
-            ]).reshape(batch_size, spike_matrix_pooled.shape[-1], self.time_steps)
-            
-            # Reorder to [batch, time_steps, num_spike_channels]
-            expanded_spikes = jnp.transpose(expanded_spikes, (0, 2, 1))
-            
-            # Replicate across sequence dimension to get [batch, time_steps, seq_len, num_spike_channels]
-            output_spikes = jnp.broadcast_to(
-                expanded_spikes[:, :, None, :],
-                (batch_size, self.time_steps, seq_len, spike_matrix.shape[-1])
-            )
-        else:
-            # Direct temporal mapping
-            output_spikes = jnp.broadcast_to(
-                spike_matrix[:, None, :, :],
-                (batch_size, self.time_steps, seq_len, spike_matrix.shape[-1])
-            )
-        
+        # Keep 4D tensor; SNN flattens [seq_len * merged_channels]
         return output_spikes
 
 class ValidatedSpikeBridge(nn.Module):
@@ -683,61 +658,28 @@ class ValidatedSpikeBridge(nn.Module):
         
         # ✅ AUTO-FIX: JAX-safe noise injection for low variance inputs
         feature_std = jnp.std(cpc_features)
-        
-        # JAX-safe conditional: always add small noise, scaled by variance condition
-        key = jax.random.PRNGKey(42)  # Fixed seed for reproducibility  
-        noise_scale = 1e-8  # Small noise relative to typical feature scales
-        
-        # Use JAX conditional to avoid boolean conversion error during tracing
-        noise_multiplier = jax.lax.cond(
-            feature_std < 1e-12,
-            lambda: 1.0,  # Add full noise if variance is low
-            lambda: 0.1   # Add minimal noise otherwise for numerical stability
-        )
-        
-        stabilizing_noise = jax.random.normal(key, cpc_features.shape) * noise_scale * noise_multiplier
+        # Use Flax rngs instead of fixed seed
+        rng = self.make_rng('spike_noise')
+        noise_scale = 1e-8
+        noise_multiplier = jax.lax.select(feature_std < 1e-12, 1.0, 0.1)
+        stabilizing_noise = jax.random.normal(rng, cpc_features.shape) * noise_scale * noise_multiplier
         cpc_features = cpc_features + stabilizing_noise
         
-        # ✅ FORCE SIMPLE FIXED ENCODING: Always use simple spike encoding to avoid negative spike rate
-        logger.debug("🔧 Using FIXED spike encoding with guaranteed positive rate (FORCED)")
-
+        # ✅ USE ADVANCED ENCODERS: phase-preserving or learnable multi-threshold
         batch_size, seq_len, feature_dim = cpc_features.shape
+
+        if self.use_learnable_encoding:
+            # Learnable multi-threshold encoder path
+            spikes = self.learnable_encoder(
+                cpc_features, training_progress=training_progress
+            )  # [batch, time_steps, seq_len, num_channels]
+            return spikes
         
-        # Normalizacja do zakresu [0, 1] 
-        features_norm = jax.nn.sigmoid(cpc_features)
-        
-        # Prosty rate encoding z gwarantowanym pozytywnym spike rate
-        spike_trains = jnp.zeros((batch_size, self.time_steps, seq_len, feature_dim))
-        
-        # Użyj features jako prawdopodobieństwa spike'ów
-        for t in range(self.time_steps):
-            # Różne progi dla różnych time steps
-            threshold = 0.3 + 0.1 * (t % 3)  # 0.3, 0.4, 0.5 cyklicznie
-            
-            # Spikes gdzie features > threshold
-            spikes = (features_norm > threshold).astype(jnp.float32)
-            spike_trains = spike_trains.at[:, t, :, :].set(spikes)
-        
-        # Gwarancja pozytywnego spike rate
-        spike_rate = jnp.mean(spike_trains)
-        
-        # Jeśli spike rate jest za niski, zwiększ spike activity
-        spike_trains = jnp.where(
-            spike_rate < 0.01,
-            # Dodaj minimalne spike activity
-            jnp.maximum(spike_trains, jnp.ones_like(spike_trains) * 0.02),  # 2% base activity
-            spike_trains
-        )
-        
-        # Upewnij się, że spike rate jest w zakresie 0.1-0.5
-        final_spike_rate = jnp.mean(spike_trains)
-        spike_trains = jnp.where(
-            final_spike_rate > 0.5,
-            spike_trains * (0.4 / final_spike_rate),  # Przeskaluj do 0.4 jeśli za wysoki
-            spike_trains
-        )
-        
-        return spike_trains
+        # Default: temporal-contrast encoding with adaptive threshold
+        spikes_tc = self._temporal_contrast_encoding_with_threshold(
+            cpc_features, threshold=self.threshold
+        )  # [batch, time_steps, seq_len, feature_dim]
+        return spikes_tc
     
     def _temporal_contrast_encoding(self, features: jnp.ndarray) -> jnp.ndarray:
         """

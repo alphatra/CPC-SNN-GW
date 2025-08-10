@@ -1,0 +1,177 @@
+2025-08-10 15:35:02,042 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:35:02,043 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:35:02,045 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:35:02,050 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:35:02,051 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:35:02,055 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-10 15:35:02,059 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-10 15:35:02,086 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-10 15:35:02,088 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-10 15:35:02,112 - data.real_ligo_integration - INFO - 🚀 Creating ENHANCED dataset with 2000 target samples
+2025-08-10 15:35:02,113 - data.real_ligo_integration - INFO -    Enhanced overlap: 90.0%
+2025-08-10 15:35:02,114 - data.real_ligo_integration - INFO -    Data augmentation: True
+2025-08-10 15:35:02,116 - data.real_ligo_integration - WARNING - ❌ ReadLIGO loading failed: ModuleNotFoundError: No module named 'readligo'
+2025-08-10 15:35:02,120 - data.real_ligo_integration - INFO - ✅ Using h5py fallback - loading LOSC HDF5 files directly
+2025-08-10 15:35:02,230 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data (source=h5py): 2048 samples
+2025-08-10 15:35:02,231 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-10 15:35:02,232 - data.real_ligo_integration - INFO - 📡 Processing real LIGO data with enhanced windowing...
+2025-08-10 15:35:02,256 - data.real_ligo_integration - INFO - ✅ Real LIGO windows: 31 (vs previous ~15)
+2025-08-10 15:35:03,089 - data.real_ligo_integration - INFO - 🔄 Applying data augmentation to real LIGO data...
+2025-08-10 15:35:04,148 - data.real_ligo_integration - INFO - ✅ Augmented data: +155 samples
+2025-08-10 15:35:04,618 - data.real_ligo_integration - INFO - 🔄 Generating 1814 synthetic GW samples...
+2025-08-10 15:35:42,569 - data.real_ligo_integration - INFO - 🎯 ENHANCED DATASET CREATED:
+2025-08-10 15:35:42,572 - data.real_ligo_integration - INFO -    Total samples: 2000
+2025-08-10 15:35:42,574 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-10 15:35:43,216 - data.real_ligo_integration - INFO -    GW signals: 729 (36.5%)
+2025-08-10 15:35:43,508 - data.real_ligo_integration - INFO -    Noise samples: 1271 (63.6%)
+2025-08-10 15:35:49,126 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-10 15:35:49,129 - utils.data_split - INFO -    Class 0 samples: 1271
+2025-08-10 15:35:49,130 - utils.data_split - INFO -    Class 1 samples: 729
+2025-08-10 15:35:59,055 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-10 15:35:59,057 - utils.data_split - INFO -    Train: 1599 samples
+2025-08-10 15:35:59,058 - utils.data_split - INFO -    Test: 401 samples
+2025-08-10 15:35:59,323 - utils.data_split - INFO -    Train class balance: 36.5% positive
+2025-08-10 15:35:59,556 - utils.data_split - INFO -    Test class balance: 36.4% positive
+2025-08-10 15:36:00,002 - utils.data_split - INFO - ✅ Balanced test set: 36.4% positive
+2025-08-10 15:36:00,003 - __main__ - INFO -    Enhanced REAL LIGO samples: train=1599, test=401
+2025-08-10 15:36:00,005 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-10 15:36:00,007 - __main__ - INFO -    Training data shape: (1599, 512)
+2025-08-10 15:36:00,008 - __main__ - INFO -    Labels shape: (1599,)
+2025-08-10 15:36:00,010 - __main__ - INFO -    Running 2 epochs...
+2025-08-10 15:36:00,011 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-10 15:36:00,043 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:36:00,043 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:36:00,044 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:36:00,044 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:36:00,046 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:36:00,046 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:36:00,051 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:36:00,051 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:36:00,052 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:36:00,052 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:36:55,319 - __main__ - ERROR - Training loop failed: Cannot broadcast to shape with fewer dimensions: arr_shape=(1, 1, 128, 64, 8) shape=(1, 24, 128, 8)
+2025-08-10 15:36:55,319 - __main__ - ERROR - Training loop failed: Cannot broadcast to shape with fewer dimensions: arr_shape=(1, 1, 128, 64, 8) shape=(1, 24, 128, 8)
+2025-08-10 15:36:55,426 - __main__ - ERROR - ❌ Training failed!
+2025-08-10 15:36:55,426 - __main__ - ERROR - ❌ Training failed!
+2025-08-10 15:42:27,587 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:42:27,588 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:42:27,590 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:42:27,596 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:42:27,597 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:42:27,599 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-10 15:42:27,601 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-10 15:42:27,615 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-10 15:42:27,616 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-10 15:42:27,628 - data.real_ligo_integration - INFO - 🚀 Creating ENHANCED dataset with 2000 target samples
+2025-08-10 15:42:27,629 - data.real_ligo_integration - INFO -    Enhanced overlap: 90.0%
+2025-08-10 15:42:27,630 - data.real_ligo_integration - INFO -    Data augmentation: True
+2025-08-10 15:42:27,632 - data.real_ligo_integration - WARNING - ❌ ReadLIGO loading failed: ModuleNotFoundError: No module named 'readligo'
+2025-08-10 15:42:27,635 - data.real_ligo_integration - INFO - ✅ Using h5py fallback - loading LOSC HDF5 files directly
+2025-08-10 15:42:27,726 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data (source=h5py): 2048 samples
+2025-08-10 15:42:27,728 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-10 15:42:27,728 - data.real_ligo_integration - INFO - 📡 Processing real LIGO data with enhanced windowing...
+2025-08-10 15:42:27,740 - data.real_ligo_integration - INFO - ✅ Real LIGO windows: 31 (vs previous ~15)
+2025-08-10 15:42:28,489 - data.real_ligo_integration - INFO - 🔄 Applying data augmentation to real LIGO data...
+2025-08-10 15:42:29,518 - data.real_ligo_integration - INFO - ✅ Augmented data: +155 samples
+2025-08-10 15:42:29,970 - data.real_ligo_integration - INFO - 🔄 Generating 1814 synthetic GW samples...
+2025-08-10 15:42:59,897 - data.real_ligo_integration - INFO - 🎯 ENHANCED DATASET CREATED:
+2025-08-10 15:42:59,898 - data.real_ligo_integration - INFO -    Total samples: 2000
+2025-08-10 15:42:59,899 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-10 15:43:00,301 - data.real_ligo_integration - INFO -    GW signals: 729 (36.5%)
+2025-08-10 15:43:00,483 - data.real_ligo_integration - INFO -    Noise samples: 1271 (63.6%)
+2025-08-10 15:43:03,814 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-10 15:43:03,816 - utils.data_split - INFO -    Class 0 samples: 1271
+2025-08-10 15:43:03,817 - utils.data_split - INFO -    Class 1 samples: 729
+2025-08-10 15:43:10,270 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-10 15:43:10,271 - utils.data_split - INFO -    Train: 1599 samples
+2025-08-10 15:43:10,272 - utils.data_split - INFO -    Test: 401 samples
+2025-08-10 15:43:10,491 - utils.data_split - INFO -    Train class balance: 36.5% positive
+2025-08-10 15:43:10,700 - utils.data_split - INFO -    Test class balance: 36.4% positive
+2025-08-10 15:43:11,105 - utils.data_split - INFO - ✅ Balanced test set: 36.4% positive
+2025-08-10 15:43:11,106 - __main__ - INFO -    Enhanced REAL LIGO samples: train=1599, test=401
+2025-08-10 15:43:11,107 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-10 15:43:11,108 - __main__ - INFO -    Training data shape: (1599, 512)
+2025-08-10 15:43:11,109 - __main__ - INFO -    Labels shape: (1599,)
+2025-08-10 15:43:11,110 - __main__ - INFO -    Running 2 epochs...
+2025-08-10 15:43:11,111 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-10 15:43:11,130 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:43:11,130 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:43:11,131 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:43:11,131 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:43:11,133 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:43:11,133 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:43:11,138 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:43:11,138 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:43:11,140 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:43:11,140 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:44:05,659 - absl - INFO - Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7d3fff960f50>, enable_pinned_host_transfer=True, save_concurrent_bytes: 96000000000 (89.4 GiB), restore_concurrent_bytes: 96000000000 (89.4 GiB)
+2025-08-10 15:44:05,659 - absl - INFO - Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7d3fff960f50>, enable_pinned_host_transfer=True, save_concurrent_bytes: 96000000000 (89.4 GiB), restore_concurrent_bytes: 96000000000 (89.4 GiB)
+2025-08-10 15:44:05,661 - absl - INFO - orbax-checkpoint version: 0.11.21
+2025-08-10 15:44:05,661 - absl - INFO - orbax-checkpoint version: 0.11.21
+2025-08-10 15:44:05,663 - __main__ - WARNING - Orbax managers unavailable: CheckpointManager.__init__() got an unexpected keyword argument 'checkpointer'
+2025-08-10 15:44:05,663 - __main__ - WARNING - Orbax managers unavailable: CheckpointManager.__init__() got an unexpected keyword argument 'checkpointer'
+2025-08-10 15:44:05,664 - __main__ - INFO -    🔥 Epoch 1/2
+2025-08-10 15:44:05,664 - __main__ - INFO -    🔥 Epoch 1/2
+2025-08-10 15:44:24,747 - __main__ - ERROR - Training loop failed: spike_bridge needs PRNG for "spike_noise" (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.InvalidRngError)
+2025-08-10 15:44:24,747 - __main__ - ERROR - Training loop failed: spike_bridge needs PRNG for "spike_noise" (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.InvalidRngError)
+2025-08-10 15:44:24,761 - __main__ - ERROR - ❌ Training failed!
+2025-08-10 15:44:24,761 - __main__ - ERROR - ❌ Training failed!
+2025-08-10 15:48:24,880 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:48:24,881 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:48:24,882 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:48:24,886 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:48:24,888 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:48:24,890 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-08-10 15:48:24,892 - __main__ - INFO - 📊 Creating data loaders...
+2025-08-10 15:48:24,904 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-08-10 15:48:24,906 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-08-10 15:48:24,918 - data.real_ligo_integration - INFO - 🚀 Creating ENHANCED dataset with 2000 target samples
+2025-08-10 15:48:24,919 - data.real_ligo_integration - INFO -    Enhanced overlap: 90.0%
+2025-08-10 15:48:24,920 - data.real_ligo_integration - INFO -    Data augmentation: True
+2025-08-10 15:48:24,922 - data.real_ligo_integration - WARNING - ❌ ReadLIGO loading failed: ModuleNotFoundError: No module named 'readligo'
+2025-08-10 15:48:24,925 - data.real_ligo_integration - INFO - ✅ Using h5py fallback - loading LOSC HDF5 files directly
+2025-08-10 15:48:25,013 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data (source=h5py): 2048 samples
+2025-08-10 15:48:25,014 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-08-10 15:48:25,015 - data.real_ligo_integration - INFO - 📡 Processing real LIGO data with enhanced windowing...
+2025-08-10 15:48:25,027 - data.real_ligo_integration - INFO - ✅ Real LIGO windows: 31 (vs previous ~15)
+2025-08-10 15:48:25,801 - data.real_ligo_integration - INFO - 🔄 Applying data augmentation to real LIGO data...
+2025-08-10 15:48:26,884 - data.real_ligo_integration - INFO - ✅ Augmented data: +155 samples
+2025-08-10 15:48:27,331 - data.real_ligo_integration - INFO - 🔄 Generating 1814 synthetic GW samples...
+2025-08-10 15:48:57,210 - data.real_ligo_integration - INFO - 🎯 ENHANCED DATASET CREATED:
+2025-08-10 15:48:57,211 - data.real_ligo_integration - INFO -    Total samples: 2000
+2025-08-10 15:48:57,212 - data.real_ligo_integration - INFO -    Window size: 512
+2025-08-10 15:48:57,644 - data.real_ligo_integration - INFO -    GW signals: 729 (36.5%)
+2025-08-10 15:48:57,838 - data.real_ligo_integration - INFO -    Noise samples: 1271 (63.6%)
+2025-08-10 15:49:01,193 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-08-10 15:49:01,194 - utils.data_split - INFO -    Class 0 samples: 1271
+2025-08-10 15:49:01,195 - utils.data_split - INFO -    Class 1 samples: 729
+2025-08-10 15:49:07,865 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-08-10 15:49:07,867 - utils.data_split - INFO -    Train: 1599 samples
+2025-08-10 15:49:07,867 - utils.data_split - INFO -    Test: 401 samples
+2025-08-10 15:49:08,094 - utils.data_split - INFO -    Train class balance: 36.5% positive
+2025-08-10 15:49:08,308 - utils.data_split - INFO -    Test class balance: 36.4% positive
+2025-08-10 15:49:08,712 - utils.data_split - INFO - ✅ Balanced test set: 36.4% positive
+2025-08-10 15:49:08,714 - __main__ - INFO -    Enhanced REAL LIGO samples: train=1599, test=401
+2025-08-10 15:49:08,715 - __main__ - INFO - ⏳ Starting real training loop...
+2025-08-10 15:49:08,716 - __main__ - INFO -    Training data shape: (1599, 512)
+2025-08-10 15:49:08,716 - __main__ - INFO -    Labels shape: (1599,)
+2025-08-10 15:49:08,717 - __main__ - INFO -    Running 2 epochs...
+2025-08-10 15:49:08,718 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-08-10 15:49:08,739 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:49:08,739 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-08-10 15:49:08,740 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:49:08,740 - training.training_utils - INFO - JAX platform: gpu
+2025-08-10 15:49:08,743 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:49:08,743 - training.base_trainer - INFO - Using basic experiment tracker
+2025-08-10 15:49:08,748 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:49:08,748 - training.training_utils - INFO - Configuration saved to outputs/sanity_2ep/standard_training_1bs/config.json
+2025-08-10 15:49:08,750 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:49:08,750 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-08-10 15:50:03,548 - absl - INFO - Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x735caeba0f80>, enable_pinned_host_transfer=True, save_concurrent_bytes: 96000000000 (89.4 GiB), restore_concurrent_bytes: 96000000000 (89.4 GiB)
+2025-08-10 15:50:03,548 - absl - INFO - Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x735caeba0f80>, enable_pinned_host_transfer=True, save_concurrent_bytes: 96000000000 (89.4 GiB), restore_concurrent_bytes: 96000000000 (89.4 GiB)
+2025-08-10 15:50:03,550 - absl - INFO - orbax-checkpoint version: 0.11.21
+2025-08-10 15:50:03,550 - absl - INFO - orbax-checkpoint version: 0.11.21
+2025-08-10 15:50:03,551 - __main__ - WARNING - Orbax managers unavailable: CheckpointManager.__init__() got an unexpected keyword argument 'checkpointer'
+2025-08-10 15:50:03,551 - __main__ - WARNING - Orbax managers unavailable: CheckpointManager.__init__() got an unexpected keyword argument 'checkpointer'
+2025-08-10 15:50:03,553 - __main__ - INFO -    🔥 Epoch 1/2
+2025-08-10 15:50:03,553 - __main__ - INFO -    🔥 Epoch 1/2

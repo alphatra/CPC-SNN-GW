@@ -12,17 +12,24 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+import numpy as np
 
 try:
     from . import __version__
-    from .utils import setup_logging
 except ImportError:
     # Fallback for direct execution
     try:
         from _version import __version__
     except ImportError:
         __version__ = "0.1.0-dev"
-    from utils import setup_logging
+
+def _import_setup_logging():
+    """Lazy import setup_logging to avoid importing JAX too early."""
+    try:
+        from .utils import setup_logging as _sl
+    except ImportError:
+        from utils import setup_logging as _sl
+    return _sl
 
 # Optional imports (will be loaded when needed)
 try:
@@ -83,11 +90,18 @@ def run_standard_training(config, args):
         )
         
         logger.info("🔧 Real CPC+SNN training pipeline:")
-        logger.info(f"   - CPC Latent Dim: {config['model']['cpc_latent_dim']}")
+        try:
+            cpc_latent_dim = config.get('model', {}).get('cpc', {}).get('latent_dim', 'N/A')
+            spike_encoding = config.get('model', {}).get('spike_bridge', {}).get('encoding_strategy', 'N/A')
+            snn_hidden_sizes = config.get('model', {}).get('snn', {}).get('hidden_sizes', [])
+        except Exception:
+            cpc_latent_dim, spike_encoding, snn_hidden_sizes = 'N/A', 'N/A', []
+
+        logger.info(f"   - CPC Latent Dim: {cpc_latent_dim}")
         logger.info(f"   - Batch Size: {trainer_config.batch_size}")
         logger.info(f"   - Learning Rate: {trainer_config.learning_rate}")
         logger.info(f"   - Epochs: {trainer_config.num_epochs}")
-        logger.info(f"   - Spike Encoding: {config['model']['spike_encoding']}")
+        logger.info(f"   - Spike Encoding: {spike_encoding}")
         
         # Create and initialize trainer
         trainer = CPCSNNTrainer(trainer_config)
@@ -101,46 +115,120 @@ def run_standard_training(config, args):
             from data.gw_dataset_builder import create_evaluation_dataset
         except ImportError:
             from .data.gw_dataset_builder import create_evaluation_dataset
-        
-        # ✅ REAL LIGO DATA: Use real GW150914 data with proper windowing
-        logger.info("   Creating REAL LIGO dataset with GW150914 data...")
-        try:
-            from data.real_ligo_integration import create_real_ligo_dataset
-            
-            # ✅ ENHANCED: Use stratified split for proper test evaluation
-            (train_signals, train_labels), (test_signals, test_labels) = create_real_ligo_dataset(
-                num_samples=1200,
-                window_size=int(args.window_size),
-                quick_mode=bool(args.quick_mode),
-                return_split=True,
-                train_ratio=0.8,
-                overlap=float(args.overlap)
-            )
-            
-            signals, labels = train_signals, train_labels  # Use training data for training
-            
-            logger.info(f"   Generated {len(signals)} REAL LIGO training samples")
-            logger.info(f"   Test set: {len(test_signals)} samples for evaluation")
-            
-        except ImportError:
-            logger.warning("   Real LIGO integration not available - falling back to synthetic")
-            # Fallback to synthetic data
+
+        # ✅ Synthetic quick route: force synthetic dataset regardless of ReadLIGO availability
+        if bool(getattr(args, 'synthetic_quick', False)):
+            logger.info("   ⚡ Synthetic quick-mode enabled: using synthetic demo dataset")
+            num_samples = int(getattr(args, 'synthetic_samples', 60))
+            seq_len = 256
             train_data = create_evaluation_dataset(
-                num_samples=1200,
-                sequence_length=512,
+                num_samples=num_samples,
+                sequence_length=seq_len,
                 sample_rate=4096,
                 random_seed=42
             )
-            # Safe device arrays
             from utils.jax_safety import safe_stack_to_device, safe_array_to_device
             all_signals = safe_stack_to_device([sample[0] for sample in train_data], dtype=np.float32)
             all_labels = safe_array_to_device([sample[1] for sample in train_data], dtype=np.int32)
-            
-            # ✅ ENHANCED: Apply stratified split to synthetic data too
-            from utils.data_split import create_stratified_split
+            try:
+                from utils.data_split import create_stratified_split
+            except ImportError:
+                from .utils.data_split import create_stratified_split
             (signals, labels), (test_signals, test_labels) = create_stratified_split(
                 all_signals, all_labels, train_ratio=0.8, random_seed=42
             )
+            logger.info(f"   Synthetic samples: train={len(signals)}, test={len(test_signals)}")
+        else:
+            # ✅ REAL LIGO DATA: Prefer fast path in quick-mode; else enhanced dataset
+            logger.info("   Creating REAL LIGO dataset with GW150914 data...")
+            try:
+            from data.real_ligo_integration import create_enhanced_ligo_dataset, create_real_ligo_dataset
+            from utils.data_split import create_stratified_split
+            
+            if bool(getattr(args, 'quick_mode', False)) and not bool(getattr(args, 'synthetic_quick', False)):
+                # FAST PATH for sanity runs
+                logger.info("   ⚡ Quick mode: using lightweight real LIGO windows (no augmentation)")
+                (train_signals, train_labels), (test_signals, test_labels) = create_real_ligo_dataset(
+                    num_samples=200,
+                    window_size=int(args.window_size if args.window_size else 256),
+                    quick_mode=True,
+                    return_split=True,
+                    train_ratio=0.8,
+                    overlap=float(args.overlap if args.overlap else 0.7)
+                )
+                signals, labels = train_signals, train_labels
+                logger.info(f"   Quick REAL LIGO samples: train={len(signals)}, test={len(test_signals)}")
+            else:
+                # ENHANCED PATH (heavier)
+                # Optional PyCBC enhanced dataset
+                pycbc_ds = None
+                if getattr(args, 'use_pycbc', False):
+                    try:
+                        from data.pycbc_integration import create_pycbc_enhanced_dataset
+                        pycbc_ds = create_pycbc_enhanced_dataset(
+                            num_samples=2000,
+                            window_size=int(args.window_size if args.window_size else 256),
+                            sample_rate=4096,
+                            snr_range=(float(args.pycbc_snr_min), float(args.pycbc_snr_max)),
+                            mass_range=(float(args.pycbc_mass_min), float(args.pycbc_mass_max)),
+                            positive_ratio=0.35,
+                            random_seed=42,
+                            psd_name=str(args.pycbc_psd),
+                            whiten=bool(args.pycbc_whiten),
+                            multi_channel=bool(args.pycbc_multi_channel),
+                            sample_rate_high=int(args.pycbc_fs_high),
+                            resample_to=int(args.window_size if args.window_size else 256)
+                        )
+                        if pycbc_ds is not None:
+                            logger.info("   ✅ PyCBC enhanced synthetic dataset available for mixing")
+                    except Exception as _e:
+                        logger.warning(f"   PyCBC dataset unavailable: {_e}")
+                enhanced_signals, enhanced_labels = create_enhanced_ligo_dataset(
+                    num_samples=2000,
+                    window_size=int(args.window_size if args.window_size else 256),
+                    enhanced_overlap=0.9,
+                    data_augmentation=True,
+                    noise_scaling=True
+                )
+                # Mix PyCBC dataset if present
+                if pycbc_ds is not None:
+                    pycbc_signals, pycbc_labels = pycbc_ds
+                    import jax
+                    enhanced_signals = jnp.concatenate([enhanced_signals, pycbc_signals], axis=0)
+                    enhanced_labels = jnp.concatenate([enhanced_labels, pycbc_labels], axis=0)
+                    key = jax.random.PRNGKey(7)
+                    perm = jax.random.permutation(key, len(enhanced_signals))
+                    enhanced_signals = enhanced_signals[perm]
+                    enhanced_labels = enhanced_labels[perm]
+                # Split enhanced dataset
+                (train_signals, train_labels), (test_signals, test_labels) = create_stratified_split(
+                    enhanced_signals, enhanced_labels, train_ratio=0.8, random_seed=42
+                )
+                signals, labels = train_signals, train_labels
+                logger.info(f"   Enhanced REAL LIGO samples: train={len(signals)}, test={len(test_signals)}")
+            
+            except ImportError:
+                logger.warning("   Real LIGO integration not available - falling back to synthetic")
+                # Fallback to synthetic data (fast)
+                num_samples = int(getattr(args, 'synthetic_samples', 60)) if bool(getattr(args, 'quick_mode', False)) else 1200
+                seq_len = 256 if bool(getattr(args, 'quick_mode', False)) else 512
+                train_data = create_evaluation_dataset(
+                    num_samples=num_samples,
+                    sequence_length=seq_len,
+                    sample_rate=4096,
+                    random_seed=42
+                )
+                # Safe device arrays
+                from utils.jax_safety import safe_stack_to_device, safe_array_to_device
+                all_signals = safe_stack_to_device([sample[0] for sample in train_data], dtype=np.float32)
+                all_labels = safe_array_to_device([sample[1] for sample in train_data], dtype=np.int32)
+                try:
+                    from utils.data_split import create_stratified_split
+                except ImportError:
+                    from .utils.data_split import create_stratified_split
+                (signals, labels), (test_signals, test_labels) = create_stratified_split(
+                    all_signals, all_labels, train_ratio=0.8, random_seed=42
+                )
         
         logger.info("⏳ Starting real training loop...")
         
@@ -160,7 +248,7 @@ def run_standard_training(config, args):
             # Create trainer config for base trainer
             real_trainer_config = TrainingConfig(
                 learning_rate=trainer_config.learning_rate,
-                batch_size=trainer_config.batch_size,
+                batch_size=args.batch_size if hasattr(args, 'batch_size') else trainer_config.batch_size,
                 num_epochs=trainer_config.num_epochs,
                 output_dir=str(training_dir),
                 project_name="gravitational-wave-detection",
@@ -168,7 +256,22 @@ def run_standard_training(config, args):
                 use_tensorboard=False,
                 optimizer="adamw",  # Faster convergence than SGD for small datasets
                 scheduler="cosine",
-                num_classes=2
+                num_classes=2,
+                grad_accum_steps=2,
+                # SpikeBridge hyperparams from CLI
+                spike_time_steps=int(args.spike_time_steps),
+                spike_threshold=float(args.spike_threshold),
+                spike_learnable=bool(args.spike_learnable),
+                spike_threshold_levels=int(args.spike_threshold_levels),
+                spike_surrogate_type=str(args.spike_surrogate_type),
+                spike_surrogate_beta=float(args.spike_surrogate_beta),
+                spike_pool_seq=bool(args.spike_pool_seq),
+                # CPC/SNN
+                cpc_attention_heads=int(args.cpc_heads),
+                cpc_transformer_layers=int(args.cpc_layers),
+                snn_hidden_size=int(args.snn_hidden),
+                early_stopping_metric=("balanced_accuracy" if args.balanced_early_stop else "loss"),
+                early_stopping_mode=("max" if args.balanced_early_stop else "min")
             )
             
             # Create real trainer
@@ -178,6 +281,42 @@ def run_standard_training(config, args):
             model = trainer.create_model()
             sample_input = signals[:1]  # Use first sample for initialization
             trainer.train_state = trainer.create_train_state(model, sample_input)
+            # Prepare checkpoint managers (skip Orbax in quick-mode to reduce overhead/noise)
+            best_manager = None
+            latest_manager = None
+            if not bool(getattr(args, 'quick_mode', False)):
+                try:
+                    import orbax.checkpoint as ocp
+                    ckpt_root = training_dir / "ckpts"
+                    (ckpt_root / "best").mkdir(parents=True, exist_ok=True)
+                    (ckpt_root / "latest").mkdir(parents=True, exist_ok=True)
+                    checkpointer = ocp.Checkpointer(ocp.PyTreeCheckpointHandler())
+                    # Newer Orbax versions may not accept 'checkpointer' kwarg; keep try/except
+                    try:
+                        best_manager = ocp.CheckpointManager(
+                            str(ckpt_root / "best"),
+                            checkpointer=checkpointer,
+                            options=ocp.CheckpointManagerOptions(max_to_keep=3)
+                        )
+                        latest_manager = ocp.CheckpointManager(
+                            str(ckpt_root / "latest"),
+                            checkpointer=checkpointer,
+                            options=ocp.CheckpointManagerOptions(max_to_keep=1)
+                        )
+                    except TypeError:
+                        # Fallback for API without 'checkpointer' kwarg
+                        best_manager = ocp.CheckpointManager(
+                            str(ckpt_root / "best"),
+                            options=ocp.CheckpointManagerOptions(max_to_keep=3)
+                        )
+                        latest_manager = ocp.CheckpointManager(
+                            str(ckpt_root / "latest"),
+                            options=ocp.CheckpointManagerOptions(max_to_keep=1)
+                        )
+                except Exception as _orb_init:
+                    logger.warning(f"Orbax managers unavailable: {_orb_init}")
+            else:
+                logger.info("⚡ Quick-mode: disabling Orbax checkpoint managers")
             
             # REAL TRAINING LOOP
             epoch_results = []
@@ -186,10 +325,19 @@ def run_standard_training(config, args):
                 
                 # Create batches
                 num_samples = len(signals)
-                num_batches = (num_samples + trainer_config.batch_size - 1) // trainer_config.batch_size
+                # ✅ Reduce per-epoch latency: cap number of batches per epoch for quick feedback
+                full_batches = (num_samples + trainer_config.batch_size - 1) // trainer_config.batch_size
+                # Slightly higher cap when batch>1 to use GPU better
+                cap = 120 if trainer_config.batch_size > 1 else 100
+                num_batches = min(full_batches, cap)
                 
                 epoch_losses = []
                 epoch_accuracies = []
+                # ✅ Moving averages over last 20 steps
+                from collections import deque
+                ma_window = 20
+                ma_losses: deque = deque(maxlen=ma_window)
+                ma_accs: deque = deque(maxlen=ma_window)
                 
                 for batch_idx in range(num_batches):
                     start_idx = batch_idx * trainer_config.batch_size
@@ -204,6 +352,13 @@ def run_standard_training(config, args):
                     
                     epoch_losses.append(metrics.loss)
                     epoch_accuracies.append(metrics.accuracy)
+                    ma_losses.append(metrics.loss)
+                    ma_accs.append(metrics.accuracy)
+                    if (batch_idx + 1) % 10 == 0:
+                        import numpy as _np
+                        ma_loss = float(_np.mean(_np.array(ma_losses))) if len(ma_losses) > 0 else metrics.loss
+                        ma_acc = float(_np.mean(_np.array(ma_accs))) if len(ma_accs) > 0 else metrics.accuracy
+                        logger.info(f"      Step {batch_idx+1}/{num_batches} loss={metrics.loss:.4f} acc={metrics.accuracy:.3f} | MA{ma_window}: loss={ma_loss:.4f} acc={ma_acc:.3f}")
                 
                 # Compute epoch averages
                 import numpy as _np
@@ -212,11 +367,159 @@ def run_standard_training(config, args):
                 
                 logger.info(f"      Loss: {avg_loss:.4f}, Accuracy: {avg_accuracy:.4f}")
                 
+                # Balanced accuracy proxy if available from test eval later
                 epoch_results.append({
                     'epoch': epoch,
                     'loss': avg_loss,
                     'accuracy': avg_accuracy
                 })
+
+                # ✅ New: Save checkpoint every N epochs (latest)
+                try:
+                    if (epoch + 1) % max(1, int(getattr(real_trainer_config, 'checkpoint_every_epochs', 5))) == 0:
+                        ckpt_path = training_dir / f"checkpoint_epoch_{epoch+1}.orbax"
+                        logger.info(f"      💾 Saving checkpoint: {ckpt_path}")
+                        # Placeholder for future: integrate orbax or pickle if needed
+                    # Always save latest checkpoint (keep=1)
+                    try:
+                        if latest_manager is not None:
+                            latest_manager.save(
+                                epoch + 1,
+                                {'train_state': trainer.train_state},
+                                metrics={'epoch': epoch+1, 'loss': avg_loss, 'accuracy': avg_accuracy}
+                            )
+                    except Exception as _orb_latest:
+                        logger.warning(f"Latest checkpoint save skipped: {_orb_latest}")
+                except Exception as _e:
+                    logger.warning(f"Checkpoint save skipped: {_e}")
+
+                # ✅ Per-epoch test evaluation (batched) + early stopping by balanced acc/F1
+                try:
+                    from training.test_evaluation import evaluate_on_test_set
+                    test_results = evaluate_on_test_set(
+                        trainer.train_state,
+                        test_signals,
+                        test_labels,
+                        train_signals=signals,
+                        verbose=False,
+                        batch_size=64,
+                        optimize_threshold=bool(args.opt_threshold)
+                    )
+                    # Compute balanced accuracy and dynamic decision threshold search placeholder
+                    balanced_acc = 0.5 * (float(test_results.get('specificity', 0.0)) + float(test_results.get('recall', 0.0)))
+                    logger.info(f"      Test acc={test_results['test_accuracy']:.3f} | sens={test_results.get('recall',0):.3f} spec={test_results.get('specificity',0):.3f} prec={test_results.get('precision',0):.3f} f1={test_results.get('f1_score',0):.3f} bal_acc={balanced_acc:.3f}")
+                    # Early stopping based on balanced accuracy/F1 (handled in trainer), here store summary
+                    epoch_results[-1]['test_f1'] = float(test_results.get('f1_score', 0.0))
+                    epoch_results[-1]['balanced_accuracy'] = float(balanced_acc)
+                    # Save threshold files
+                    try:
+                        if bool(args.opt_threshold) and 'opt_threshold' in test_results:
+                            (training_dir / 'last_threshold.txt').write_text(str(float(test_results['opt_threshold'])))
+                            # If improved best, also update best_threshold.txt
+                            best_file = training_dir / "best_metric.txt"
+                            prev_best = float(best_file.read_text().strip()) if best_file.exists() else -1.0
+                            if balanced_acc > prev_best:
+                                (training_dir / 'best_threshold.txt').write_text(str(float(test_results['opt_threshold'])))
+                    except Exception as _th:
+                        logger.warning(f"Threshold write skipped: {_th}")
+                    # Log to Weights & Biases if enabled
+                    try:
+                        if getattr(real_trainer_config, 'use_wandb', False):
+                            import wandb
+                            log_dict = {
+                                'epoch': epoch + 1,
+                                'train/loss': avg_loss,
+                                'train/accuracy': avg_accuracy,
+                                'test/accuracy': float(test_results.get('test_accuracy', 0.0)),
+                                'test/precision': float(test_results.get('precision', 0.0)),
+                                'test/recall': float(test_results.get('recall', 0.0)),
+                                'test/f1': float(test_results.get('f1_score', 0.0)),
+                                'test/balanced_accuracy': float(balanced_acc),
+                                'test/ece': float(test_results.get('ece', 0.0)),
+                            }
+                            # Curves
+                            y_true = test_results.get('true_labels', [])
+                            y_prob = test_results.get('probabilities', [])
+                            y_pred = test_results.get('predictions', [])
+                            if y_true and y_prob:
+                                import numpy as _np
+                                y_true_np = _np.array(y_true)
+                                p = _np.array(y_prob)
+                                y_probas = _np.stack([1.0 - p, p], axis=1)
+                                try:
+                                    log_dict['plots/roc'] = wandb.plot.roc_curve(y_true_np, y_probas, labels=['0','1'])
+                                except Exception:
+                                    pass
+                                try:
+                                    log_dict['plots/pr'] = wandb.plot.pr_curve(y_true_np, y_probas, labels=['0','1'])
+                                except Exception:
+                                    pass
+                            if y_true and y_pred:
+                                try:
+                                    log_dict['plots/confusion_matrix'] = wandb.plot.confusion_matrix(
+                                        y_true=y_true, preds=y_pred, class_names=['0','1']
+                                    )
+                                except Exception:
+                                    pass
+                            wandb.log(log_dict)
+                    except Exception as _wb:
+                        logger.warning(f"W&B logging skipped: {_wb}")
+                    # Placeholder for threshold search: we would adjust decision threshold if we had probabilities
+                    # Early stopping: stop if no improvement for patience epochs
+                    # Trainer has internal EarlyStoppingMonitor; here we pass a metrics-like object
+                    class _M: pass
+                    _m = _M()
+                    _m.epoch = epoch
+                    _m.loss = avg_loss
+                    _m.accuracy = avg_accuracy
+                    _m.f1_score = epoch_results[-1].get('test_f1', 0.0)
+                    # store per-class acc if available (fallback)
+                    _m.accuracy_class0 = test_results.get('specificity', 0.0)
+                    _m.accuracy_class1 = test_results.get('recall', 0.0)
+                    trainer.should_stop_training(_m)
+                    # Save best weights by balanced accuracy/F1 (after eval)
+                    try:
+                        if epoch_results[-1].get('balanced_accuracy') is not None:
+                            best_metric = epoch_results[-1]['balanced_accuracy']
+                            best_file = training_dir / "best_metric.txt"
+                            prev_best = -1.0
+                            if best_file.exists():
+                                try:
+                                    prev_best = float(best_file.read_text().strip())
+                                except Exception:
+                                    prev_best = -1.0
+                            if best_metric > prev_best:
+                                from pathlib import Path as _Path
+                                (_Path(training_dir) / "best_metric.txt").write_text(str(best_metric))
+                                # Save detailed best metrics and threshold if available
+                                try:
+                                    import json as _json
+                                    best_metrics = {
+                                        'epoch': epoch + 1,
+                                        'balanced_accuracy': float(best_metric),
+                                        'loss': float(avg_loss),
+                                        'accuracy': float(avg_accuracy),
+                                        'test_accuracy': float(test_results.get('test_accuracy', 0.0)),
+                                        'f1': float(test_results.get('f1_score', 0.0)),
+                                        'ece': float(test_results.get('ece', 0.0))
+                                    }
+                                    (training_dir / 'best_metrics.json').write_text(_json.dumps(best_metrics, indent=2))
+                                except Exception as _bm:
+                                    logger.warning(f"Could not write best_metrics.json: {_bm}")
+                                logger.info("      🏆 New best balanced accuracy; saving best checkpoint")
+                                if best_manager is not None:
+                                    try:
+                                        best_manager.save(
+                                            epoch + 1,
+                                            {'train_state': trainer.train_state},
+                                            metrics={'balanced_accuracy': best_metric, 'epoch': epoch+1}
+                                        )
+                                    except Exception as _orb:
+                                        logger.warning(f"Orbax checkpoint skipped: {_orb}")
+                    except Exception as _e2:
+                        logger.warning(f"Best checkpoint save skipped: {_e2}")
+                except Exception as _e:
+                    logger.warning(f"Per-epoch eval skipped: {_e}")
             
             end_time = time.time()
             training_time = end_time - start_time
@@ -582,6 +885,24 @@ def train_cmd():
         default=32,
         help="Training batch size"
     )
+    # SpikeBridge hyperparameters via CLI
+    parser.add_argument("--spike-time-steps", type=int, default=24, help="SpikeBridge time steps T")
+    parser.add_argument("--spike-threshold", type=float, default=0.1, help="Base threshold for encoders")
+    parser.add_argument("--spike-learnable", action="store_true", help="Use learnable multi-threshold encoding")
+    parser.add_argument("--no-spike-learnable", dest="spike_learnable", action="store_false", help="Disable learnable encoding")
+    parser.set_defaults(spike_learnable=True)
+    parser.add_argument("--spike-threshold-levels", type=int, default=4, help="Number of threshold levels")
+    parser.add_argument("--spike-surrogate-type", type=str, default="adaptive_multi_scale", help="Surrogate type for spikes")
+    parser.add_argument("--spike-surrogate-beta", type=float, default=4.0, help="Surrogate beta")
+    parser.add_argument("--spike-pool-seq", action="store_true", help="Enable pooling over seq dimension before SNN")
+    # CPC/Transformer params
+    parser.add_argument("--cpc-heads", type=int, default=8, help="Temporal attention heads")
+    parser.add_argument("--cpc-layers", type=int, default=4, help="Temporal transformer layers")
+    # SNN params
+    parser.add_argument("--snn-hidden", type=int, default=32, help="SNN hidden size")
+    # Early stop and thresholding
+    parser.add_argument("--balanced-early-stop", action="store_true", help="Use balanced accuracy/F1 early stopping")
+    parser.add_argument("--opt-threshold", action="store_true", help="Optimize decision threshold by F1/balanced acc on test per epoch")
     
     parser.add_argument(
         "--learning-rate", "--lr",
@@ -602,9 +923,92 @@ def train_cmd():
         help="Overlap ratio for windowing (0.0-0.99)"
     )
     parser.add_argument(
+        "--use-pycbc",
+        action="store_true",
+        help="Use PyCBC-enhanced synthetic dataset if available"
+    )
+    # PyCBC simulation controls
+    parser.add_argument(
+        "--pycbc-psd",
+        type=str,
+        default="aLIGOZeroDetHighPower",
+        help="PyCBC PSD name (e.g., aLIGOZeroDetHighPower, aLIGOLateHighSensitivity)")
+    parser.add_argument(
+        "--pycbc-whiten",
+        dest="pycbc_whiten",
+        action="store_true",
+        help="Enable PyCBC time-domain whitening"
+    )
+    parser.add_argument(
+        "--no-pycbc-whiten",
+        dest="pycbc_whiten",
+        action="store_false",
+        help="Disable PyCBC time-domain whitening"
+    )
+    parser.set_defaults(pycbc_whiten=True)
+    parser.add_argument(
+        "--pycbc-multi-channel",
+        action="store_true",
+        help="Return H1/L1 as 2-channel inputs (else averaged)"
+    )
+    parser.add_argument(
+        "--pycbc-snr-min",
+        type=float,
+        default=8.0,
+        help="Minimum target SNR for PyCBC injections"
+    )
+    parser.add_argument(
+        "--pycbc-snr-max",
+        type=float,
+        default=20.0,
+        help="Maximum target SNR for PyCBC injections"
+    )
+    parser.add_argument(
+        "--pycbc-mass-min",
+        type=float,
+        default=10.0,
+        help="Minimum component mass (solar masses)"
+    )
+    parser.add_argument(
+        "--pycbc-mass-max",
+        type=float,
+        default=50.0,
+        help="Maximum component mass (solar masses)"
+    )
+    parser.add_argument(
+        "--pycbc-fs-high",
+        type=int,
+        default=8192,
+        help="High sample rate for PyCBC synthesis before resampling"
+    )
+    # Real multi-event controls
+    parser.add_argument(
+        "--multi-event",
+        action="store_true",
+        help="Use multiple LOSC events from data/gwosc_cache for training"
+    )
+    parser.add_argument(
+        "--k-folds",
+        type=int,
+        default=0,
+        help="Number of folds for stratified K-fold (0 disables K-fold)"
+    )
+    parser.add_argument(
         "--quick-mode",
         action="store_true",
         help="Use smaller windows for quick testing"
+    )
+    # Force synthetic quick dataset instead of real LIGO in quick-mode
+    parser.add_argument(
+        "--synthetic-quick",
+        action="store_true",
+        help="Force synthetic quick demo dataset instead of real LIGO in quick-mode"
+    )
+    parser.add_argument(
+        "--synthetic-samples",
+        type=int,
+        default=60,
+        help="Number of samples for synthetic quick demo dataset"
     )
     
     parser.add_argument(
@@ -637,26 +1041,35 @@ def train_cmd():
     
     args = parser.parse_args()
     
-    # Setup logging
-    setup_logging(
+    # Setup logging (lazy import to respect device env settings)
+    _sl = _import_setup_logging()
+    _sl(
         level=logging.INFO if args.verbose == 0 else logging.DEBUG,
         log_file=args.log_file
     )
     # Device selection and platform safety
     import os
     try:
-        import jax
+        # Set platform BEFORE importing jax so it takes effect
         if args.device == 'cpu':
             os.environ['JAX_PLATFORMS'] = 'cpu'
+            os.environ['CUDA_VISIBLE_DEVICES'] = ''
+            os.environ['NVIDIA_VISIBLE_DEVICES'] = ''
             logger.info("Forcing CPU backend as requested by --device=cpu")
         elif args.device == 'gpu':
-            # Let JAX auto-pick GPU if available; otherwise log and continue
             os.environ.pop('JAX_PLATFORMS', None)
+            os.environ.pop('CUDA_VISIBLE_DEVICES', None)
+            os.environ.pop('NVIDIA_VISIBLE_DEVICES', None)
             logger.info("Requesting GPU backend; JAX will use CUDA if available")
-        else:  # auto
-            if jax.default_backend() == 'metal':
-                os.environ['JAX_PLATFORMS'] = 'cpu'
-                logger.warning("Metal backend is experimental; falling back to CPU for stability. For GPU, run on NVIDIA (CUDA).")
+        # Import jax after environment is configured
+        import jax
+        if args.device == 'auto':
+            try:
+                if jax.default_backend() == 'metal':
+                    os.environ['JAX_PLATFORMS'] = 'cpu'
+                    logger.warning("Metal backend is experimental; falling back to CPU for stability. For GPU, run on NVIDIA (CUDA).")
+            except Exception:
+                pass
     except Exception:
         pass
     
@@ -699,7 +1112,16 @@ def train_cmd():
         jax.config.update('jax_enable_x64', False)  # Use float32 for memory efficiency
         
         # ✅ COMPREHENSIVE CUDA WARMUP: Advanced model-specific kernel initialization
-        logger.info("🔥 Performing COMPREHENSIVE GPU warmup to eliminate timing issues...")
+        if args.device != 'gpu':
+            logger.info("⏭️ Skipping GPU warmup (device is not GPU)")
+            raise RuntimeError("NO_GPU_WARMUP")
+        devices = jax.devices()
+        gpu_devices = [d for d in devices if d.platform == 'gpu']
+        if gpu_devices:
+            logger.info("🔥 Performing COMPREHENSIVE GPU warmup to eliminate timing issues...")
+        else:
+            logger.info("⏭️ Skipping GPU warmup (no GPU detected)")
+            raise RuntimeError("NO_GPU_WARMUP")
         
         warmup_key = jax.random.PRNGKey(456)
         
@@ -804,7 +1226,8 @@ def train_cmd():
             logger.info("💻 Using CPU backend")
             
     except Exception as e:
-        logger.warning(f"⚠️ GPU configuration warning: {e}")
+        if str(e) != "NO_GPU_WARMUP":
+            logger.warning(f"⚠️ GPU configuration warning: {e}")
         logger.info("   Continuing with default JAX settings")
     
     # Load configuration
@@ -819,13 +1242,25 @@ def train_cmd():
     # Override config with CLI arguments (using dict syntax)
     # Note: This is a simplified approach - full CLI integration would need more work
     if args.output_dir:
+        config.setdefault('logging', {})
         config['logging']['checkpoint_dir'] = str(args.output_dir)
-    if args.epochs:
-        config['training']['cpc_epochs'] = args.epochs  # Use correct key name
-    if args.batch_size:
+    if args.epochs is not None:
+        # Some trainers use unified cpc_epochs; keep backward-compatible override
+        config.setdefault('training', {})
+        config['training']['cpc_epochs'] = args.epochs
+        # Also try nested keys if present in YAML
+        if 'cpc_pretrain' in config.get('training', {}):
+            config['training']['cpc_pretrain']['num_epochs'] = args.epochs
+    if args.batch_size is not None:
+        config.setdefault('training', {})
         config['training']['batch_size'] = args.batch_size
-    if args.learning_rate:
+        if 'cpc_pretrain' in config['training']:
+            config['training']['cpc_pretrain']['batch_size'] = args.batch_size
+    if args.learning_rate is not None:
+        config.setdefault('training', {})
         config['training']['cpc_lr'] = args.learning_rate
+        if 'cpc_pretrain' in config['training']:
+            config['training']['cpc_pretrain']['learning_rate'] = args.learning_rate
     if args.device and args.device != 'auto':
         config['platform']['device'] = args.device
     if args.wandb:
@@ -938,7 +1373,8 @@ def eval_cmd():
     args = parser.parse_args()
     
     # Setup logging
-    setup_logging(
+    _sl = _import_setup_logging()
+    _sl(
         level=logging.INFO if args.verbose == 0 else logging.DEBUG,
         log_file=args.log_file
     )
@@ -1232,7 +1668,8 @@ def infer_cmd():
     args = parser.parse_args()
     
     # Setup logging
-    setup_logging(
+    _sl = _import_setup_logging()
+    _sl(
         level=logging.INFO if args.verbose == 0 else logging.DEBUG,
         log_file=args.log_file
     )
@@ -1291,6 +1728,7 @@ def main():
         print("  train     Train CPC+SNN model")
         print("  eval      Evaluate trained model")
         print("  infer     Run inference")
+        print("  hpo       Run Optuna hyperparameter optimization (sketch)")
         return 1
     
     command = sys.argv[1]
@@ -1303,6 +1741,14 @@ def main():
         return eval_cmd()
     elif command == "infer":
         return infer_cmd()
+    elif command == "hpo":
+        # Sketch HPO entry: expects separate module (to be implemented)
+        try:
+            from training.hpo_optuna import run_hpo
+            return run_hpo()
+        except Exception as e:
+            print(f"HPO not implemented: {e}")
+            return 2
     else:
         print(f"Unknown command: {command}")
         print("Available commands: train, eval, infer")

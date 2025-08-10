@@ -76,6 +76,10 @@ def detect_available_devices() -> Dict[str, Any]:
 def create_optimal_device_config(device_info: Dict[str, Any]) -> DeviceConfig:
     """Create optimal device configuration based on detected hardware"""
     
+    # If GPU detected via JAX but memory unknown (no torch), assume 8GB class
+    if device_info['gpu_available'] and device_info['gpu_memory_gb'] == 0.0:
+        device_info['gpu_memory_gb'] = 8.0
+
     if device_info['gpu_available'] and device_info['gpu_memory_gb'] > 4.0:
         # 🚀 GPU Configuration (T4, V100, A100, etc.)
         logger.info(f"🎮 GPU DETECTED: {device_info['gpu_memory_gb']:.1f}GB VRAM")
@@ -93,9 +97,9 @@ def create_optimal_device_config(device_info: Dict[str, Any]) -> DeviceConfig:
         else:  # Smaller GPU (8-12GB)
             return DeviceConfig(
                 platform='gpu',
-                memory_fraction=0.75,  # Conservative for smaller GPU
+                memory_fraction=0.35,  # More conservative to avoid OOM on 8-12GB
                 use_preallocate=False,
-                xla_flags='--xla_gpu_cuda_data_dir=/usr/local/cuda',
+                xla_flags='--xla_gpu_cuda_data_dir=/usr/local/cuda --xla_gpu_autotune_level=0',
                 recommended_batch_size=1,  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
                 recommended_epochs=100,
                 expected_speedup=15.0

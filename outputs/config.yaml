@@ -61,7 +61,7 @@ model:
 platform:
   batch_size_auto_adjust: true
   cache_compilation: true
-  device: auto
+  device: gpu
   enable_jit: true
   enable_performance_optimizations: true
   max_memory_fraction: 0.5
@@ -71,11 +71,11 @@ platform:
   precision: float32
   random_seed: 42
 training:
-  batch_size: 1
+  batch_size: 4
   batch_size_auto_adjust: true
   bootstrap_samples: 100
   compute_roc_auc: true
-  cpc_epochs: 5
+  cpc_epochs: 2
   cpc_lr: 0.0005
   enable_cpc_finetuning_stage2: true
   enable_performance_optimizations: true
@@ -116,7 +116,7 @@ wandb:
   max_memory_fraction: 0.5
   memory_metrics: true
   monitor_memory: true
-  name: neuromorphic-gw-1754614416
+  name: neuromorphic-gw-1754783277
   neuromorphic_metrics: true
   notes: Enhanced neuromorphic GW detection with comprehensive monitoring
   output_dir: wandb_outputs

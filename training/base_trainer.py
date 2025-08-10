@@ -21,6 +21,7 @@ import jax.numpy as jnp
 import flax.linen as nn
 import optax
 from flax.training import train_state
+from flax.training import checkpoints
 
 # Import local utilities
 from .training_utils import (
@@ -35,7 +36,7 @@ from .training_metrics import (
 )
 
 # Import models
-from models.cpc_encoder import CPCEncoder
+from models.cpc_encoder import RealCPCEncoder, RealCPCConfig
 from models.snn_classifier import SNNClassifier  
 from models.spike_bridge import ValidatedSpikeBridge
 
@@ -60,6 +61,7 @@ class TrainingConfig:
     scheduler: str = "cosine"
     gradient_clipping: float = 1.0  # ✅ RE-ENABLED: Needed for CPC stability
     mixed_precision: bool = True
+    grad_accum_steps: int = 1  # ✅ NEW: gradient accumulation
     
     # Monitoring
     log_every: int = 10
@@ -78,8 +80,52 @@ class TrainingConfig:
     
     # Early stopping
     early_stopping_patience: int = 10
-    early_stopping_metric: str = "loss"
-    early_stopping_mode: str = "min"
+    # loss | balanced_accuracy | f1
+    early_stopping_metric: str = "balanced_accuracy"
+    # min | max (for loss → min, for f1/balanced_accuracy → max)
+    early_stopping_mode: str = "max"
+
+    # ✅ New: checkpointing frequency
+    checkpoint_every_epochs: int = 5
+
+    # ✅ New: focal loss and class weighting controls
+    use_focal_loss: bool = True
+    focal_gamma: float = 1.8
+    class1_weight: float = 1.1  # further reduce FP
+
+    # ✅ New: Exponential Moving Average of parameters
+    use_ema: bool = True
+    ema_decay: float = 0.999
+
+    # ✅ SpikeBridge hyperparameters (exposed)
+    spike_time_steps: int = 24
+    spike_threshold: float = 0.1
+    spike_learnable: bool = True
+    spike_threshold_levels: int = 4
+    spike_surrogate_type: str = "adaptive_multi_scale"
+    spike_surrogate_beta: float = 4.0
+    spike_pool_seq: bool = False
+    spike_target_rate_low: float = 0.10
+    spike_target_rate_high: float = 0.20
+
+    # ✅ CPC pretraining / multitask parameters
+    use_cpc_aux_loss: bool = True
+    cpc_aux_weight: float = 0.2
+    ce_loss_weight: float = 1.0
+    cpc_freeze_first_n_convs: int = 0  # 0,1,2
+    cpc_prediction_steps: int = 12
+    cpc_num_negatives: int = 128
+    cpc_use_hard_negatives: bool = True
+    cpc_temperature: float = 0.07
+    cpc_use_temporal_transformer: bool = True
+    cpc_attention_heads: int = 8
+    cpc_transformer_layers: int = 4
+    cpc_dropout_rate: float = 0.1
+    cpc_use_grad_checkpointing: bool = True
+    cpc_use_mixed_precision: bool = True
+
+    # ✅ SNN exposure
+    snn_hidden_size: int = 32
 
 
 class TrainerBase(ABC):
@@ -137,6 +183,7 @@ class TrainerBase(ABC):
         
         # Training state
         self.train_state = None
+        self.ema_params = None
         self.start_time = None
         
         # Save configuration
@@ -144,6 +191,9 @@ class TrainerBase(ABC):
         self.tracker.log_hyperparameters(config.__dict__)
         
         logger.info(f"Initialized {self.__class__.__name__} with config: {config.model_name}")
+        
+        # ✅ NEW: Deterministic RNG key to avoid per-step retracing (no time.time() in JIT)
+        self.rng_key = jax.random.PRNGKey(42)
     
     def create_optimizer(self) -> optax.GradientTransformation:
         """Create optimizer with specified configuration."""
@@ -226,7 +276,13 @@ class TrainerBase(ABC):
     
     def should_stop_training(self, metrics: TrainingMetrics) -> bool:
         """Check if training should stop early."""
-        metric_value = getattr(metrics, self.config.early_stopping_metric, metrics.loss)
+        # Map friendly names
+        if self.config.early_stopping_metric == "balanced_accuracy":
+            metric_value = float((metrics.accuracy_class0 + metrics.accuracy_class1) / 2.0) if hasattr(metrics, 'accuracy_class0') else metrics.accuracy
+        elif self.config.early_stopping_metric == "f1":
+            metric_value = float(getattr(metrics, 'f1_score', metrics.accuracy))
+        else:
+            metric_value = getattr(metrics, self.config.early_stopping_metric, metrics.loss)
         return self.early_stopping.update(
             metric_value, 
             metrics.epoch, 
@@ -280,12 +336,33 @@ class CPCSNNTrainer(TrainerBase):
         class CPCSNNModel(nn.Module):
             """Complete CPC+SNN pipeline model."""
             num_classes: int  # ✅ CONFIGURABLE: Pass num_classes as parameter
+            config: TrainingConfig
             
             def setup(self):
                 # ✅ ULTRA-MEMORY OPTIMIZED: Minimal model size to prevent collapse + memory issues
-                self.cpc_encoder = CPCEncoder(latent_dim=64)   # ⬇️ ULTRA-REDUCED: 128 → 64 (75% smaller than original)
-                self.spike_bridge = ValidatedSpikeBridge()
-                self.snn_classifier = SNNClassifier(hidden_size=32, num_classes=self.num_classes)  # ⬇️ ULTRA-REDUCED: 64 → 32 (87.5% smaller)
+                # Configure CPC encoder with exposed parameters
+                cpc_cfg = RealCPCConfig(
+                    latent_dim=getattr(self.config, 'cpc_latent_dim', 64),
+                    prediction_steps=self.config.cpc_prediction_steps,
+                    num_negatives=self.config.cpc_num_negatives,
+                    temperature=self.config.cpc_temperature,
+                    use_hard_negatives=self.config.cpc_use_hard_negatives,
+                    use_temporal_transformer=self.config.cpc_use_temporal_transformer,
+                    temporal_attention_heads=self.config.cpc_attention_heads,
+                    dropout_rate=self.config.cpc_dropout_rate,
+                    use_gradient_checkpointing=self.config.cpc_use_grad_checkpointing,
+                    use_mixed_precision=self.config.cpc_use_mixed_precision,
+                )
+                self.cpc_encoder = RealCPCEncoder(config=cpc_cfg)
+                self.spike_bridge = ValidatedSpikeBridge(
+                    time_steps=self.config.spike_time_steps,
+                    use_learnable_encoding=self.config.spike_learnable,
+                    threshold=self.config.spike_threshold,
+                    num_threshold_levels=self.config.spike_threshold_levels,
+                    surrogate_type=self.config.spike_surrogate_type,
+                    surrogate_beta=self.config.spike_surrogate_beta,
+                )
+                self.snn_classifier = SNNClassifier(hidden_size=self.config.snn_hidden_size, num_classes=self.num_classes)
             
             @nn.compact  
             def __call__(self, x, train: bool = True, return_intermediates: bool = False):
@@ -308,20 +385,25 @@ class CPCSNNTrainer(TrainerBase):
                 else:
                     return logits
         
-        return CPCSNNModel(num_classes=self.config.num_classes)
+        return CPCSNNModel(num_classes=self.config.num_classes, config=self.config)
     
     def create_train_state(self, model: nn.Module, sample_input: jnp.ndarray) -> train_state.TrainState:
         """Initialize training state with model parameters."""
         key = jax.random.PRNGKey(42)
-        params = model.init({'params': key, 'spike_bridge': key}, sample_input, train=True)
+        # Provide RNGs that match module expectations
+        params = model.init({'params': key, 'spike_noise': key, 'dropout': key}, sample_input, train=True)
         
         optimizer = self.create_optimizer()
         
-        return train_state.TrainState.create(
+        self.train_state = train_state.TrainState.create(
             apply_fn=model.apply,
             params=params,
             tx=optimizer
         )
+        # Initialize EMA params if enabled
+        if getattr(self.config, 'use_ema', False):
+            self.ema_params = self.train_state.params
+        return self.train_state
     
     def train_step(self, train_state: train_state.TrainState, batch: Tuple[jnp.ndarray, jnp.ndarray]) -> Tuple[train_state.TrainState, TrainingMetrics, Dict[str, Any]]:
         """Execute one training step with gradient update and enhanced data collection."""
@@ -332,32 +414,86 @@ class CPCSNNTrainer(TrainerBase):
         
         def loss_fn(params):
             # Forward pass with spike collection
-            logits = train_state.apply_fn(
+            # ✅ Use step-derived PRNG key to prevent XLA retracing and ensure determinism
+            step_key = jax.random.fold_in(self.rng_key, int(train_state.step))
+            # Full forward pass to obtain logits and CPC latents from model
+            outputs = train_state.apply_fn(
                 params, x, train=True,
-                rngs={'spike_bridge': jax.random.PRNGKey(int(time.time()))}
+                rngs={'spike_noise': step_key, 'dropout': step_key},
+                return_intermediates=True
             )
-            # Label smoothing
-            epsilon = jnp.asarray(self.config.label_smoothing)
+            logits = outputs['logits'] if isinstance(outputs, dict) else outputs
+            cpc_latent = outputs.get('cpc_features', None) if isinstance(outputs, dict) else None
             num_classes = self.config.num_classes
-            y_smooth = (1.0 - epsilon) * jax.nn.one_hot(y, num_classes) + epsilon / num_classes
-            per_example_loss = optax.softmax_cross_entropy(logits, y_smooth)
-            # Class weighting (inverse frequency within batch)
+            epsilon = jnp.asarray(self.config.label_smoothing)
+            onehot = jax.nn.one_hot(y, num_classes)
+            y_smooth = (1.0 - epsilon) * onehot + epsilon / num_classes
+
+            # Baseline CE
+            log_probs = jax.nn.log_softmax(logits, axis=-1)
+            ce = -jnp.sum(y_smooth * log_probs, axis=-1)
+
+            # Focal modulation (optional)
+            if getattr(self.config, 'use_focal_loss', True):
+                probs = jax.nn.softmax(logits, axis=-1)
+                p_t = jnp.sum(onehot * probs, axis=-1)
+                gamma = jnp.asarray(getattr(self.config, 'focal_gamma', 2.5))
+                focal_weight = jnp.power(1.0 - p_t, gamma)
+                per_example_loss = focal_weight * ce
+            else:
+                per_example_loss = ce
+
+            # Class weighting: inverse freq plus extra weight for class 1
             if self.config.use_class_weighting:
                 counts = jnp.bincount(y, length=num_classes).astype(jnp.float32)
                 counts = jnp.maximum(counts, 1.0)
-                weights = jnp.sum(counts) / (counts * num_classes)
-                sample_weights = weights[y]
+                inv_freq = jnp.sum(counts) / (counts * num_classes)
+                # extra emphasis for class 1
+                class1_weight = jnp.asarray(getattr(self.config, 'class1_weight', 1.5))
+                class_weights = inv_freq.at[1].set(inv_freq[1] * class1_weight)
+                sample_weights = class_weights[y]
                 loss = jnp.mean(per_example_loss * sample_weights)
             else:
                 loss = jnp.mean(per_example_loss)
+
+            # ✅ Multi-task: add CPC auxiliary InfoNCE loss
+            if getattr(self.config, 'use_cpc_aux_loss', True) and cpc_latent is not None:
+                try:
+                    from models.cpc_losses import temporal_info_nce_loss
+                    # Guard against extremely short sequence length to avoid indexing errors
+                    if cpc_latent is not None and cpc_latent.shape[1] >= 3:
+                        cpc_aux = temporal_info_nce_loss(cpc_latent, temperature=0.06)
+                        loss = self.config.ce_loss_weight * loss + self.config.cpc_aux_weight * cpc_aux
+                except Exception:
+                    pass
             accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
             return loss, accuracy
         
-        # Compute gradients
-        (loss, accuracy), grads = jax.value_and_grad(loss_fn, has_aux=True)(train_state.params)
+        # Gradient accumulation
+        accum_steps = max(1, int(getattr(self.config, 'grad_accum_steps', 1)))
+        loss = 0.0
+        accuracy = 0.0
+        grads = None
+        for acc_i in range(accum_steps):
+            (part_loss, part_acc), part_grads = jax.value_and_grad(loss_fn, has_aux=True)(train_state.params)
+            loss += float(part_loss) / accum_steps
+            accuracy += float(part_acc) / accum_steps
+            if grads is None:
+                grads = part_grads
+            else:
+                grads = jax.tree_util.tree_map(lambda g, pg: g + pg, grads, part_grads)
+        grads = jax.tree_util.tree_map(lambda g: g / accum_steps, grads)
         
-        # Update parameters
+        # Update parameters with accumulated gradients
         train_state = train_state.apply_gradients(grads=grads)
+        # Update EMA
+        if getattr(self.config, 'use_ema', False) and self.ema_params is not None:
+            decay = jnp.asarray(getattr(self.config, 'ema_decay', 0.999))
+            self.ema_params = jax.tree_util.tree_map(
+                lambda ema, cur: decay * ema + (1.0 - decay) * cur,
+                self.ema_params,
+                train_state.params
+            )
         
         # Compute gradient norm (return JAX array for JIT compatibility)
         grad_norm = compute_gradient_norm(grads)
@@ -393,11 +529,13 @@ class CPCSNNTrainer(TrainerBase):
         # Forward pass without gradients
         logits = train_state.apply_fn(
             train_state.params, x, train=False,
-            rngs={'spike_bridge': jax.random.PRNGKey(42)}
+            rngs={'spike_noise': jax.random.PRNGKey(42)}
         )
         
         loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
         accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
+        # Emit probabilities for downstream threshold optimization/ROC-PR
+        probs = jax.nn.softmax(logits, axis=-1)
         
         metrics = create_training_metrics(
             step=train_state.step,
@@ -405,6 +543,10 @@ class CPCSNNTrainer(TrainerBase):
             loss=float(loss), 
             accuracy=float(accuracy)
         )
+        try:
+            metrics.update_custom(prob_class1=float(jnp.mean(probs[:, 1])), true_pos_rate=float(accuracy))
+        except Exception:
+            pass
         
         return metrics
 

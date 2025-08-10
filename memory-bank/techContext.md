@@ -1,6 +1,6 @@
 # 🔬 Technical Context: Neuromorphic GW Detection Implementation
 
-## 🎉 CURRENT TECHNICAL STATE: REVOLUTIONARY MIGRATION COMPLETE
+## 🎉 CURRENT TECHNICAL STATE: REVOLUTIONARY MIGRATION + TRAINING EXTENSIONS
 
 **Technical Status**: **REVOLUTIONARY BREAKTHROUGH** - All critical functions migrated with real data integration  
 **Last Updated**: 2025-07-24  
@@ -246,10 +246,10 @@ def create_stratified_split(signals: jnp.ndarray, labels: jnp.ndarray,
 - **Quality Validation**: Explicit check for single-class test sets
 - **Reproducible**: Fixed random seeds for consistent splits
 
-### ✅ **TECHNICAL BREAKTHROUGH 5: COMPREHENSIVE TEST EVALUATION**
+### ✅ **TECHNICAL BREAKTHROUGH 5: COMPREHENSIVE TEST EVALUATION** (EXTENDED)
 
 **Module**: `training/test_evaluation.py` (NEW)  
-**Technical Approach**: Real accuracy with model collapse detection
+**Technical Approach**: Real accuracy with model collapse detection + ROC/PR AUC + ECE + optimal threshold + event-level aggregation
 
 ```python
 # ✅ TECHNICAL IMPLEMENTATION: Professional test evaluation
@@ -263,12 +263,17 @@ def evaluate_on_test_set(trainer_state, test_signals: jnp.ndarray,
                    jnp.array_equal(test_signals, train_signals))
     
     # Forward pass for predictions
-    test_predictions = []
-    for i in range(len(test_signals)):
-        test_signal = test_signals[i:i+1]
-        test_logits = trainer_state.apply_fn(trainer_state.params, test_signal, train=False)
-        test_pred = jnp.argmax(test_logits, axis=-1)[0]
-        test_predictions.append(int(test_pred))
+    # Batched forward pass (deterministic RNG for SpikeBridge)
+    preds_list, prob_list = [], []
+    for start in range(0, len(test_signals), 64):
+        end = min(start + 64, len(test_signals))
+        batch_x = test_signals[start:end]
+        logits = trainer_state.apply_fn(trainer_state.params, batch_x, train=False, rngs={'spike_bridge': jax.random.PRNGKey(0)})
+        preds_list.append(jnp.argmax(logits, axis=-1))
+        probs = jax.nn.softmax(logits, axis=-1)
+        prob_list.append(probs[:, 1])
+    test_predictions = jnp.concatenate(preds_list, axis=0)
+    test_prob_class1 = jnp.concatenate(prob_list, axis=0)
     
     test_predictions = jnp.array(test_predictions)
     test_accuracy = jnp.mean(test_predictions == test_labels)
@@ -424,8 +429,8 @@ Hardware Layer:    T4/V100 GPU with 6-stage warmup optimization
 JAX Layer:         Comprehensive CUDA kernel initialization
 Data Layer:        ReadLIGO GW150914 → Proper windows → Stratified split
 Model Layer:       CPC (Working InfoNCE) → SpikeBridge → SNN
-Training Layer:    Enhanced loss with CPC fixes + gradient accumulation
-Evaluation Layer:  Real test accuracy + model collapse detection
+Training Layer:    Enhanced loss z CPC aux, gradient accumulation, Orbax best/latest
+Evaluation Layer:  Real test accuracy, ROC/PR AUC, ECE, optimal threshold, event-level
 Quality Layer:     Professional reporting + suspicious pattern detection
 ```
 
@@ -477,6 +482,46 @@ if test_results['model_collapse']:
 - **Batch-Agnostic CPC**: Contrastive learning working for batch_size=1
 - **Progressive GPU Warmup**: Eliminates CUDA kernel timing issues
 - **Quality-Assured Evaluation**: Professional test validation framework
+
+---
+
+## ❗ Known Issues & Platform Constraints (Updated 2025-08-08)
+
+### JAX METAL Backend
+- Symptom: Startup failure with `UNIMPLEMENTED: default_memory_space is not supported.` during advanced training initialization.
+- Context: Observed on macOS with JAX platform METAL; logs confirm Metal device selection.
+- Impact: Blocks GPU execution on macOS Metal for current configuration.
+- Workarounds:
+  - Force CPU backend on macOS: set `JAX_PLATFORM_NAME=cpu` before importing JAX/Python startup.
+  - Prefer CUDA backend on Windows/WSL with NVIDIA GPUs: `JAX_PLATFORM_NAME=cuda` and CUDA-enabled JAX build.
+ - Retain memory safety flags (CUDA verified):
+   - `XLA_PYTHON_CLIENT_PREALLOCATE=false`
+   - `XLA_PYTHON_CLIENT_MEM_FRACTION=0.35`
+
+---
+
+## 🧩 2025-08-10 – Tech notes (CPU sanity)
+
+- CUDA plugin ostrzeżenia przy starcie na CPU są niekrytyczne (backend finalnie `cpu`).
+- W quick-mode wyłączamy Orbax (Checkpoints) dla skrócenia logów i uniknięcia API mismatch.
+- Dodano wymuszenie syntetycznego datasetu: `--synthetic-quick` + `--synthetic-samples` → przewidywalny, szybki sanity run.
+- OOM LLVM przy ewaluacji dużych test setów na CPU – ograniczyć eval batch (np. 16) i rozmiar testu w quick-mode.
+- `pip` w venv zepsuty – metryki zaawansowane (ROC/PR/ECE) wymagają `scikit-learn`; naprawa przez `ensurepip` lub `get-pip.py`.
+## 🧪 HPO (Optuna) – Technical Sketch
+
+- Module: `training/hpo_optuna.py`
+- Objective: balanced accuracy (spec-recall mean) na mini‑runach (8 epok)
+- Search space: LR, SNN hidden, SpikeBridge T/threshold, focal gamma, class1 weight, CPC heads/layers
+- Dataset: syntetyczny mini (opcja: PyCBC/real mini w kolejnych krokach)
+
+## 💾 Checkpointing – Orbax
+
+- CheckpointManager(best/latest) z `Checkpointer(PyTreeCheckpointHandler())`
+- Zapis: latest każda epoka; best po ewaluacji (balanced accuracy)
+- Artefakty: `best_metric.txt`, `best_metrics.json`, `best_threshold.txt`, `last_threshold.txt`
+- Next Steps:
+  - Validate full advanced training run on CPU (functional check), then migrate to CUDA for performance.
+  - Track upstream JAX Metal support for default_memory_space.
 
 ---
 

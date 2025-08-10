@@ -1,0 +1,380 @@
+[2025-08-10 16:08:50,971] INFO [__main__:992] Forcing CPU backend as requested by --device=cpu
+[2025-08-10 16:08:50,972] INFO [__main__:1008] 🚀 Starting CPC+SNN training (v0.1.dev2+g95217e9.d20250716)
+[2025-08-10 16:08:50,973] INFO [__main__:1009]    Output directory: outputs/sanity_2ep_cpu
+[2025-08-10 16:08:50,973] INFO [__main__:1010]    Configuration: configs/final_framework_config.yaml
+[2025-08-10 16:08:50,974] INFO [__main__:1013] 🔧 Configuring JAX GPU settings...
+[2025-08-10 16:08:50,993] INFO [__main__:1019] 🔧 Applying performance optimizations (startup)
+[2025-08-10 16:08:50,994] INFO [utils.config:36] ✅ Applying runtime performance optimizations...
+[2025-08-10 16:08:54,157] INFO [utils.config:60] JAX platform: gpu
+[2025-08-10 16:08:54,158] INFO [utils.config:61] JAX devices: [CudaDevice(id=0)]
+[2025-08-10 16:08:54,159] INFO [utils.config:62] Memory fraction: 0.35
+[2025-08-10 16:08:54,160] INFO [utils.config:68] System memory: 16.7GB total, 15.7GB available
+[2025-08-10 16:08:54,161] INFO [__main__:1024] 🔧 Pre-compiling models (startup)
+[2025-08-10 16:08:54,161] INFO [utils.config:114] ⏭️ Skipping JIT pre-compilation on dummy inputs (user preference)
+[2025-08-10 16:08:54,162] INFO [__main__:1050] 🔥 Performing COMPREHENSIVE GPU warmup to eliminate timing issues...
+[2025-08-10 16:08:55,361] INFO [__main__:1058]    🔸 Stage 1: Basic tensor operations...
+[2025-08-10 16:09:01,437] INFO [__main__:1066]    🔸 Stage 2: Dense layer operations...
+[2025-08-10 16:09:04,730] INFO [__main__:1076]    🔸 Stage 3: CPC/SNN operations...
+[2025-08-10 16:09:07,680] INFO [__main__:1094]    🔸 Stage 4: Advanced CUDA kernels...
+[2025-08-10 16:09:09,890] INFO [__main__:1107]    🔸 Stage 5: JAX JIT compilation warmup...
+[2025-08-10 16:09:10,238] INFO [__main__:1121]    🔸 Stage 6: SpikeBridge/CPC specific warmup...
+[2025-08-10 16:09:18,753] INFO [__main__:1146] ✅ COMPREHENSIVE GPU warmup completed - ALL CUDA kernels initialized!
+[2025-08-10 16:09:18,754] INFO [__main__:1153] 🎯 GPU devices available: 1
+[2025-08-10 16:09:18,773] INFO [utils.config:444] Adding default enhanced W&B configuration
+[2025-08-10 16:09:18,774] INFO [utils.config:447] Loaded configuration from configs/final_framework_config.yaml
+[2025-08-10 16:09:18,774] INFO [__main__:1169] ✅ Loaded configuration from configs/final_framework_config.yaml
+[2025-08-10 16:09:18,788] INFO [utils.config:479] Configuration saved to outputs/sanity_2ep_cpu/config.yaml
+[2025-08-10 16:09:18,788] INFO [__main__:1208] 💾 Saved configuration to outputs/sanity_2ep_cpu/config.yaml
+[2025-08-10 16:09:18,789] INFO [__main__:1212] 🎯 Starting standard training mode...
+[2025-08-10 16:09:18,790] INFO [__main__:1219] 📋 Configuration loaded: cpu device, 128 latent dim
+[2025-08-10 16:09:18,790] INFO [__main__:1220] 📋 Spike encoding: phase_preserving
+[2025-08-10 16:09:18,791] INFO [__main__:1221] 📋 SNN hidden size: 512
+[2025-08-10 16:09:18,791] INFO [__main__:1228] 🔧 Running standard CPC+SNN training...
+[2025-08-10 16:09:18,803] INFO [utils.device_auto_detection:201] 🔍 Starting intelligent device detection...
+[2025-08-10 16:09:18,804] INFO [utils.device_auto_detection:51] PyTorch not available for GPU detection
+[2025-08-10 16:09:18,805] INFO [utils.device_auto_detection:62] JAX devices detected: [CudaDevice(id=0)]
+[2025-08-10 16:09:18,806] INFO [utils.device_auto_detection:123] 🔋 STANDARD CPU: 16 cores, 15.6GB RAM
+[2025-08-10 16:09:18,806] INFO [utils.device_auto_detection:137] 🔧 Applying optimal device configuration...
+[2025-08-10 16:09:18,807] INFO [utils.device_auto_detection:138]    Platform: cpu
+[2025-08-10 16:09:18,807] INFO [utils.device_auto_detection:139]    Memory fraction: 0.4
+[2025-08-10 16:09:18,808] INFO [utils.device_auto_detection:140]    Recommended batch size: 1
+[2025-08-10 16:09:18,808] INFO [utils.device_auto_detection:141]    Expected speedup: 1.0x
+[2025-08-10 16:09:18,809] INFO [utils.device_auto_detection:162] ✅ JAX configured successfully:
+[2025-08-10 16:09:18,809] INFO [utils.device_auto_detection:163]    Platform: gpu
+[2025-08-10 16:09:18,810] INFO [utils.device_auto_detection:164]    Devices: [CudaDevice(id=0)]
+[2025-08-10 16:09:18,811] INFO [utils.device_auto_detection:167] 🚀 GPU ACCELERATION ACTIVE - Expected 1.0x speedup!
+[2025-08-10 16:09:18,811] INFO [utils.device_auto_detection:215] ✅ Device auto-detection and optimization complete!
+[2025-08-10 16:09:18,812] INFO [utils.device_auto_detection:216] 💡 TIP: Your system is optimized for CPU training
+[2025-08-10 16:09:18,812] INFO [__main__:57] 🎮 Platform detected: CPU
+[2025-08-10 16:09:18,813] INFO [__main__:58] ⚡ Expected speedup: 1.0x
+[2025-08-10 16:09:18,814] INFO [__main__:85] 🔧 Real CPC+SNN training pipeline:
+[2025-08-10 16:09:18,815] INFO [__main__:93]    - CPC Latent Dim: 128
+[2025-08-10 16:09:18,816] INFO [__main__:94]    - Batch Size: 1
+[2025-08-10 16:09:18,816] INFO [__main__:95]    - Learning Rate: 0.001
+[2025-08-10 16:09:18,817] INFO [__main__:96]    - Epochs: 2
+[2025-08-10 16:09:18,818] INFO [__main__:97]    - Spike Encoding: phase_preserving
+[2025-08-10 16:09:18,831] INFO [training.training_utils:90] JAX devices: [CudaDevice(id=0)]
+[2025-08-10 16:09:18,832] INFO [training.training_utils:91] JAX platform: gpu
+[2025-08-10 16:09:18,834] INFO [training.base_trainer:170] Using basic experiment tracker
+[2025-08-10 16:09:18,839] INFO [training.training_utils:116] Configuration saved to outputs/sanity_2ep_cpu/standard_training_1bs/config.json
+[2025-08-10 16:09:18,841] INFO [training.base_trainer:193] Initialized CPCSNNTrainer with config: cpc_snn_gw
+[2025-08-10 16:09:18,843] INFO [__main__:102] 🚀 Creating CPC+SNN model with SpikeBridge...
+[2025-08-10 16:09:18,845] INFO [__main__:105] 📊 Creating data loaders...
+[2025-08-10 16:09:18,858] WARNING [data.gw_dataset_builder:29] TensorFlow not available - TFRecord export disabled
+[2025-08-10 16:09:18,859] INFO [__main__:113]    Creating REAL LIGO dataset with GW150914 data...
+[2025-08-10 16:09:18,879] INFO [__main__:120]    ⚡ Quick mode: using lightweight real LIGO windows (no augmentation)
+[2025-08-10 16:09:18,880] INFO [data.real_ligo_integration:393] 🌊 Attempting to download real GW150914 data...
+[2025-08-10 16:09:18,883] WARNING [data.real_ligo_integration:41] ❌ ReadLIGO loading failed: ModuleNotFoundError: No module named 'readligo'
+[2025-08-10 16:09:18,887] INFO [data.real_ligo_integration:50] ✅ Using h5py fallback - loading LOSC HDF5 files directly
+[2025-08-10 16:09:18,974] INFO [data.real_ligo_integration:91] ✅ Successfully loaded real GW150914 strain data (source=h5py): 2048 samples
+[2025-08-10 16:09:18,976] INFO [data.real_ligo_integration:92] 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+[2025-08-10 16:09:18,977] INFO [data.real_ligo_integration:399] ✅ GW150914 strain data obtained: 2048 samples
+[2025-08-10 16:09:18,988] INFO [data.real_ligo_integration:405] 🌊 Created proper windowed dataset:
+[2025-08-10 16:09:18,989] INFO [data.real_ligo_integration:406]    Total windows: 15
+[2025-08-10 16:09:18,990] INFO [data.real_ligo_integration:407]    Window size: 256
+[2025-08-10 16:09:19,472] INFO [data.real_ligo_integration:408]    Signal windows (label=1): 3
+[2025-08-10 16:09:19,673] INFO [data.real_ligo_integration:409]    Noise windows (label=0): 12
+[2025-08-10 16:09:19,861] INFO [data.real_ligo_integration:410]    Class balance: 20.0% positive
+[2025-08-10 16:09:23,784] INFO [utils.data_split:49] 📊 Creating stratified split (train: 80.0%):
+[2025-08-10 16:09:23,785] INFO [utils.data_split:50]    Class 0 samples: 12
+[2025-08-10 16:09:23,786] INFO [utils.data_split:51]    Class 1 samples: 3
+[2025-08-10 16:09:30,005] INFO [utils.data_split:90] 📊 Dataset split completed:
+[2025-08-10 16:09:30,006] INFO [utils.data_split:91]    Train: 11 samples
+[2025-08-10 16:09:30,007] INFO [utils.data_split:92]    Test: 4 samples
+[2025-08-10 16:09:30,200] INFO [utils.data_split:93]    Train class balance: 18.2% positive
+[2025-08-10 16:09:30,400] INFO [utils.data_split:94]    Test class balance: 25.0% positive
+[2025-08-10 16:09:30,791] INFO [utils.data_split:105] ✅ Balanced test set: 25.0% positive
+[2025-08-10 16:09:30,792] INFO [__main__:130]    Quick REAL LIGO samples: train=11, test=4
+[2025-08-10 16:09:30,793] INFO [__main__:197] ⏳ Starting real training loop...
+[2025-08-10 16:09:30,794] INFO [__main__:202]    Training data shape: (11, 256)
+[2025-08-10 16:09:30,795] INFO [__main__:203]    Labels shape: (11,)
+[2025-08-10 16:09:30,796] INFO [__main__:204]    Running 2 epochs...
+[2025-08-10 16:09:30,797] INFO [__main__:209] 🚀 Starting REAL CPC+SNN training pipeline!
+[2025-08-10 16:09:30,817] INFO [training.training_utils:90] JAX devices: [CudaDevice(id=0)]
+[2025-08-10 16:09:30,819] INFO [training.training_utils:91] JAX platform: gpu
+[2025-08-10 16:09:30,821] INFO [training.base_trainer:170] Using basic experiment tracker
+[2025-08-10 16:09:30,827] INFO [training.training_utils:116] Configuration saved to outputs/sanity_2ep_cpu/standard_training_1bs/config.json
+[2025-08-10 16:09:30,829] INFO [training.base_trainer:193] Initialized CPCSNNTrainer with config: cpc_snn_gw
+[2025-08-10 16:10:31,588] INFO [absl:375] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x724f9aa615b0>, enable_pinned_host_transfer=True, save_concurrent_bytes: 96000000000 (89.4 GiB), restore_concurrent_bytes: 96000000000 (89.4 GiB)
+[2025-08-10 16:10:31,589] INFO [absl:35] orbax-checkpoint version: 0.11.21
+[2025-08-10 16:10:31,591] WARNING [__main__:268] Orbax managers unavailable: CheckpointManager.__init__() got an unexpected keyword argument 'checkpointer'
+[2025-08-10 16:10:31,592] INFO [__main__:273]    🔥 Epoch 1/2
+[2025-08-10 16:18:42,173] INFO [__main__:310]       Step 10/11 loss=0.3872 acc=1.000 | MA20: loss=0.5731 acc=0.600
+[2025-08-10 16:19:15,347] INFO [__main__:317]       Loss: 0.5568, Accuracy: 0.6364
+[2025-08-10 16:19:15,396] WARNING [__main__:471] Per-epoch eval skipped: No module named 'sklearn'
+[2025-08-10 16:19:15,398] INFO [__main__:273]    🔥 Epoch 2/2
+[2025-08-10 16:24:16,892] INFO [__main__:310]       Step 10/11 loss=0.8333 acc=0.000 | MA20: loss=0.5856 acc=0.400
+[2025-08-10 16:24:46,026] INFO [__main__:317]       Loss: 0.5712, Accuracy: 0.4545
+[2025-08-10 16:24:46,040] WARNING [__main__:471] Per-epoch eval skipped: No module named 'sklearn'
+[2025-08-10 16:24:46,042] INFO [__main__:485] 🎉 REAL Training completed in 915.2s!
+[2025-08-10 16:24:46,053] ERROR [__main__:551] Training loop failed: No module named 'sklearn'
+[2025-08-10 16:24:46,075] ERROR [__main__:1253] ❌ Training failed!
+[2025-08-10 16:34:34,144] INFO [__main__:1001] Forcing CPU backend as requested by --device=cpu
+[2025-08-10 16:34:34,145] INFO [__main__:1019] 🚀 Starting CPC+SNN training (v0.1.dev2+g95217e9.d20250716)
+[2025-08-10 16:34:34,145] INFO [__main__:1020]    Output directory: outputs/sanity_2ep_cpu
+[2025-08-10 16:34:34,146] INFO [__main__:1021]    Configuration: configs/final_framework_config.yaml
+[2025-08-10 16:34:34,147] INFO [__main__:1024] 🔧 Configuring JAX GPU settings...
+[2025-08-10 16:34:34,164] INFO [__main__:1030] 🔧 Applying performance optimizations (startup)
+[2025-08-10 16:34:34,165] INFO [utils.config:36] ✅ Applying runtime performance optimizations...
+[2025-08-10 16:34:36,440] ERROR [jax._src.xla_bridge:502] Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/mnt/c/Users/alpph/Documents/CPC-SNN-GW/.venv/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 500, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/mnt/c/Users/alpph/Documents/CPC-SNN-GW/.venv/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/mnt/c/Users/alpph/Documents/CPC-SNN-GW/.venv/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+[2025-08-10 16:34:36,528] WARNING [jax._src.xla_bridge:872] An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+[2025-08-10 16:34:36,529] INFO [utils.config:60] JAX platform: cpu
+[2025-08-10 16:34:36,529] INFO [utils.config:61] JAX devices: [CpuDevice(id=0)]
+[2025-08-10 16:34:36,530] INFO [utils.config:62] Memory fraction: 0.35
+[2025-08-10 16:34:36,531] INFO [utils.config:68] System memory: 16.7GB total, 15.8GB available
+[2025-08-10 16:34:36,531] INFO [__main__:1035] 🔧 Pre-compiling models (startup)
+[2025-08-10 16:34:36,531] INFO [utils.config:114] ⏭️ Skipping JIT pre-compilation on dummy inputs (user preference)
+[2025-08-10 16:34:36,532] INFO [__main__:1059] ⏭️ Skipping GPU warmup (device is not GPU)
+[2025-08-10 16:34:36,533] INFO [__main__:1174]    Continuing with default JAX settings
+[2025-08-10 16:34:36,552] INFO [utils.config:444] Adding default enhanced W&B configuration
+[2025-08-10 16:34:36,552] INFO [utils.config:447] Loaded configuration from configs/final_framework_config.yaml
+[2025-08-10 16:34:36,553] INFO [__main__:1183] ✅ Loaded configuration from configs/final_framework_config.yaml
+[2025-08-10 16:34:36,567] INFO [utils.config:479] Configuration saved to outputs/sanity_2ep_cpu/config.yaml
+[2025-08-10 16:34:36,567] INFO [__main__:1222] 💾 Saved configuration to outputs/sanity_2ep_cpu/config.yaml
+[2025-08-10 16:34:36,568] INFO [__main__:1226] 🎯 Starting standard training mode...
+[2025-08-10 16:34:36,568] INFO [__main__:1233] 📋 Configuration loaded: cpu device, 128 latent dim
+[2025-08-10 16:34:36,569] INFO [__main__:1234] 📋 Spike encoding: phase_preserving
+[2025-08-10 16:34:36,570] INFO [__main__:1235] 📋 SNN hidden size: 512
+[2025-08-10 16:34:36,570] INFO [__main__:1242] 🔧 Running standard CPC+SNN training...
+[2025-08-10 16:34:36,583] INFO [utils.device_auto_detection:201] 🔍 Starting intelligent device detection...
+[2025-08-10 16:34:36,584] INFO [utils.device_auto_detection:51] PyTorch not available for GPU detection
+[2025-08-10 16:34:36,585] INFO [utils.device_auto_detection:62] JAX devices detected: [CpuDevice(id=0)]
+[2025-08-10 16:34:36,586] INFO [utils.device_auto_detection:123] 🔋 STANDARD CPU: 16 cores, 15.6GB RAM
+[2025-08-10 16:34:36,586] INFO [utils.device_auto_detection:137] 🔧 Applying optimal device configuration...
+[2025-08-10 16:34:36,587] INFO [utils.device_auto_detection:138]    Platform: cpu
+[2025-08-10 16:34:36,587] INFO [utils.device_auto_detection:139]    Memory fraction: 0.4
+[2025-08-10 16:34:36,587] INFO [utils.device_auto_detection:140]    Recommended batch size: 1
+[2025-08-10 16:34:36,588] INFO [utils.device_auto_detection:141]    Expected speedup: 1.0x
+[2025-08-10 16:34:36,588] INFO [utils.device_auto_detection:162] ✅ JAX configured successfully:
+[2025-08-10 16:34:36,589] INFO [utils.device_auto_detection:163]    Platform: cpu
+[2025-08-10 16:34:36,590] INFO [utils.device_auto_detection:164]    Devices: [CpuDevice(id=0)]
+[2025-08-10 16:34:36,590] INFO [utils.device_auto_detection:169] 💻 CPU mode active - Consider GPU for 1.0x speedup
+[2025-08-10 16:34:36,591] INFO [utils.device_auto_detection:215] ✅ Device auto-detection and optimization complete!
+[2025-08-10 16:34:36,591] INFO [utils.device_auto_detection:216] 💡 TIP: Your system is optimized for CPU training
+[2025-08-10 16:34:36,592] INFO [__main__:63] 🎮 Platform detected: CPU
+[2025-08-10 16:34:36,593] INFO [__main__:64] ⚡ Expected speedup: 1.0x
+[2025-08-10 16:34:36,596] INFO [__main__:91] 🔧 Real CPC+SNN training pipeline:
+[2025-08-10 16:34:36,596] INFO [__main__:99]    - CPC Latent Dim: 128
+[2025-08-10 16:34:36,597] INFO [__main__:100]    - Batch Size: 1
+[2025-08-10 16:34:36,597] INFO [__main__:101]    - Learning Rate: 0.001
+[2025-08-10 16:34:36,598] INFO [__main__:102]    - Epochs: 2
+[2025-08-10 16:34:36,599] INFO [__main__:103]    - Spike Encoding: phase_preserving
+[2025-08-10 16:34:36,614] INFO [training.training_utils:90] JAX devices: [CpuDevice(id=0)]
+[2025-08-10 16:34:36,616] INFO [training.training_utils:91] JAX platform: cpu
+[2025-08-10 16:34:36,617] INFO [training.base_trainer:170] Using basic experiment tracker
+[2025-08-10 16:34:36,621] INFO [training.training_utils:116] Configuration saved to outputs/sanity_2ep_cpu/standard_training_1bs/config.json
+[2025-08-10 16:34:36,623] INFO [training.base_trainer:193] Initialized CPCSNNTrainer with config: cpc_snn_gw
+[2025-08-10 16:34:37,226] INFO [__main__:108] 🚀 Creating CPC+SNN model with SpikeBridge...
+[2025-08-10 16:34:37,228] INFO [__main__:111] 📊 Creating data loaders...
+[2025-08-10 16:34:37,238] WARNING [data.gw_dataset_builder:29] TensorFlow not available - TFRecord export disabled
+[2025-08-10 16:34:37,240] INFO [__main__:119]    Creating REAL LIGO dataset with GW150914 data...
+[2025-08-10 16:34:37,259] INFO [__main__:126]    ⚡ Quick mode: using lightweight real LIGO windows (no augmentation)
+[2025-08-10 16:34:37,260] INFO [data.real_ligo_integration:393] 🌊 Attempting to download real GW150914 data...
+[2025-08-10 16:34:37,262] WARNING [data.real_ligo_integration:41] ❌ ReadLIGO loading failed: ModuleNotFoundError: No module named 'readligo'
+[2025-08-10 16:34:37,265] INFO [data.real_ligo_integration:50] ✅ Using h5py fallback - loading LOSC HDF5 files directly
+[2025-08-10 16:34:37,356] INFO [data.real_ligo_integration:91] ✅ Successfully loaded real GW150914 strain data (source=h5py): 2048 samples
+[2025-08-10 16:34:37,357] INFO [data.real_ligo_integration:92] 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+[2025-08-10 16:34:37,360] INFO [data.real_ligo_integration:399] ✅ GW150914 strain data obtained: 2048 samples
+[2025-08-10 16:34:37,371] INFO [data.real_ligo_integration:405] 🌊 Created proper windowed dataset:
+[2025-08-10 16:34:37,372] INFO [data.real_ligo_integration:406]    Total windows: 15
+[2025-08-10 16:34:37,372] INFO [data.real_ligo_integration:407]    Window size: 256
+[2025-08-10 16:34:37,458] INFO [data.real_ligo_integration:408]    Signal windows (label=1): 3
+[2025-08-10 16:34:37,488] INFO [data.real_ligo_integration:409]    Noise windows (label=0): 12
+[2025-08-10 16:34:37,521] INFO [data.real_ligo_integration:410]    Class balance: 20.0% positive
+[2025-08-10 16:34:38,333] INFO [utils.data_split:49] 📊 Creating stratified split (train: 80.0%):
+[2025-08-10 16:34:38,334] INFO [utils.data_split:50]    Class 0 samples: 12
+[2025-08-10 16:34:38,335] INFO [utils.data_split:51]    Class 1 samples: 3
+[2025-08-10 16:34:39,488] INFO [utils.data_split:90] 📊 Dataset split completed:
+[2025-08-10 16:34:39,490] INFO [utils.data_split:91]    Train: 11 samples
+[2025-08-10 16:34:39,490] INFO [utils.data_split:92]    Test: 4 samples
+[2025-08-10 16:34:39,517] INFO [utils.data_split:93]    Train class balance: 18.2% positive
+[2025-08-10 16:34:39,544] INFO [utils.data_split:94]    Test class balance: 25.0% positive
+[2025-08-10 16:34:39,598] INFO [utils.data_split:105] ✅ Balanced test set: 25.0% positive
+[2025-08-10 16:34:39,599] INFO [__main__:136]    Quick REAL LIGO samples: train=11, test=4
+[2025-08-10 16:34:39,600] INFO [__main__:203] ⏳ Starting real training loop...
+[2025-08-10 16:34:39,601] INFO [__main__:208]    Training data shape: (11, 256)
+[2025-08-10 16:34:39,602] INFO [__main__:209]    Labels shape: (11,)
+[2025-08-10 16:34:39,603] INFO [__main__:210]    Running 2 epochs...
+[2025-08-10 16:34:39,604] INFO [__main__:215] 🚀 Starting REAL CPC+SNN training pipeline!
+[2025-08-10 16:34:39,624] INFO [training.training_utils:90] JAX devices: [CpuDevice(id=0)]
+[2025-08-10 16:34:39,625] INFO [training.training_utils:91] JAX platform: cpu
+[2025-08-10 16:34:39,627] INFO [training.base_trainer:170] Using basic experiment tracker
+[2025-08-10 16:34:39,632] INFO [training.training_utils:116] Configuration saved to outputs/sanity_2ep_cpu/standard_training_1bs/config.json
+[2025-08-10 16:34:39,633] INFO [training.base_trainer:193] Initialized CPCSNNTrainer with config: cpc_snn_gw
+[2025-08-10 16:34:51,392] INFO [absl:375] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x701bc9e51850>, enable_pinned_host_transfer=False, save_concurrent_bytes: 96000000000 (89.4 GiB), restore_concurrent_bytes: 96000000000 (89.4 GiB)
+[2025-08-10 16:34:51,393] INFO [absl:35] orbax-checkpoint version: 0.11.21
+[2025-08-10 16:34:51,395] WARNING [__main__:274] Orbax managers unavailable: CheckpointManager.__init__() got an unexpected keyword argument 'checkpointer'
+[2025-08-10 16:34:51,396] INFO [__main__:279]    🔥 Epoch 1/2
+[2025-08-10 16:37:59,816] INFO [__main__:316]       Step 10/11 loss=0.5339 acc=1.000 | MA20: loss=0.5690 acc=0.600
+[2025-08-10 16:38:16,124] INFO [__main__:323]       Loss: 0.5575, Accuracy: 0.6364
+[2025-08-10 16:38:22,950] WARNING [__main__:477] Per-epoch eval skipped: spike_bridge needs PRNG for "spike_noise" (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.InvalidRngError)
+[2025-08-10 16:38:22,952] INFO [__main__:279]    🔥 Epoch 2/2
+[2025-08-10 16:40:58,332] INFO [__main__:316]       Step 10/11 loss=0.5269 acc=1.000 | MA20: loss=0.5776 acc=0.600
+[2025-08-10 16:41:13,590] INFO [__main__:323]       Loss: 0.6474, Accuracy: 0.5455
+[2025-08-10 16:41:14,810] WARNING [__main__:477] Per-epoch eval skipped: spike_bridge needs PRNG for "spike_noise" (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.InvalidRngError)
+[2025-08-10 16:41:14,812] INFO [__main__:491] 🎉 REAL Training completed in 395.2s!
+[2025-08-10 16:41:14,813] INFO [training.test_evaluation:51] 
+🧪 Evaluating on test set...
+[2025-08-10 16:41:16,024] ERROR [__main__:557] Training loop failed: spike_bridge needs PRNG for "spike_noise" (https://flax.readthedocs.io/en/latest/api_reference/flax.errors.html#flax.errors.InvalidRngError)
+[2025-08-10 16:41:16,043] ERROR [__main__:1267] ❌ Training failed!
+[2025-08-10 16:48:38,003] INFO [__main__:1001] Forcing CPU backend as requested by --device=cpu
+[2025-08-10 16:48:38,003] INFO [__main__:1019] 🚀 Starting CPC+SNN training (v0.1.dev2+g95217e9.d20250716)
+[2025-08-10 16:48:38,004] INFO [__main__:1020]    Output directory: outputs/sanity_2ep_cpu
+[2025-08-10 16:48:38,005] INFO [__main__:1021]    Configuration: configs/final_framework_config.yaml
+[2025-08-10 16:48:38,005] INFO [__main__:1024] 🔧 Configuring JAX GPU settings...
+[2025-08-10 16:48:38,026] INFO [__main__:1030] 🔧 Applying performance optimizations (startup)
+[2025-08-10 16:48:38,026] INFO [utils.config:36] ✅ Applying runtime performance optimizations...
+[2025-08-10 16:48:40,356] ERROR [jax._src.xla_bridge:502] Jax plugin configuration error: Exception when calling jax_plugins.xla_cuda12.initialize()
+Traceback (most recent call last):
+  File "/mnt/c/Users/alpph/Documents/CPC-SNN-GW/.venv/lib/python3.12/site-packages/jax/_src/xla_bridge.py", line 500, in discover_pjrt_plugins
+    plugin_module.initialize()
+  File "/mnt/c/Users/alpph/Documents/CPC-SNN-GW/.venv/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 328, in initialize
+    _check_cuda_versions(raise_on_first_error=True)
+  File "/mnt/c/Users/alpph/Documents/CPC-SNN-GW/.venv/lib/python3.12/site-packages/jax_plugins/xla_cuda12/__init__.py", line 285, in _check_cuda_versions
+    local_device_count = cuda_versions.cuda_device_count()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: jaxlib/cuda/versions_helpers.cc:113: operation cuInit(0) failed: CUDA_ERROR_NO_DEVICE
+[2025-08-10 16:48:40,413] WARNING [jax._src.xla_bridge:872] An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+[2025-08-10 16:48:40,414] INFO [utils.config:60] JAX platform: cpu
+[2025-08-10 16:48:40,415] INFO [utils.config:61] JAX devices: [CpuDevice(id=0)]
+[2025-08-10 16:48:40,416] INFO [utils.config:62] Memory fraction: 0.35
+[2025-08-10 16:48:40,417] INFO [utils.config:68] System memory: 16.7GB total, 15.8GB available
+[2025-08-10 16:48:40,417] INFO [__main__:1035] 🔧 Pre-compiling models (startup)
+[2025-08-10 16:48:40,418] INFO [utils.config:114] ⏭️ Skipping JIT pre-compilation on dummy inputs (user preference)
+[2025-08-10 16:48:40,419] INFO [__main__:1059] ⏭️ Skipping GPU warmup (device is not GPU)
+[2025-08-10 16:48:40,420] INFO [__main__:1174]    Continuing with default JAX settings
+[2025-08-10 16:48:40,440] INFO [utils.config:444] Adding default enhanced W&B configuration
+[2025-08-10 16:48:40,441] INFO [utils.config:447] Loaded configuration from configs/final_framework_config.yaml
+[2025-08-10 16:48:40,441] INFO [__main__:1183] ✅ Loaded configuration from configs/final_framework_config.yaml
+[2025-08-10 16:48:40,456] INFO [utils.config:479] Configuration saved to outputs/sanity_2ep_cpu/config.yaml
+[2025-08-10 16:48:40,456] INFO [__main__:1222] 💾 Saved configuration to outputs/sanity_2ep_cpu/config.yaml
+[2025-08-10 16:48:40,457] INFO [__main__:1226] 🎯 Starting standard training mode...
+[2025-08-10 16:48:40,458] INFO [__main__:1233] 📋 Configuration loaded: cpu device, 128 latent dim
+[2025-08-10 16:48:40,458] INFO [__main__:1234] 📋 Spike encoding: phase_preserving
+[2025-08-10 16:48:40,459] INFO [__main__:1235] 📋 SNN hidden size: 512
+[2025-08-10 16:48:40,459] INFO [__main__:1242] 🔧 Running standard CPC+SNN training...
+[2025-08-10 16:48:40,472] INFO [utils.device_auto_detection:201] 🔍 Starting intelligent device detection...
+[2025-08-10 16:48:40,473] INFO [utils.device_auto_detection:51] PyTorch not available for GPU detection
+[2025-08-10 16:48:40,474] INFO [utils.device_auto_detection:62] JAX devices detected: [CpuDevice(id=0)]
+[2025-08-10 16:48:40,475] INFO [utils.device_auto_detection:123] 🔋 STANDARD CPU: 16 cores, 15.6GB RAM
+[2025-08-10 16:48:40,475] INFO [utils.device_auto_detection:137] 🔧 Applying optimal device configuration...
+[2025-08-10 16:48:40,476] INFO [utils.device_auto_detection:138]    Platform: cpu
+[2025-08-10 16:48:40,476] INFO [utils.device_auto_detection:139]    Memory fraction: 0.4
+[2025-08-10 16:48:40,477] INFO [utils.device_auto_detection:140]    Recommended batch size: 1
+[2025-08-10 16:48:40,477] INFO [utils.device_auto_detection:141]    Expected speedup: 1.0x
+[2025-08-10 16:48:40,478] INFO [utils.device_auto_detection:162] ✅ JAX configured successfully:
+[2025-08-10 16:48:40,479] INFO [utils.device_auto_detection:163]    Platform: cpu
+[2025-08-10 16:48:40,480] INFO [utils.device_auto_detection:164]    Devices: [CpuDevice(id=0)]
+[2025-08-10 16:48:40,480] INFO [utils.device_auto_detection:169] 💻 CPU mode active - Consider GPU for 1.0x speedup
+[2025-08-10 16:48:40,481] INFO [utils.device_auto_detection:215] ✅ Device auto-detection and optimization complete!
+[2025-08-10 16:48:40,481] INFO [utils.device_auto_detection:216] 💡 TIP: Your system is optimized for CPU training
+[2025-08-10 16:48:40,482] INFO [__main__:63] 🎮 Platform detected: CPU
+[2025-08-10 16:48:40,483] INFO [__main__:64] ⚡ Expected speedup: 1.0x
+[2025-08-10 16:48:40,486] INFO [__main__:91] 🔧 Real CPC+SNN training pipeline:
+[2025-08-10 16:48:40,486] INFO [__main__:99]    - CPC Latent Dim: 128
+[2025-08-10 16:48:40,487] INFO [__main__:100]    - Batch Size: 1
+[2025-08-10 16:48:40,487] INFO [__main__:101]    - Learning Rate: 0.001
+[2025-08-10 16:48:40,488] INFO [__main__:102]    - Epochs: 2
+[2025-08-10 16:48:40,489] INFO [__main__:103]    - Spike Encoding: phase_preserving
+[2025-08-10 16:48:40,504] INFO [training.training_utils:90] JAX devices: [CpuDevice(id=0)]
+[2025-08-10 16:48:40,505] INFO [training.training_utils:91] JAX platform: cpu
+[2025-08-10 16:48:40,507] INFO [training.base_trainer:170] Using basic experiment tracker
+[2025-08-10 16:48:40,511] INFO [training.training_utils:116] Configuration saved to outputs/sanity_2ep_cpu/standard_training_1bs/config.json
+[2025-08-10 16:48:40,512] INFO [training.base_trainer:193] Initialized CPCSNNTrainer with config: cpc_snn_gw
+[2025-08-10 16:48:41,040] INFO [__main__:108] 🚀 Creating CPC+SNN model with SpikeBridge...
+[2025-08-10 16:48:41,043] INFO [__main__:111] 📊 Creating data loaders...
+[2025-08-10 16:48:41,054] WARNING [data.gw_dataset_builder:29] TensorFlow not available - TFRecord export disabled
+[2025-08-10 16:48:41,056] INFO [__main__:119]    Creating REAL LIGO dataset with GW150914 data...
+[2025-08-10 16:48:41,075] INFO [__main__:126]    ⚡ Quick mode: using lightweight real LIGO windows (no augmentation)
+[2025-08-10 16:48:41,077] INFO [data.real_ligo_integration:393] 🌊 Attempting to download real GW150914 data...
+[2025-08-10 16:48:41,078] WARNING [data.real_ligo_integration:41] ❌ ReadLIGO loading failed: ModuleNotFoundError: No module named 'readligo'
+[2025-08-10 16:48:41,082] INFO [data.real_ligo_integration:50] ✅ Using h5py fallback - loading LOSC HDF5 files directly
+[2025-08-10 16:48:41,178] INFO [data.real_ligo_integration:91] ✅ Successfully loaded real GW150914 strain data (source=h5py): 2048 samples
+[2025-08-10 16:48:41,179] INFO [data.real_ligo_integration:92] 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+[2025-08-10 16:48:41,182] INFO [data.real_ligo_integration:399] ✅ GW150914 strain data obtained: 2048 samples
+[2025-08-10 16:48:41,193] INFO [data.real_ligo_integration:405] 🌊 Created proper windowed dataset:
+[2025-08-10 16:48:41,194] INFO [data.real_ligo_integration:406]    Total windows: 15
+[2025-08-10 16:48:41,195] INFO [data.real_ligo_integration:407]    Window size: 256
+[2025-08-10 16:48:41,264] INFO [data.real_ligo_integration:408]    Signal windows (label=1): 3
+[2025-08-10 16:48:41,296] INFO [data.real_ligo_integration:409]    Noise windows (label=0): 12
+[2025-08-10 16:48:41,333] INFO [data.real_ligo_integration:410]    Class balance: 20.0% positive
+[2025-08-10 16:48:42,121] INFO [utils.data_split:49] 📊 Creating stratified split (train: 80.0%):
+[2025-08-10 16:48:42,123] INFO [utils.data_split:50]    Class 0 samples: 12
+[2025-08-10 16:48:42,124] INFO [utils.data_split:51]    Class 1 samples: 3
+[2025-08-10 16:48:43,303] INFO [utils.data_split:90] 📊 Dataset split completed:
+[2025-08-10 16:48:43,304] INFO [utils.data_split:91]    Train: 11 samples
+[2025-08-10 16:48:43,305] INFO [utils.data_split:92]    Test: 4 samples
+[2025-08-10 16:48:43,334] INFO [utils.data_split:93]    Train class balance: 18.2% positive
+[2025-08-10 16:48:43,363] INFO [utils.data_split:94]    Test class balance: 25.0% positive
+[2025-08-10 16:48:43,419] INFO [utils.data_split:105] ✅ Balanced test set: 25.0% positive
+[2025-08-10 16:48:43,421] INFO [__main__:136]    Quick REAL LIGO samples: train=11, test=4
+[2025-08-10 16:48:43,422] INFO [__main__:203] ⏳ Starting real training loop...
+[2025-08-10 16:48:43,423] INFO [__main__:208]    Training data shape: (11, 256)
+[2025-08-10 16:48:43,424] INFO [__main__:209]    Labels shape: (11,)
+[2025-08-10 16:48:43,425] INFO [__main__:210]    Running 2 epochs...
+[2025-08-10 16:48:43,426] INFO [__main__:215] 🚀 Starting REAL CPC+SNN training pipeline!
+[2025-08-10 16:48:43,448] INFO [training.training_utils:90] JAX devices: [CpuDevice(id=0)]
+[2025-08-10 16:48:43,450] INFO [training.training_utils:91] JAX platform: cpu
+[2025-08-10 16:48:43,452] INFO [training.base_trainer:170] Using basic experiment tracker
+[2025-08-10 16:48:43,457] INFO [training.training_utils:116] Configuration saved to outputs/sanity_2ep_cpu/standard_training_1bs/config.json
+[2025-08-10 16:48:43,459] INFO [training.base_trainer:193] Initialized CPCSNNTrainer with config: cpc_snn_gw
+[2025-08-10 16:48:55,772] INFO [absl:375] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x748e19495d30>, enable_pinned_host_transfer=False, save_concurrent_bytes: 96000000000 (89.4 GiB), restore_concurrent_bytes: 96000000000 (89.4 GiB)
+[2025-08-10 16:48:55,773] INFO [absl:35] orbax-checkpoint version: 0.11.21
+[2025-08-10 16:48:55,775] WARNING [__main__:274] Orbax managers unavailable: CheckpointManager.__init__() got an unexpected keyword argument 'checkpointer'
+[2025-08-10 16:48:55,776] INFO [__main__:279]    🔥 Epoch 1/2
+[2025-08-10 16:52:12,252] INFO [__main__:316]       Step 10/11 loss=0.5339 acc=1.000 | MA20: loss=0.5690 acc=0.600
+[2025-08-10 16:52:27,711] INFO [__main__:323]       Loss: 0.5575, Accuracy: 0.6364
+[2025-08-10 16:52:38,017] INFO [__main__:365]       Test acc=0.250 | sens=1.000 spec=0.000 prec=0.250 f1=0.400 bal_acc=0.500
+[2025-08-10 16:52:38,019] INFO [training.training_metrics:328] New best loss: 0.557510 at epoch 0
+[2025-08-10 16:52:38,027] INFO [__main__:464]       🏆 New best balanced accuracy; saving best checkpoint
+[2025-08-10 16:52:38,029] INFO [__main__:279]    🔥 Epoch 2/2
+[2025-08-10 16:55:16,457] INFO [__main__:316]       Step 10/11 loss=0.5269 acc=1.000 | MA20: loss=0.5776 acc=0.600
+[2025-08-10 16:55:32,922] INFO [__main__:323]       Loss: 0.6474, Accuracy: 0.5455
+[2025-08-10 16:55:33,714] INFO [__main__:365]       Test acc=0.250 | sens=1.000 spec=0.000 prec=0.250 f1=0.400 bal_acc=0.500
+[2025-08-10 16:55:33,719] INFO [__main__:491] 🎉 REAL Training completed in 410.3s!
+[2025-08-10 16:55:33,721] INFO [training.test_evaluation:51] 
+🧪 Evaluating on test set...
+[2025-08-10 16:55:34,504] INFO [training.test_evaluation:102] 📊 TEST SET ANALYSIS:
+[2025-08-10 16:55:34,505] INFO [training.test_evaluation:103]    Test samples: 4
+[2025-08-10 16:55:34,507] INFO [training.test_evaluation:104]    True labels - Class 0: 3, Class 1: 1
+[2025-08-10 16:55:34,508] INFO [training.test_evaluation:105]    Predictions - Class 0: 0, Class 1: 4
+[2025-08-10 16:55:34,509] INFO [training.test_evaluation:106]    Test accuracy: 25.0%
+[2025-08-10 16:55:34,513] WARNING [training.test_evaluation:115] 🚨 MODEL ALWAYS PREDICTS CLASS 1 ON TEST SET!
+[2025-08-10 16:55:34,514] WARNING [training.test_evaluation:116]    This suggests the model didn't learn properly
+[2025-08-10 16:55:34,516] INFO [training.test_evaluation:120] 🔍 TEST PREDICTIONS vs LABELS:
+[2025-08-10 16:55:34,649] INFO [training.test_evaluation:123]    Test 0: Pred=1, True=0 ❌
+[2025-08-10 16:55:34,652] INFO [training.test_evaluation:123]    Test 1: Pred=1, True=1 ✅
+[2025-08-10 16:55:34,654] INFO [training.test_evaluation:123]    Test 2: Pred=1, True=0 ❌
+[2025-08-10 16:55:34,657] INFO [training.test_evaluation:123]    Test 3: Pred=1, True=0 ❌
+[2025-08-10 16:55:34,660] INFO [__main__:512] ======================================================================
+🧪 TEST EVALUATION SUMMARY 🧪
+======================================================================
+Training Accuracy: 54.5%
+Test Accuracy: 25.0% (This is the REAL accuracy!)
+✅ Realistic accuracy for this challenging task!
+🚨 MODEL COLLAPSE: Always predicts class 1
+F1 Score: 0.400
+Precision: 0.250
+Recall: 1.000
+Data Source: Real LIGO GW150914
+Epochs: 2
+======================================================================
+[2025-08-10 16:55:34,662] INFO [__main__:514] 🎉 Training completed successfully!
+[2025-08-10 16:55:34,663] INFO [__main__:515]    - Total epochs: 2
+[2025-08-10 16:55:34,665] INFO [__main__:516]    - Final loss: 0.6474
+[2025-08-10 16:55:34,666] INFO [__main__:517]    - Training accuracy: 0.5455
+[2025-08-10 16:55:34,668] INFO [__main__:518]    - Test accuracy: 0.2500 (REAL accuracy)
+[2025-08-10 16:55:34,669] INFO [__main__:519]    - Training time: 410.3s
+[2025-08-10 16:55:34,671] INFO [__main__:523]    Model saved to: /mnt/c/Users/alpph/Documents/CPC-SNN-GW/outputs/sanity_2ep_cpu/standard_training_1bs/final_model.orbax
+[2025-08-10 16:55:34,693] INFO [__main__:1262] ✅ Training completed successfully!
+[2025-08-10 16:55:34,696] INFO [__main__:1263] 📊 Final metrics: {'final_train_loss': 0.6474207179112867, 'final_train_accuracy': 0.5454545454545454, 'final_test_accuracy': 0.25, 'final_val_loss': None, 'final_val_accuracy': None, 'total_epochs': 2, 'total_steps': 22, 'best_metric': 0.25, 'training_time_seconds': 410.29224586486816, 'model_params': 250000, 'has_proper_test_set': True, 'model_collapse': True, 'test_analysis': {'test_accuracy': 0.25, 'has_proper_test_set': True, 'data_leakage': False, 'model_collapse': True, 'collapsed_class': 1, 'class_counts_true': {0: 3, 1: 1}, 'class_counts_pred': {0: 0, 1: 4}, 'suspicious_patterns': ['model_collapse'], 'sensitivity': 1.0, 'specificity': 0.0, 'precision': 0.25, 'recall': 1.0, 'f1_score': 0.4, 'predictions': [1, 1, 1, 1], 'true_labels': [0, 1, 0, 0], 'probabilities': [0.5530251264572144, 0.5537925958633423, 0.5528395771980286, 0.5529587268829346], 'auc_roc': 0.0, 'auc_pr': 0.0, 'roc_curve': {}, 'pr_curve': {}, 'opt_threshold': 0.5, 'ece': 0.30315399169921875, 'event_level': {}}}
+[2025-08-10 16:55:34,698] INFO [__main__:1264] 💾 Model saved to: /mnt/c/Users/alpph/Documents/CPC-SNN-GW/outputs/sanity_2ep_cpu/standard_training_1bs/final_model.orbax
