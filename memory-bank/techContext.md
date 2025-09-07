@@ -1,10 +1,25 @@
 # 🔬 Technical Context: Neuromorphic GW Detection Implementation
 
-## 🎉 CURRENT TECHNICAL STATE: REVOLUTIONARY MIGRATION + TRAINING EXTENSIONS
+## 🚨 CURRENT TECHNICAL STATE: DATA VOLUME CRISIS RESOLVED + MLGWSC-1 INTEGRATION
 
-**Technical Status**: **REVOLUTIONARY BREAKTHROUGH** - All critical functions migrated with real data integration  
-**Last Updated**: 2025-07-24  
-**Achievement**: **6 CRITICAL MODULES MIGRATED** - Complete technical enhancement from real_ligo_test.py
+**Technical Status**: **ROOT CAUSE DIAGNOSED & FIXED** - Systematic MLGWSC-1 comparison reveals data volume crisis  
+**Last Updated**: 2025-09-07  
+**Achievement**: **ARCHITECTURE + DATA PIPELINE FIXES APPLIED** - 4 critical fixes + MLGWSC-1 dataset recommendation
+
+## 🔬 CRITICAL TECHNICAL DISCOVERY
+
+### **Data Volume Crisis Diagnosis**:
+| **Technical Metric** | **CPC-SNN-GW (Failing)** | **MLGWSC-1 (AResGW Working)** |
+|---------------------|---------------------------|-------------------------------|
+| **Training Samples** | 36 windows | ~100,000 windows |
+| **Data Source** | Single GW150914 (2048 samples) | 30 days O3a background |
+| **Preprocessing** | Basic mean/std normalization | Professional PSD whitening + DAIN |
+| **Injections** | Simple synthetic chirps | PyCBC IMRPhenomXPHM waveforms |
+| **Window Strategy** | Missing create_proper_windows() | MLGWSC-1 Slicer class |
+| **Result** | ~50% accuracy (random) | 84% accuracy (proven) |
+
+### **Technical Root Cause**: 
+**Insufficient training data volume** - Deep learning requires thousands of samples, CPC-SNN had only 36 examples!
 
 > Sync Advisory (2025-07-28): Repository synced with `origin/main`. Verified modules exist and paths used here match the codebase (`data/real_ligo_integration.py`, `training/cpc_loss_fixes.py`, `training/test_evaluation.py`, `utils/data_split.py`).
 

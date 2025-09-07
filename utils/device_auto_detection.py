@@ -87,10 +87,10 @@ def create_optimal_device_config(device_info: Dict[str, Any]) -> DeviceConfig:
         if device_info['gpu_memory_gb'] >= 15.0:  # T4 (16GB), V100 (16GB+)
             return DeviceConfig(
                 platform='gpu',
-                memory_fraction=0.85,  # Use most of GPU VRAM
+                memory_fraction=0.35,  # More conservative to avoid huge BFC allocations
                 use_preallocate=False,  # Dynamic allocation
                 xla_flags='--xla_gpu_cuda_data_dir=/usr/local/cuda',
-                recommended_batch_size=1,  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
+                recommended_batch_size=8,  # Conservative but practical for large GPUs
                 recommended_epochs=100,  # Full training
                 expected_speedup=25.0   # 25x faster than CPU
             )

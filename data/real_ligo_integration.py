@@ -14,7 +14,7 @@ import logging
 import numpy as np
 import jax
 import jax.numpy as jnp
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 logger = logging.getLogger(__name__)
 
@@ -225,6 +225,64 @@ def create_simulated_gw150914_strain() -> np.ndarray:
     
     return strain_final
 
+def create_proper_windows(strain_data: np.ndarray, 
+                         window_size: int = 256,
+                         overlap: float = 0.5,
+                         event_location: float = 0.6) -> Tuple[List[np.ndarray], List[int]]:
+    """
+    🚨 MISSING FUNCTION IMPLEMENTED: Create properly labeled overlapping windows
+    
+    Based on MLGWSC-1 approach - creates sliding windows with proper overlap.
+    
+    Args:
+        strain_data: Raw strain data array
+        window_size: Size of each window
+        overlap: Overlap fraction (0.5 = 50% overlap)
+        event_location: Where GW event is expected (0.6 = 60% into data)
+        
+    Returns:
+        Tuple of (window_list, label_list)
+    """
+    logger.info(f"🔧 Creating sliding windows: size={window_size}, overlap={overlap:.1%}")
+    
+    data_length = len(strain_data)
+    step_size = int(window_size * (1 - overlap))  # Step between windows
+    
+    windows = []
+    labels = []
+    
+    # Calculate GW event position in original data
+    gw_event_sample = int(data_length * event_location)
+    
+    # Generate sliding windows (MLGWSC-1 style)
+    for start in range(0, data_length - window_size + 1, step_size):
+        end = start + window_size
+        window = strain_data[start:end]
+        
+        # Label based on whether window contains GW event
+        window_start_rel = start / data_length
+        window_end_rel = end / data_length
+        
+        # Label=1 if window contains significant part of GW event  
+        if window_start_rel <= event_location <= window_end_rel:
+            # Check if event is significantly within window (not just edge)
+            event_pos_in_window = (event_location - window_start_rel) / (window_end_rel - window_start_rel)
+            if 0.2 <= event_pos_in_window <= 0.8:  # Event well within window
+                label = 1
+            else:
+                label = 0  # Event too close to edges
+        else:
+            label = 0  # Pure noise window
+            
+        windows.append(window.astype(np.float32))
+        labels.append(label)
+    
+    logger.info(f"✅ Generated {len(windows)} sliding windows")
+    logger.info(f"   Signal windows: {sum(labels)} ({100*np.mean(labels):.1f}%)")
+    logger.info(f"   Noise windows: {len(labels)-sum(labels)} ({100*(1-np.mean(labels)):.1f}%)")
+    
+    return windows, labels
+
 def create_enhanced_ligo_dataset(num_samples: int = 2000,
                                window_size: int = 256,
                                enhanced_overlap: float = 0.9,
@@ -261,13 +319,16 @@ def create_enhanced_ligo_dataset(num_samples: int = 2000,
         logger.info("📡 Processing real LIGO data with enhanced windowing...")
         
         # Use high overlap (90%) for many more windows
-        signals, labels = create_proper_windows(
-            real_strain, 
-            window_size=window_size, 
-            overlap=enhanced_overlap
-        )
+        # Respect external overlap if provided via env override to keep CLI consistent
+        try:
+            import os as _os
+            _ov = _os.environ.get('GW_OVERLAP')
+            _ov = float(_ov) if _ov is not None else enhanced_overlap
+        except Exception:
+            _ov = enhanced_overlap
+        signals, labels = create_proper_windows(real_strain, window_size=window_size, overlap=_ov)
         
-        logger.info(f"✅ Real LIGO windows: {len(signals)} (vs previous ~15)")
+        logger.info(f"✅ Real LIGO windows: {len(signals)} (overlap={_ov:.1%})")
         all_signals.extend(signals)
         all_labels.extend(labels)
         
@@ -400,7 +461,11 @@ def create_real_ligo_dataset(num_samples: int = 1200,
         
         # ✅ MEMORY-OPTIMIZED: Create smaller windowed dataset
         window_size = 256 if quick_mode else window_size
-        signals, labels = create_proper_windows(real_strain, window_size=window_size, overlap=overlap)
+        windows_list, labels_list = create_proper_windows(real_strain, window_size=window_size, overlap=overlap)
+        
+        # Convert to JAX arrays
+        signals = jnp.array(windows_list)
+        labels = jnp.array(labels_list)
         
         logger.info(f"🌊 Created proper windowed dataset:")
         logger.info(f"   Total windows: {len(signals)}")

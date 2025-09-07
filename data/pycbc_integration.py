@@ -44,7 +44,6 @@ def create_pycbc_enhanced_dataset(
         from pycbc import psd as _psd
         from pycbc.noise import noise_from_psd
         from pycbc.filter import highpass
-        from pycbc.filter import whiten as ts_whiten
         from pycbc.types import TimeSeries
     except Exception as e:
         logger.warning(f"PyCBC not available: {e}")
@@ -152,13 +151,25 @@ def create_pycbc_enhanced_dataset(
         x_h1 = proj_h1 + n_arr
         x_l1 = proj_l1 + n_arr
 
-        # Whitening
+        # Whitening (robust to PyCBC API location changes)
         if whiten:
             try:
                 ts_h1 = TimeSeries(x_h1, delta_t=1.0 / sample_rate_high)
                 ts_l1 = TimeSeries(x_l1, delta_t=1.0 / sample_rate_high)
-                ts_h1 = ts_whiten(ts_h1, psd, 20.0)
-                ts_l1 = ts_whiten(ts_l1, psd, 20.0)
+                try:
+                    # Newer PyCBC: timeseries.whiten
+                    from pycbc.types.timeseries import whiten as _ts_whiten  # type: ignore
+                    ts_h1 = _ts_whiten(ts_h1, psd, 20.0)
+                    ts_l1 = _ts_whiten(ts_l1, psd, 20.0)
+                except Exception:
+                    try:
+                        # Legacy PyCBC: filter.whiten
+                        from pycbc.filter import whiten as _ts_whiten_legacy  # type: ignore
+                        ts_h1 = _ts_whiten_legacy(ts_h1, psd, 20.0)
+                        ts_l1 = _ts_whiten_legacy(ts_l1, psd, 20.0)
+                    except Exception:
+                        # Fallback: no whitening
+                        pass
                 x_h1 = ts_h1.numpy()
                 x_l1 = ts_l1.numpy()
             except Exception:

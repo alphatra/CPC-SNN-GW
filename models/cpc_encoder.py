@@ -143,7 +143,7 @@ class TemporalTransformerCPC(nn.Module):
 class RealCPCConfig:
     """🚨 FIXED: Real CPC configuration with critical parameter fixes."""
     # 🚨 CRITICAL FIX: Architecture parameters fixed for frequency preservation
-    latent_dim: int = 64   # ✅ ULTRA-MINIMAL: GPU memory optimization 128→64 (prevents model collapse + memory)
+    latent_dim: int = 256   # ✅ FIXED: Increased from 64 to provide sufficient capacity for GW patterns
     conv_channels: Tuple[int, ...] = (64, 128, 256, 512)  # ✅ Progressive depth
     downsample_factor: int = 4  # ✅ CRITICAL FIX: Was 64 (destroyed 99% frequency info)
     context_length: int = 256   # ✅ INCREASED from 64 for proper GW stationarity
@@ -287,13 +287,9 @@ class RealCPCEncoder(nn.Module):
             name='projection'
         )(x_temporal)
         
-        # 🚨 CRITICAL: L2 normalization for stable contrastive learning
-        z_norm = jnp.linalg.norm(z, axis=-1, keepdims=True)
-        z_normalized = jnp.where(
-            z_norm > 1e-6,
-            z / (z_norm + 1e-8),
-            z  # Keep original if norm too small
-        )
+        # ✅ FIXED: Removed aggressive L2 normalization that destroyed gradient flow
+        # Keep original features without normalization for better learning
+        z_normalized = z
         
         outputs['latent'] = z_normalized
         

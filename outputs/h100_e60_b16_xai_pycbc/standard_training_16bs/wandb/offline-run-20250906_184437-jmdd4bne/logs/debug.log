@@ -1,0 +1,102 @@
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_setup.py:_flush():81] Current SDK version is 0.21.3
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_setup.py:_flush():81] Configure stats pid to 100004
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_setup.py:_flush():81] Loading settings from /teamspace/studios/this_studio/.config/wandb/settings
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_setup.py:_flush():81] Loading settings from /teamspace/studios/this_studio/CPC-SNN-GW/wandb/settings
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_init.py:setup_run_log_directory():686] Logging user logs to outputs/h100_e60_b16_xai_pycbc/standard_training_16bs/wandb/offline-run-20250906_184437-jmdd4bne/logs/debug.log
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_init.py:setup_run_log_directory():687] Logging internal logs to outputs/h100_e60_b16_xai_pycbc/standard_training_16bs/wandb/offline-run-20250906_184437-jmdd4bne/logs/debug-internal.log
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_init.py:init():813] calling init triggers
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_init.py:init():818] wandb.init called with sweep_config: {}
+config: {'_wandb': {}}
+2025-09-06 18:44:37,661 INFO    MainThread:100004 [wandb_init.py:init():854] starting backend
+2025-09-06 18:44:37,867 INFO    MainThread:100004 [wandb_init.py:init():857] sending inform_init request
+2025-09-06 18:44:37,869 INFO    MainThread:100004 [wandb_init.py:init():865] backend started and connected
+2025-09-06 18:44:37,870 INFO    MainThread:100004 [wandb_init.py:init():936] updated telemetry
+2025-09-06 18:44:37,877 INFO    MainThread:100004 [wandb_init.py:init():960] communicating run to backend with 90.0 second timeout
+2025-09-06 18:44:37,987 INFO    MainThread:100004 [wandb_init.py:init():1011] starting run threads in backend
+2025-09-06 18:44:38,119 INFO    MainThread:100004 [wandb_run.py:_console_start():2494] atexit reg
+2025-09-06 18:44:38,120 INFO    MainThread:100004 [wandb_run.py:_redirect():2342] redirect: wrap_raw
+2025-09-06 18:44:38,120 INFO    MainThread:100004 [wandb_run.py:_redirect():2411] Wrapping output streams.
+2025-09-06 18:44:38,120 INFO    MainThread:100004 [wandb_run.py:_redirect():2434] Redirects installed.
+2025-09-06 18:44:38,121 INFO    MainThread:100004 [wandb_init.py:init():1057] run started, returning control to user process
+2025-09-06 18:44:38,124 INFO    MainThread:100004 [wandb_run.py:_config_callback():1380] config_cb None None {'model_name': 'cpc_snn_gw', 'batch_size': 16, 'learning_rate': 0.001, 'weight_decay': 0.0001, 'num_epochs': 10, 'num_classes': 2, 'label_smoothing': 0.1, 'use_class_weighting': True, 'optimizer': 'sgd', 'scheduler': 'cosine', 'gradient_clipping': 1.0, 'mixed_precision': True, 'grad_accum_steps': 1, 'log_every': 10, 'eval_every': 100, 'save_every': 1000, 'output_dir': 'outputs/h100_e60_b16_xai_pycbc/standard_training_16bs', 'use_wandb': True, 'use_tensorboard': True, 'project_name': 'cpc-snn-gw', 'max_memory_gb': 8.0, 'enable_profiling': False, 'early_stopping_patience': 10, 'early_stopping_metric': 'balanced_accuracy', 'early_stopping_mode': 'max', 'checkpoint_every_epochs': 5, 'use_focal_loss': True, 'focal_gamma': 1.8, 'class1_weight': 1.1, 'use_ema': True, 'ema_decay': 0.999, 'spike_time_steps': 24, 'spike_threshold': 0.1, 'spike_learnable': True, 'spike_threshold_levels': 4, 'spike_surrogate_type': 'adaptive_multi_scale', 'spike_surrogate_beta': 4.0, 'spike_pool_seq': False, 'spike_target_rate_low': 0.1, 'spike_target_rate_high': 0.2, 'use_cpc_aux_loss': True, 'cpc_aux_weight': 0.2, 'ce_loss_weight': 1.0, 'cpc_freeze_first_n_convs': 0, 'cpc_prediction_steps': 12, 'cpc_num_negatives': 128, 'cpc_use_hard_negatives': True, 'cpc_temperature': 0.07, 'cpc_use_temporal_transformer': True, 'cpc_attention_heads': 8, 'cpc_transformer_layers': 4, 'cpc_dropout_rate': 0.1, 'cpc_use_grad_checkpointing': True, 'cpc_use_mixed_precision': True, 'snn_hidden_size': 32}
+2025-09-06 18:44:50,062 INFO    MainThread:100004 [wandb_run.py:_config_callback():1380] config_cb None None {'model_name': 'cpc_snn_gw', 'batch_size': 16, 'learning_rate': 0.001, 'weight_decay': 0.0001, 'num_epochs': 10, 'num_classes': 2, 'label_smoothing': 0.1, 'use_class_weighting': True, 'optimizer': 'adamw', 'scheduler': 'cosine', 'gradient_clipping': 1.0, 'mixed_precision': True, 'grad_accum_steps': 2, 'log_every': 10, 'eval_every': 100, 'save_every': 1000, 'output_dir': 'outputs/h100_e60_b16_xai_pycbc/standard_training_16bs', 'use_wandb': True, 'use_tensorboard': False, 'project_name': 'gravitational-wave-detection', 'max_memory_gb': 8.0, 'enable_profiling': False, 'early_stopping_patience': 10, 'early_stopping_metric': 'balanced_accuracy', 'early_stopping_mode': 'max', 'checkpoint_every_epochs': 5, 'use_focal_loss': True, 'focal_gamma': 1.8, 'class1_weight': 1.1, 'use_ema': True, 'ema_decay': 0.999, 'spike_time_steps': 24, 'spike_threshold': 0.1, 'spike_learnable': True, 'spike_threshold_levels': 4, 'spike_surrogate_type': 'adaptive_multi_scale', 'spike_surrogate_beta': 4.0, 'spike_pool_seq': False, 'spike_target_rate_low': 0.1, 'spike_target_rate_high': 0.2, 'use_cpc_aux_loss': True, 'cpc_aux_weight': 0.2, 'ce_loss_weight': 1.0, 'cpc_freeze_first_n_convs': 0, 'cpc_prediction_steps': 12, 'cpc_num_negatives': 128, 'cpc_use_hard_negatives': True, 'cpc_temperature': 0.07, 'cpc_use_temporal_transformer': True, 'cpc_attention_heads': 8, 'cpc_transformer_layers': 4, 'cpc_dropout_rate': 0.1, 'cpc_use_grad_checkpointing': True, 'cpc_use_mixed_precision': True, 'snn_hidden_size': 32}
+2025-09-06 18:49:35,431 INFO    wandb-AsyncioManager-main:100004 [service_client.py:_forward_responses():84] Reached EOF.
+2025-09-06 18:49:35,432 INFO    wandb-AsyncioManager-main:100004 [mailbox.py:close():137] Closing mailbox, abandoning 0 handles.
+2025-09-06 18:49:36,164 ERROR   wandb-AsyncioManager-main:100004 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 65, in _send_server_request
+    await self._writer.drain()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-09-06 18:49:36,196 ERROR   wandb-AsyncioManager-main:100004 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 65, in _send_server_request
+    await self._writer.drain()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-09-06 18:49:36,323 ERROR   wandb-AsyncioManager-main:100004 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 65, in _send_server_request
+    await self._writer.drain()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-09-06 18:49:36,343 ERROR   wandb-AsyncioManager-main:100004 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 65, in _send_server_request
+    await self._writer.drain()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-09-06 18:49:36,429 ERROR   wandb-AsyncioManager-main:100004 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 65, in _send_server_request
+    await self._writer.drain()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-09-06 18:49:36,445 ERROR   wandb-AsyncioManager-main:100004 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 65, in _send_server_request
+    await self._writer.drain()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost
+2025-09-06 18:49:36,459 ERROR   wandb-AsyncioManager-main:100004 [asyncio_manager.py:fn_wrap_exceptions():183] Uncaught exception in run_soon callback.
+Traceback (most recent call last):
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/asyncio_manager.py", line 181, in fn_wrap_exceptions
+    await fn()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/site-packages/wandb/sdk/lib/service/service_client.py", line 65, in _send_server_request
+    await self._writer.drain()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 371, in drain
+    await self._protocol._drain_helper()
+  File "/home/zeus/miniconda3/envs/cloudspace/lib/python3.10/asyncio/streams.py", line 167, in _drain_helper
+    raise ConnectionResetError('Connection lost')
+ConnectionResetError: Connection lost

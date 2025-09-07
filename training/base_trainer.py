@@ -49,7 +49,7 @@ class TrainingConfig:
     # Model parameters - ✅ MEMORY OPTIMIZED
     model_name: str = "cpc_snn_gw"
     batch_size: int = 1  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
-    learning_rate: float = 1e-4  # ✅ ULTRA-CONSERVATIVE: Prevent model collapse (was 1e-3)
+    learning_rate: float = 5e-5  # ✅ FIXED: Matching successful AResGW learning rate
     weight_decay: float = 1e-4
     num_epochs: int = 100
     num_classes: int = 2  # ✅ CONFIGURABLE: Binary classification by default
@@ -126,6 +126,9 @@ class TrainingConfig:
 
     # ✅ SNN exposure
     snn_hidden_size: int = 32
+    
+    # ✅ CPC exposure - FIXED: Add missing latent_dim parameter
+    cpc_latent_dim: int = 256  # ✅ FIXED: Increased from 64 for sufficient capacity
 
 
 class TrainerBase(ABC):
@@ -342,7 +345,7 @@ class CPCSNNTrainer(TrainerBase):
                 # ✅ ULTRA-MEMORY OPTIMIZED: Minimal model size to prevent collapse + memory issues
                 # Configure CPC encoder with exposed parameters
                 cpc_cfg = RealCPCConfig(
-                    latent_dim=getattr(self.config, 'cpc_latent_dim', 64),
+                    latent_dim=getattr(self.config, 'cpc_latent_dim', 256),
                     prediction_steps=self.config.cpc_prediction_steps,
                     num_negatives=self.config.cpc_num_negatives,
                     temperature=self.config.cpc_temperature,

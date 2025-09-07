@@ -29,29 +29,30 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 def setup_professional_logging(level=logging.INFO, log_file=None):
-    """Setup professional logging configuration."""
+    """Setup professional logging configuration (idempotent, no duplicates)."""
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
+    
+    # Remove existing handlers to prevent duplicate logs
+    for h in list(root_logger.handlers):
+        root_logger.removeHandler(h)
+    
     # Console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
     
     # File handler (optional)
-    handlers = [console_handler]
     if log_file:
         file_handler = logging.FileHandler(log_file)
         file_handler.setFormatter(formatter)
-        handlers.append(file_handler)
+        root_logger.addHandler(file_handler)
     
-    # Configure logger
-    logger = logging.getLogger()
-    logger.setLevel(level)
-    for handler in handlers:
-        logger.addHandler(handler)
-    
-    return logger
+    return root_logger
 
 def setup_directories(output_dir: str):
     """Setup training directories."""

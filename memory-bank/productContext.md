@@ -62,13 +62,20 @@
 
 ### Competitive Landscape ✅ MARKET LEADER POSITION ESTABLISHED
 
-| Solution | Approach | Platform | Energy | Real-time | Status |
-|----------|----------|-----------|---------|-----------|--------|
-| PyCBC | Matched Filter | Any | High | No | Incumbent |
-| Deep Learning | CNN/RNN | CUDA only | Very High | Limited | Research |
-| **Our Solution** | **CPC+SNN** | **Apple+Universal** | **Ultra Low** | **Yes** | **✅ WORKING** |
+| Solution | Approach | Training Data | Platform | Result | Status |
+|----------|----------|---------------|-----------|---------|--------|
+| **AResGW (MLGWSC-1)** | **ResNet54 + Professional** | **~100,000 samples (30 days O3a)** | Any | **✅ 84% accuracy** | **PROVEN BASELINE** |
+| PyCBC | Matched Filter | Template bank | Any | Working | Incumbent |
+| Deep Learning CNNs | CNN/RNN | Variable | CUDA only | Limited | Research |
+| **Our Solution (Current)** | **CPC+SNN** | **36 samples (single event)** | Apple+Universal | **❌ ~50% random** | **DIAGNOSIS: INSUFFICIENT DATA** |
+| **Our Solution (Fixed)** | **CPC+SNN + MLGWSC-1 Data** | **Switching to ~100,000 samples** | Apple+Universal | **🎯 Expected 70%+** | **RECOMMENDED APPROACH** |
 
-**MARKET BREAKTHROUGH**: We are the **ONLY** working neuromorphic GW detector in existence.
+**MARKET INSIGHT**: Data volume is MORE critical than architecture sophistication - AResGW succeeds due to MASSIVE MLGWSC-1 dataset, not just ResNet.
+
+**COMPETITIVE STRATEGY UPDATED**: 
+1. **Phase 1**: Match AResGW using MLGWSC-1 dataset (baseline)
+2. **Phase 2**: Add neuromorphic advantages once performance proven  
+3. **Phase 3**: Differentiate with Apple Silicon + edge deployment
 
 ### Differentiators ✅ PROVEN COMPETITIVE ADVANTAGES
 

@@ -31,7 +31,7 @@ data:
 model:
   # 🚨 CRITICAL FIX: CPC Encoder parameters optimized for GW frequency preservation
   cpc:
-    latent_dim: 64   # ✅ ULTRA-MINIMAL: GPU memory optimization to prevent model collapse + memory issues
+    latent_dim: 256   # ✅ FIXED: Increased from 64 to provide sufficient capacity for GW patterns
     downsample_factor: 4  # ✅ CRITICAL FIX: Was 64 (destroyed 99% freq info) → 4
     context_length: 128  # ✅ SET to 128 to match current runtime expectation
     prediction_steps: 12  # Keep reasonable for memory
@@ -62,7 +62,7 @@ model:
 training:
   # Phase 1: CPC Pretraining - ✅ MEMORY OPTIMIZED
   cpc_pretrain:
-    learning_rate: 1e-4  # ✅ OPTIMIZED from analysis
+    learning_rate: 5e-5  # ✅ FIXED: Matching successful AResGW learning rate
     batch_size: 1  # ✅ MEMORY FIX: Ultra-small batch for GPU memory constraints
     num_epochs: 50
     warmup_epochs: 5

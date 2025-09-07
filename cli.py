@@ -142,70 +142,70 @@ def run_standard_training(config, args):
             # ✅ REAL LIGO DATA: Prefer fast path in quick-mode; else enhanced dataset
             logger.info("   Creating REAL LIGO dataset with GW150914 data...")
             try:
-            from data.real_ligo_integration import create_enhanced_ligo_dataset, create_real_ligo_dataset
-            from utils.data_split import create_stratified_split
-            
-            if bool(getattr(args, 'quick_mode', False)) and not bool(getattr(args, 'synthetic_quick', False)):
-                # FAST PATH for sanity runs
-                logger.info("   ⚡ Quick mode: using lightweight real LIGO windows (no augmentation)")
-                (train_signals, train_labels), (test_signals, test_labels) = create_real_ligo_dataset(
-                    num_samples=200,
-                    window_size=int(args.window_size if args.window_size else 256),
-                    quick_mode=True,
-                    return_split=True,
-                    train_ratio=0.8,
-                    overlap=float(args.overlap if args.overlap else 0.7)
-                )
-                signals, labels = train_signals, train_labels
-                logger.info(f"   Quick REAL LIGO samples: train={len(signals)}, test={len(test_signals)}")
-            else:
-                # ENHANCED PATH (heavier)
-                # Optional PyCBC enhanced dataset
-                pycbc_ds = None
-                if getattr(args, 'use_pycbc', False):
-                    try:
-                        from data.pycbc_integration import create_pycbc_enhanced_dataset
-                        pycbc_ds = create_pycbc_enhanced_dataset(
-                            num_samples=2000,
-                            window_size=int(args.window_size if args.window_size else 256),
-                            sample_rate=4096,
-                            snr_range=(float(args.pycbc_snr_min), float(args.pycbc_snr_max)),
-                            mass_range=(float(args.pycbc_mass_min), float(args.pycbc_mass_max)),
-                            positive_ratio=0.35,
-                            random_seed=42,
-                            psd_name=str(args.pycbc_psd),
-                            whiten=bool(args.pycbc_whiten),
-                            multi_channel=bool(args.pycbc_multi_channel),
-                            sample_rate_high=int(args.pycbc_fs_high),
-                            resample_to=int(args.window_size if args.window_size else 256)
-                        )
-                        if pycbc_ds is not None:
-                            logger.info("   ✅ PyCBC enhanced synthetic dataset available for mixing")
-                    except Exception as _e:
-                        logger.warning(f"   PyCBC dataset unavailable: {_e}")
-                enhanced_signals, enhanced_labels = create_enhanced_ligo_dataset(
-                    num_samples=2000,
-                    window_size=int(args.window_size if args.window_size else 256),
-                    enhanced_overlap=0.9,
-                    data_augmentation=True,
-                    noise_scaling=True
-                )
-                # Mix PyCBC dataset if present
-                if pycbc_ds is not None:
-                    pycbc_signals, pycbc_labels = pycbc_ds
-                    import jax
-                    enhanced_signals = jnp.concatenate([enhanced_signals, pycbc_signals], axis=0)
-                    enhanced_labels = jnp.concatenate([enhanced_labels, pycbc_labels], axis=0)
-                    key = jax.random.PRNGKey(7)
-                    perm = jax.random.permutation(key, len(enhanced_signals))
-                    enhanced_signals = enhanced_signals[perm]
-                    enhanced_labels = enhanced_labels[perm]
-                # Split enhanced dataset
-                (train_signals, train_labels), (test_signals, test_labels) = create_stratified_split(
-                    enhanced_signals, enhanced_labels, train_ratio=0.8, random_seed=42
-                )
-                signals, labels = train_signals, train_labels
-                logger.info(f"   Enhanced REAL LIGO samples: train={len(signals)}, test={len(test_signals)}")
+                from data.real_ligo_integration import create_enhanced_ligo_dataset, create_real_ligo_dataset
+                from utils.data_split import create_stratified_split
+
+                if bool(getattr(args, 'quick_mode', False)) and not bool(getattr(args, 'synthetic_quick', False)):
+                    # FAST PATH for sanity runs
+                    logger.info("   ⚡ Quick mode: using lightweight real LIGO windows (no augmentation)")
+                    (train_signals, train_labels), (test_signals, test_labels) = create_real_ligo_dataset(
+                        num_samples=200,
+                        window_size=int(args.window_size if args.window_size else 256),
+                        quick_mode=True,
+                        return_split=True,
+                        train_ratio=0.8,
+                        overlap=float(args.overlap if args.overlap else 0.7)
+                    )
+                    signals, labels = train_signals, train_labels
+                    logger.info(f"   Quick REAL LIGO samples: train={len(signals)}, test={len(test_signals)}")
+                else:
+                    # ENHANCED PATH (heavier)
+                    # Optional PyCBC enhanced dataset
+                    pycbc_ds = None
+                    if getattr(args, 'use_pycbc', False):
+                        try:
+                            from data.pycbc_integration import create_pycbc_enhanced_dataset
+                            pycbc_ds = create_pycbc_enhanced_dataset(
+                                num_samples=2000,
+                                window_size=int(args.window_size if args.window_size else 256),
+                                sample_rate=4096,
+                                snr_range=(float(args.pycbc_snr_min), float(args.pycbc_snr_max)),
+                                mass_range=(float(args.pycbc_mass_min), float(args.pycbc_mass_max)),
+                                positive_ratio=0.35,
+                                random_seed=42,
+                                psd_name=str(args.pycbc_psd),
+                                whiten=bool(args.pycbc_whiten),
+                                multi_channel=bool(args.pycbc_multi_channel),
+                                sample_rate_high=int(args.pycbc_fs_high),
+                                resample_to=int(args.window_size if args.window_size else 256)
+                            )
+                            if pycbc_ds is not None:
+                                logger.info("   ✅ PyCBC enhanced synthetic dataset available for mixing")
+                        except Exception as _e:
+                            logger.warning(f"   PyCBC dataset unavailable: {_e}")
+                    enhanced_signals, enhanced_labels = create_enhanced_ligo_dataset(
+                        num_samples=2000,
+                        window_size=int(args.window_size if args.window_size else 256),
+                        enhanced_overlap=0.9,
+                        data_augmentation=True,
+                        noise_scaling=True
+                    )
+                    # Mix PyCBC dataset if present
+                    if pycbc_ds is not None:
+                        pycbc_signals, pycbc_labels = pycbc_ds
+                        import jax
+                        enhanced_signals = jnp.concatenate([enhanced_signals, pycbc_signals], axis=0)
+                        enhanced_labels = jnp.concatenate([enhanced_labels, pycbc_labels], axis=0)
+                        key = jax.random.PRNGKey(7)
+                        perm = jax.random.permutation(key, len(enhanced_signals))
+                        enhanced_signals = enhanced_signals[perm]
+                        enhanced_labels = enhanced_labels[perm]
+                    # Split enhanced dataset
+                    (train_signals, train_labels), (test_signals, test_labels) = create_stratified_split(
+                        enhanced_signals, enhanced_labels, train_ratio=0.8, random_seed=42
+                    )
+                    signals, labels = train_signals, train_labels
+                    logger.info(f"   Enhanced REAL LIGO samples: train={len(signals)}, test={len(test_signals)}")
             
             except ImportError:
                 logger.warning("   Real LIGO integration not available - falling back to synthetic")
@@ -287,32 +287,21 @@ def run_standard_training(config, args):
             if not bool(getattr(args, 'quick_mode', False)):
                 try:
                     import orbax.checkpoint as ocp
-                    ckpt_root = training_dir / "ckpts"
+                    ckpt_root = (training_dir / "ckpts").resolve()
                     (ckpt_root / "best").mkdir(parents=True, exist_ok=True)
                     (ckpt_root / "latest").mkdir(parents=True, exist_ok=True)
-                    checkpointer = ocp.Checkpointer(ocp.PyTreeCheckpointHandler())
-                    # Newer Orbax versions may not accept 'checkpointer' kwarg; keep try/except
-                    try:
-                        best_manager = ocp.CheckpointManager(
-                            str(ckpt_root / "best"),
-                            checkpointer=checkpointer,
-                            options=ocp.CheckpointManagerOptions(max_to_keep=3)
-                        )
-                        latest_manager = ocp.CheckpointManager(
-                            str(ckpt_root / "latest"),
-                            checkpointer=checkpointer,
-                            options=ocp.CheckpointManagerOptions(max_to_keep=1)
-                        )
-                    except TypeError:
-                        # Fallback for API without 'checkpointer' kwarg
-                        best_manager = ocp.CheckpointManager(
-                            str(ckpt_root / "best"),
-                            options=ocp.CheckpointManagerOptions(max_to_keep=3)
-                        )
-                        latest_manager = ocp.CheckpointManager(
-                            str(ckpt_root / "latest"),
-                            options=ocp.CheckpointManagerOptions(max_to_keep=1)
-                        )
+                    # Updated Orbax usage compatible with 0.4.x+
+                    handler = ocp.PyTreeCheckpointHandler()
+                    best_manager = ocp.CheckpointManager(
+                        directory=str((ckpt_root / "best").resolve()),
+                        checkpointers={"train_state": ocp.Checkpointer(handler)},
+                        options=ocp.CheckpointManagerOptions(max_to_keep=3)
+                    )
+                    latest_manager = ocp.CheckpointManager(
+                        directory=str((ckpt_root / "latest").resolve()),
+                        checkpointers={"train_state": ocp.Checkpointer(handler)},
+                        options=ocp.CheckpointManagerOptions(max_to_keep=1)
+                    )
                 except Exception as _orb_init:
                     logger.warning(f"Orbax managers unavailable: {_orb_init}")
             else:

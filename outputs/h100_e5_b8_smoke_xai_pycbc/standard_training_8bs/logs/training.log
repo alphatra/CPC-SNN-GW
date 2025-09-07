@@ -1,0 +1,462 @@
+2025-09-06 18:49:57,822 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-09-06 18:49:57,822 - training.training_utils - INFO - JAX platform: gpu
+2025-09-06 18:49:58,291 - training.training_metrics - INFO - W&B tracking initialized
+2025-09-06 18:49:58,292 - training.training_metrics - INFO - TensorBoard logging to: outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/tensorboard
+2025-09-06 18:49:58,292 - training.base_trainer - INFO - Using basic experiment tracker
+2025-09-06 18:49:58,293 - training.training_utils - INFO - Configuration saved to outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/config.json
+2025-09-06 18:49:58,294 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-09-06 18:49:58,295 - __main__ - INFO - 🚀 Creating CPC+SNN model with SpikeBridge...
+2025-09-06 18:49:58,296 - __main__ - INFO - 📊 Creating data loaders...
+2025-09-06 18:49:58,297 - data.gw_dataset_builder - WARNING - TensorFlow not available - TFRecord export disabled
+2025-09-06 18:49:58,298 - __main__ - INFO -    Creating REAL LIGO dataset with GW150914 data...
+2025-09-06 18:49:59,054 - __main__ - WARNING -    PyCBC dataset unavailable: PSD not compatible with requested delta_t
+2025-09-06 18:49:59,054 - data.real_ligo_integration - INFO - 🚀 Creating ENHANCED dataset with 2000 target samples
+2025-09-06 18:49:59,054 - data.real_ligo_integration - INFO -    Enhanced overlap: 90.0%
+2025-09-06 18:49:59,055 - data.real_ligo_integration - INFO -    Data augmentation: True
+2025-09-06 18:49:59,055 - data.real_ligo_integration - INFO - ✅ ReadLIGO available - loading real GW150914 data
+2025-09-06 18:49:59,078 - data.real_ligo_integration - INFO - ✅ Successfully loaded real GW150914 strain data (source=readligo): 2048 samples
+2025-09-06 18:49:59,079 - data.real_ligo_integration - INFO - 📊 Strain amplitude range: -7.60e-21 to -2.08e-21
+2025-09-06 18:49:59,079 - data.real_ligo_integration - INFO - 📡 Processing real LIGO data with enhanced windowing...
+2025-09-06 18:49:59,080 - data.real_ligo_integration - INFO - ✅ Real LIGO windows: 15 (overlap=50.0%)
+2025-09-06 18:49:59,271 - data.real_ligo_integration - INFO - 🔄 Applying data augmentation to real LIGO data...
+2025-09-06 18:49:59,570 - data.real_ligo_integration - INFO - ✅ Augmented data: +75 samples
+2025-09-06 18:49:59,678 - data.real_ligo_integration - INFO - ✅ Oversampled positives by 18 to reach ~40%
+2025-09-06 18:49:59,679 - data.real_ligo_integration - INFO - 🔄 Generating 1892 synthetic GW samples...
+2025-09-06 18:50:07,406 - data.real_ligo_integration - INFO - 🎯 ENHANCED DATASET CREATED:
+2025-09-06 18:50:07,407 - data.real_ligo_integration - INFO -    Total samples: 2000
+2025-09-06 18:50:07,408 - data.real_ligo_integration - INFO -    Window size: 256
+2025-09-06 18:50:07,505 - data.real_ligo_integration - INFO -    GW signals: 708 (35.4%)
+2025-09-06 18:50:07,540 - data.real_ligo_integration - INFO -    Noise samples: 1292 (64.6%)
+2025-09-06 18:50:08,395 - utils.data_split - INFO - 📊 Creating stratified split (train: 80.0%):
+2025-09-06 18:50:08,395 - utils.data_split - INFO -    Class 0 samples: 1292
+2025-09-06 18:50:08,396 - utils.data_split - INFO -    Class 1 samples: 708
+2025-09-06 18:50:10,612 - utils.data_split - INFO - 📊 Dataset split completed:
+2025-09-06 18:50:10,613 - utils.data_split - INFO -    Train: 1599 samples
+2025-09-06 18:50:10,613 - utils.data_split - INFO -    Test: 401 samples
+2025-09-06 18:50:10,667 - utils.data_split - INFO -    Train class balance: 35.4% positive
+2025-09-06 18:50:10,716 - utils.data_split - INFO -    Test class balance: 35.4% positive
+2025-09-06 18:50:10,794 - utils.data_split - INFO - ✅ Balanced test set: 35.4% positive
+2025-09-06 18:50:10,795 - __main__ - INFO -    Enhanced REAL LIGO samples: train=1599, test=401
+2025-09-06 18:50:10,795 - __main__ - INFO - ⏳ Starting real training loop...
+2025-09-06 18:50:10,795 - __main__ - INFO -    Training data shape: (1599, 256)
+2025-09-06 18:50:10,795 - __main__ - INFO -    Labels shape: (1599,)
+2025-09-06 18:50:10,796 - __main__ - INFO -    Running 5 epochs...
+2025-09-06 18:50:10,796 - __main__ - INFO - 🚀 Starting REAL CPC+SNN training pipeline!
+2025-09-06 18:50:10,797 - training.training_utils - INFO - JAX devices: [CudaDevice(id=0)]
+2025-09-06 18:50:10,797 - training.training_utils - INFO - JAX platform: gpu
+2025-09-06 18:50:10,798 - training.training_metrics - INFO - W&B tracking - using existing run
+2025-09-06 18:50:10,798 - training.base_trainer - INFO - Using basic experiment tracker
+2025-09-06 18:50:10,798 - training.training_utils - INFO - Configuration saved to outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/config.json
+2025-09-06 18:50:10,800 - training.base_trainer - INFO - Initialized CPCSNNTrainer with config: cpc_snn_gw
+2025-09-06 18:50:27,009 - __main__ - INFO -    🔥 Epoch 1/5
+2025-09-06 18:52:09,438 - __main__ - INFO -       Step 10/120 loss=0.5094 acc=0.625 | MA20: loss=0.5618 acc=0.550
+2025-09-06 18:53:12,438 - __main__ - INFO -       Step 20/120 loss=0.6560 acc=0.375 | MA20: loss=0.5838 acc=0.531
+2025-09-06 18:54:16,404 - __main__ - INFO -       Step 30/120 loss=0.4651 acc=0.625 | MA20: loss=0.6050 acc=0.519
+2025-09-06 18:55:18,843 - __main__ - INFO -       Step 40/120 loss=0.5153 acc=0.750 | MA20: loss=0.6127 acc=0.519
+2025-09-06 18:56:21,908 - __main__ - INFO -       Step 50/120 loss=0.6482 acc=0.375 | MA20: loss=0.6344 acc=0.494
+2025-09-06 18:57:26,217 - __main__ - INFO -       Step 60/120 loss=0.5074 acc=0.500 | MA20: loss=0.6374 acc=0.450
+2025-09-06 18:58:30,265 - __main__ - INFO -       Step 70/120 loss=0.6933 acc=0.625 | MA20: loss=0.6334 acc=0.412
+2025-09-06 18:59:32,297 - __main__ - INFO -       Step 80/120 loss=0.5249 acc=0.625 | MA20: loss=0.6331 acc=0.450
+2025-09-06 19:00:36,600 - __main__ - INFO -       Step 90/120 loss=0.5044 acc=0.750 | MA20: loss=0.6052 acc=0.506
+2025-09-06 19:01:41,245 - __main__ - INFO -       Step 100/120 loss=0.6067 acc=0.375 | MA20: loss=0.6083 acc=0.487
+2025-09-06 19:02:43,883 - __main__ - INFO -       Step 110/120 loss=0.3922 acc=0.875 | MA20: loss=0.6153 acc=0.475
+2025-09-06 19:03:48,353 - __main__ - INFO -       Step 120/120 loss=0.6993 acc=0.625 | MA20: loss=0.6025 acc=0.494
+2025-09-06 19:03:48,354 - __main__ - INFO -       Loss: 0.6130, Accuracy: 0.4885
+2025-09-06 19:03:48,355 - absl - INFO - Saving item to outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/latest/1.orbax-checkpoint-tmp-1757185428355311/train_state.
+2025-09-06 19:03:48,369 - __main__ - WARNING - Latest checkpoint save skipped: Checkpoint path should be absolute. Got outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/latest/1.orbax-checkpoint-tmp-1757185428355311/train_state.orbax-checkpoint-tmp-1757185428356508
+2025-09-06 19:04:19,689 - __main__ - INFO -       Test acc=0.499 | sens=0.528 spec=0.483 prec=0.359 f1=0.427 bal_acc=0.505
+2025-09-06 19:04:19,905 - training.training_metrics - INFO - New best balanced_accuracy: 0.505397 at epoch 0
+2025-09-06 19:04:19,906 - __main__ - INFO -       🏆 New best balanced accuracy; saving best checkpoint
+2025-09-06 19:04:19,906 - absl - INFO - Saving item to outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/best/1.orbax-checkpoint-tmp-1757185459906502/train_state.
+2025-09-06 19:04:19,918 - __main__ - WARNING - Orbax checkpoint skipped: Checkpoint path should be absolute. Got outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/best/1.orbax-checkpoint-tmp-1757185459906502/train_state.orbax-checkpoint-tmp-1757185459907592
+2025-09-06 19:04:19,918 - __main__ - INFO -    🔥 Epoch 2/5
+2025-09-06 19:05:24,125 - __main__ - INFO -       Step 10/120 loss=0.5785 acc=0.500 | MA20: loss=0.6321 acc=0.512
+2025-09-06 19:06:30,503 - __main__ - INFO -       Step 20/120 loss=0.7434 acc=0.500 | MA20: loss=0.6348 acc=0.506
+2025-09-06 19:07:35,841 - __main__ - INFO -       Step 30/120 loss=0.5765 acc=0.250 | MA20: loss=0.6231 acc=0.469
+2025-09-06 19:08:41,550 - __main__ - INFO -       Step 40/120 loss=0.5967 acc=0.625 | MA20: loss=0.6164 acc=0.469
+2025-09-06 19:09:47,638 - __main__ - INFO -       Step 50/120 loss=0.5982 acc=0.875 | MA20: loss=0.6318 acc=0.494
+2025-09-06 19:10:53,432 - __main__ - INFO -       Step 60/120 loss=0.5583 acc=0.500 | MA20: loss=0.6150 acc=0.481
+2025-09-06 19:11:59,235 - __main__ - INFO -       Step 70/120 loss=0.7128 acc=0.500 | MA20: loss=0.6201 acc=0.469
+2025-09-06 19:13:05,872 - __main__ - INFO -       Step 80/120 loss=0.6540 acc=0.375 | MA20: loss=0.6598 acc=0.487
+2025-09-06 19:14:11,436 - __main__ - INFO -       Step 90/120 loss=0.4404 acc=0.875 | MA20: loss=0.6278 acc=0.531
+2025-09-06 19:15:17,323 - __main__ - INFO -       Step 100/120 loss=0.7629 acc=0.250 | MA20: loss=0.6067 acc=0.519
+2025-09-06 19:16:22,883 - __main__ - INFO -       Step 110/120 loss=0.3862 acc=0.875 | MA20: loss=0.6044 acc=0.512
+2025-09-06 19:17:28,919 - __main__ - INFO -       Step 120/120 loss=0.7453 acc=0.500 | MA20: loss=0.6098 acc=0.519
+2025-09-06 19:17:28,920 - __main__ - INFO -       Loss: 0.6237, Accuracy: 0.4969
+2025-09-06 19:17:28,921 - absl - INFO - Saving item to outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/latest/2.orbax-checkpoint-tmp-1757186248921191/train_state.
+2025-09-06 19:17:28,934 - __main__ - WARNING - Latest checkpoint save skipped: Checkpoint path should be absolute. Got outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/latest/2.orbax-checkpoint-tmp-1757186248921191/train_state.orbax-checkpoint-tmp-1757186248922096
+2025-09-06 19:17:35,441 - __main__ - INFO -       Test acc=0.534 | sens=0.556 spec=0.521 prec=0.389 f1=0.458 bal_acc=0.539
+2025-09-06 19:17:35,498 - training.training_metrics - INFO - New best balanced_accuracy: 0.538787 at epoch 1
+2025-09-06 19:17:35,499 - __main__ - INFO -       🏆 New best balanced accuracy; saving best checkpoint
+2025-09-06 19:17:35,499 - absl - INFO - Saving item to outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/best/2.orbax-checkpoint-tmp-1757186255499474/train_state.
+2025-09-06 19:17:35,510 - __main__ - WARNING - Orbax checkpoint skipped: Checkpoint path should be absolute. Got outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/best/2.orbax-checkpoint-tmp-1757186255499474/train_state.orbax-checkpoint-tmp-1757186255500202
+2025-09-06 19:17:35,511 - __main__ - INFO -    🔥 Epoch 3/5
+2025-09-06 19:18:41,940 - __main__ - INFO -       Step 10/120 loss=0.6290 acc=0.375 | MA20: loss=0.5901 acc=0.575
+2025-09-06 19:19:48,779 - __main__ - INFO -       Step 20/120 loss=0.6067 acc=0.500 | MA20: loss=0.5921 acc=0.575
+2025-09-06 19:20:55,016 - __main__ - INFO -       Step 30/120 loss=0.5566 acc=0.375 | MA20: loss=0.6058 acc=0.556
+2025-09-06 19:22:02,121 - __main__ - INFO -       Step 40/120 loss=0.5519 acc=0.500 | MA20: loss=0.6536 acc=0.469
+2025-09-06 19:23:08,193 - __main__ - INFO -       Step 50/120 loss=0.6299 acc=0.750 | MA20: loss=0.6736 acc=0.450
+2025-09-06 19:24:13,865 - __main__ - INFO -       Step 60/120 loss=0.4997 acc=0.500 | MA20: loss=0.6411 acc=0.506
+2025-09-06 19:25:20,511 - __main__ - INFO -       Step 70/120 loss=0.7186 acc=0.625 | MA20: loss=0.6451 acc=0.481
+2025-09-06 19:26:27,331 - __main__ - INFO -       Step 80/120 loss=0.7949 acc=0.375 | MA20: loss=0.6454 acc=0.475
+2025-09-06 19:27:33,898 - __main__ - INFO -       Step 90/120 loss=0.5436 acc=0.500 | MA20: loss=0.6396 acc=0.481
+2025-09-06 19:28:37,844 - __main__ - INFO -       Step 100/120 loss=0.7353 acc=0.375 | MA20: loss=0.6560 acc=0.463
+2025-09-06 19:29:45,428 - __main__ - INFO -       Step 110/120 loss=0.4008 acc=0.875 | MA20: loss=0.6240 acc=0.512
+2025-09-06 19:30:52,430 - __main__ - INFO -       Step 120/120 loss=0.6947 acc=0.500 | MA20: loss=0.5940 acc=0.550
+2025-09-06 19:30:52,431 - __main__ - INFO -       Loss: 0.6304, Accuracy: 0.5062
+2025-09-06 19:30:52,432 - absl - INFO - Saving item to outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/latest/3.orbax-checkpoint-tmp-1757187052432071/train_state.
+2025-09-06 19:30:52,444 - __main__ - WARNING - Latest checkpoint save skipped: Checkpoint path should be absolute. Got outputs/h100_e5_b8_smoke_xai_pycbc/standard_training_8bs/ckpts/latest/3.orbax-checkpoint-tmp-1757187052432071/train_state.orbax-checkpoint-tmp-1757187052432846
+2025-09-06 19:30:59,003 - __main__ - INFO -       Test acc=0.476 | sens=0.479 spec=0.475 prec=0.333 f1=0.393 bal_acc=0.477
+2025-09-06 19:30:59,059 - __main__ - INFO -    🔥 Epoch 4/5
+2025-09-06 19:32:06,157 - __main__ - INFO -       Step 10/120 loss=0.5539 acc=0.750 | MA20: loss=0.6190 acc=0.512
+2025-09-06 19:33:12,800 - __main__ - INFO -       Step 20/120 loss=0.6859 acc=0.500 | MA20: loss=0.6136 acc=0.537
+2025-09-06 19:34:16,540 - __main__ - INFO -       Step 30/120 loss=0.4397 acc=0.875 | MA20: loss=0.6097 acc=0.487
+2025-09-06 19:35:23,507 - __main__ - INFO -       Step 40/120 loss=0.6266 acc=0.500 | MA20: loss=0.6253 acc=0.456
+2025-09-06 19:35:28,996 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,003 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,010 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,017 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,036 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,043 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,050 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,063 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,069 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,076 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,083 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,090 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,104 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,110 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,165 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,165 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,176 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,178 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,185 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,199 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,206 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,220 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,234 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,247 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,254 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,268 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,275 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,288 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,302 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,308 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,313 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,326 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,333 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,347 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,362 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,375 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,387 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,394 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,401 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,408 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,421 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,428 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,433 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,440 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,448 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,461 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,476 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,490 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,621 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,633 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,647 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,662 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,676 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,690 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,710 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,724 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,743 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,755 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,770 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,784 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,791 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,806 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,813 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,820 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,825 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,832 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,837 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,844 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,858 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,865 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,872 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,877 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,883 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,890 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,897 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,904 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,911 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,919 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,925 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,939 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,946 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,953 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,960 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,974 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,981 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,989 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:29,996 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,001 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,009 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,011 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,012 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,012 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,029 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,029 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,030 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,037 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,052 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,059 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,066 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,080 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,087 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,095 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,102 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,109 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,116 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,130 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,137 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,143 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,150 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,164 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,171 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,179 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,193 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,205 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,212 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,218 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,225 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,232 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,237 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,244 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,257 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,265 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,280 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,301 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,314 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,326 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,341 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,356 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,370 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,383 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,398 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,412 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,427 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,440 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,454 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,469 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,476 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,488 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,494 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,508 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,834 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,847 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,861 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,875 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,882 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,889 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,904 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,911 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,918 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,925 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,932 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,947 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,961 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,976 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,983 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:30,997 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,005 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,012 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,019 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,026 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,033 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,040 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,045 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,046 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,046 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,053 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,063 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,063 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,063 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,071 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,078 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,092 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,098 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,105 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,112 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,120 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,127 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,134 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,141 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,149 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,156 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,163 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,170 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,192 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,206 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,218 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,226 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,240 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,254 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,261 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,269 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,276 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,283 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,290 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,297 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,304 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,317 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,323 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,328 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,334 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,340 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,346 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,352 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,359 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,377 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,389 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,401 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,406 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,412 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,417 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,423 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,429 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,435 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,441 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,447 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,453 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,459 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,465 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,470 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,477 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,483 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,489 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,495 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,501 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,507 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,513 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,519 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,525 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,531 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,537 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,543 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,549 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,555 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,561 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,567 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,573 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,579 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,585 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,591 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,596 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,603 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,609 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,615 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,620 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,623 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,624 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,624 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,624 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,624 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,637 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,645 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,646 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,652 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,658 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,664 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,670 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,676 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,682 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,688 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,694 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,701 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,706 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,718 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,730 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,736 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,741 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,747 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,752 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,758 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,764 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,775 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,781 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,783 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,783 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,784 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,784 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,784 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,784 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,785 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,805 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,821 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,821 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,827 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,838 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,844 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,850 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,856 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,862 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,868 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,874 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,879 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,886 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,891 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,904 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,915 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,921 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,933 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,939 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,944 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,945 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,945 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,954 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:31,978 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,002 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,004 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,004 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,005 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,017 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,028 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,040 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,046 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,058 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,064 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,076 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,082 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,094 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,100 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,106 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,118 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,130 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,142 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,154 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,154 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,155 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,155 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,166 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,191 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,204 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,205 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,205 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,213 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,220 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,235 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,242 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,249 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,256 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,263 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,271 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,278 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,285 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,292 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,304 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,305 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,305 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,306 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,321 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,343 - asyncio - WARNING - socket.send() raised exception.
+2025-09-06 19:35:32,350 - asyncio - WARNING - socket.send() raised exception.
