@@ -116,8 +116,96 @@ def run_standard_training(config, args):
         except ImportError:
             from .data.gw_dataset_builder import create_evaluation_dataset
 
+        # ✅ MLGWSC-1 professional dataset route
+        if bool(getattr(args, 'use_mlgwsc', False)):
+            logger.info("   📦 Using MLGWSC-1 professional dataset via MLGWSCDataLoader")
+            # Lazy import to avoid heavy deps before needed
+            try:
+                try:
+                    from implement_mlgwsc_loader import MLGWSCDataLoader
+                except Exception:
+                    from .implement_mlgwsc_loader import MLGWSCDataLoader  # type: ignore
+            except Exception as _imp:
+                logger.error(f"   ❌ Cannot import MLGWSC loader: {_imp}")
+                raise
+
+            # Resolve paths (allow defaults)
+            import os as _os
+            default_bg = "/teamspace/studios/this_studio/data/dataset-4/v2/val_background_s24w6d1_1.hdf"
+            background_hdf = str(getattr(args, 'mlgwsc_background_hdf', None) or default_bg)
+            injections_npy = str(getattr(args, 'mlgwsc_injections_npy', "")) or None
+            if not Path(background_hdf).exists():
+                raise FileNotFoundError(f"MLGWSC background HDF not found: {background_hdf}")
+
+            # Slice/stride in samples (AResGW uses 2048 Hz base here)
+            slice_len = int(float(getattr(args, 'mlgwsc_slice_seconds', 1.25)) * 2048)
+            # stride currently unused in loader sampling (prepared for future)
+            _ = int(float(getattr(args, 'mlgwsc_stride_seconds', 1.0)) * 2048)
+
+            # Create loader and collect samples
+            loader = MLGWSCDataLoader(
+                background_hdf_path=background_hdf,
+                injections_npy_path=injections_npy,
+                slice_len=slice_len,
+                batch_size=int(args.batch_size)
+            )
+
+            max_samples = int(getattr(args, 'mlgwsc_samples', 1024))
+            collected_x = []
+            collected_y = []
+            total_collected = 0
+            for batch_x, batch_y in loader.create_training_batches(batch_size=int(args.batch_size)):
+                # batch_x: [B, T], batch_y: [B]
+                import numpy as _np
+                remain = max_samples - total_collected
+                if remain <= 0:
+                    break
+                take = min(remain, int(batch_x.shape[0]))
+                collected_x.append(batch_x[:take])
+                collected_y.append(batch_y[:take])
+                total_collected += take
+                if total_collected >= max_samples:
+                    break
+
+            if total_collected == 0:
+                raise RuntimeError("MLGWSC loader yielded no samples. Check dataset paths.")
+
+            import jax.numpy as jnp  # ensure jnp available
+            all_signals = jnp.concatenate(collected_x, axis=0)
+            all_labels = jnp.concatenate(collected_y, axis=0)
+
+            # Stratified split
+            try:
+                from utils.data_split import create_stratified_split
+            except ImportError:
+                from .utils.data_split import create_stratified_split
+            (signals, labels), (test_signals, test_labels) = create_stratified_split(
+                all_signals, all_labels, train_ratio=0.8, random_seed=42
+            )
+            logger.info(f"   MLGWSC samples: train={len(signals)}, test={len(test_signals)}, T={signals.shape[-1]}")
+
+            # ✅ Optional PSD whitening using AdvancedDataPreprocessor
+            if bool(getattr(args, 'whiten_psd', False)):
+                try:
+                    logger.info("   🔧 Applying PSD whitening (AdvancedDataPreprocessor, fs=2048)...")
+                    try:
+                        from data.gw_preprocessor import AdvancedDataPreprocessor
+                    except ImportError:
+                        from .data.gw_preprocessor import AdvancedDataPreprocessor  # type: ignore
+                    pre = AdvancedDataPreprocessor(sample_rate=2048, apply_whitening=True)
+                    # Process training signals
+                    train_results = pre.process_batch([signals[i] for i in range(len(signals))])
+                    import jax.numpy as _jnp
+                    signals = _jnp.stack([r.strain_data for r in train_results])
+                    # Process test signals
+                    test_results = pre.process_batch([test_signals[i] for i in range(len(test_signals))])
+                    test_signals = _jnp.stack([r.strain_data for r in test_results])
+                    logger.info("   ✅ PSD whitening applied to train/test sets")
+                except Exception as _w:
+                    logger.warning(f"   ⚠️ Whitening skipped due to error: {_w}")
+
         # ✅ Synthetic quick route: force synthetic dataset regardless of ReadLIGO availability
-        if bool(getattr(args, 'synthetic_quick', False)):
+        elif bool(getattr(args, 'synthetic_quick', False)):
             logger.info("   ⚡ Synthetic quick-mode enabled: using synthetic demo dataset")
             num_samples = int(getattr(args, 'synthetic_samples', 60))
             seq_len = 256
@@ -998,6 +1086,55 @@ def train_cmd():
         type=int,
         default=60,
         help="Number of samples for synthetic quick demo dataset"
+    )
+    # Preprocessing controls
+    parser.add_argument(
+        "--whiten-psd",
+        dest="whiten_psd",
+        action="store_true",
+        help="Apply PSD whitening to input signals (AdvancedDataPreprocessor)"
+    )
+    parser.add_argument(
+        "--no-whiten-psd",
+        dest="whiten_psd",
+        action="store_false",
+        help="Disable PSD whitening"
+    )
+    parser.set_defaults(whiten_psd=False)
+    # MLGWSC-1 professional dataset controls
+    parser.add_argument(
+        "--use-mlgwsc",
+        action="store_true",
+        help="Use MLGWSC-1 professional dataset via HDF/NPY loader"
+    )
+    parser.add_argument(
+        "--mlgwsc-background-hdf",
+        type=Path,
+        help="Path to MLGWSC background HDF (e.g., val_background_*.hdf)"
+    )
+    parser.add_argument(
+        "--mlgwsc-injections-npy",
+        type=Path,
+        default=None,
+        help="Optional path to MLGWSC injections .npy (waveforms)"
+    )
+    parser.add_argument(
+        "--mlgwsc-slice-seconds",
+        type=float,
+        default=1.25,
+        help="Slice length in seconds for MLGWSC windows (default 1.25s)"
+    )
+    parser.add_argument(
+        "--mlgwsc-stride-seconds",
+        type=float,
+        default=1.0,
+        help="Stride in seconds between MLGWSC windows"
+    )
+    parser.add_argument(
+        "--mlgwsc-samples",
+        type=int,
+        default=1024,
+        help="Maximum number of MLGWSC samples to load for training"
     )
     
     parser.add_argument(
