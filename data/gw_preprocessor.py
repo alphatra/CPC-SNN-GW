@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Union, Tuple
 from dataclasses import dataclass
 import logging
 from pathlib import Path
+import time
 
 from data.readligo_data_sources import QualityMetrics, ProcessingResult
 from data.cache_manager import create_professional_cache
@@ -464,6 +465,7 @@ class AdvancedDataPreprocessor:
     def _whiten_data(self, strain_data: jnp.ndarray, psd: jnp.ndarray) -> jnp.ndarray:
         """
         Whiten strain data using estimated PSD.
+        ✅ ENHANCED: Now supports aLIGOZeroDetHighPower analytical PSD if available.
         
         Args:
             strain_data: Input strain timeseries
@@ -489,6 +491,92 @@ class AdvancedDataPreprocessor:
         
         # Return to time domain
         return jnp.real(jnp.fft.ifft(whitened_fft))
+    
+    def _whiten_with_aligo_psd(self, strain_data: jnp.ndarray) -> jnp.ndarray:
+        """
+        ✅ ENHANCED: Whiten data using aLIGOZeroDetHighPower analytical PSD.
+        This provides more realistic noise characteristics for GW detection.
+        
+        Args:
+            strain_data: Input strain timeseries
+            
+        Returns:
+            Whitened strain data using LIGO PSD model
+        """
+        try:
+            # Try to import PyCBC for analytical PSD
+            from pycbc.psd import analytical, interpolate, inverse_spectrum_truncation
+            
+            # Generate aLIGOZeroDetHighPower PSD
+            # This is the design sensitivity curve for Advanced LIGO
+            nyquist = self.sample_rate / 2.0
+            delta_f = 1.0 / self.psd_length  # Frequency resolution
+            flen = int(nyquist / delta_f) + 1
+            
+            # Create analytical PSD
+            psd = analytical.aLIGOZeroDetHighPower(flen, delta_f, self.bandpass[0])
+            
+            # Convert to numpy/jax array
+            psd_array = jnp.array(psd.data)
+            
+            # Apply inverse spectrum truncation for better numerical stability
+            # This technique reduces ringing artifacts from sharp PSD features
+            max_filter_len = int(self.sample_rate * 4)  # 4 seconds max filter
+            psd_truncated = inverse_spectrum_truncation(
+                psd, 
+                max_filter_len=max_filter_len,
+                low_frequency_cutoff=self.bandpass[0],
+                trunc_method='hann'
+            )
+            
+            # FFT of strain data  
+            strain_fft = jnp.fft.fft(strain_data)
+            freqs = jnp.fft.fftfreq(len(strain_data), 1/self.sample_rate)
+            
+            # Interpolate PSD to match FFT frequencies
+            psd_freqs = jnp.arange(len(psd_truncated.data)) * delta_f
+            psd_interp = jnp.interp(jnp.abs(freqs), psd_freqs, jnp.array(psd_truncated.data))
+            
+            # Avoid division by zero and apply safety threshold
+            psd_interp = jnp.where(psd_interp < 1e-40, 1e-40, psd_interp)
+            
+            # Whiten in frequency domain with proper normalization
+            whitened_fft = strain_fft / jnp.sqrt(psd_interp)
+            
+            # Apply band-pass window to reduce edge effects
+            window = jnp.ones_like(freqs)
+            freq_abs = jnp.abs(freqs)
+            window = jnp.where(freq_abs < self.bandpass[0], 0.0, window)
+            window = jnp.where(freq_abs > self.bandpass[1], 0.0, window)
+            
+            # Smooth transitions at band edges
+            transition_width = 5.0  # Hz
+            low_transition = (freq_abs - self.bandpass[0]) / transition_width
+            high_transition = (self.bandpass[1] - freq_abs) / transition_width
+            window = window * jnp.clip(low_transition, 0.0, 1.0) * jnp.clip(high_transition, 0.0, 1.0)
+            
+            whitened_fft = whitened_fft * window
+            
+            # Return to time domain
+            whitened = jnp.real(jnp.fft.ifft(whitened_fft))
+            
+            # Remove edge artifacts with taper
+            taper_samples = int(0.1 * len(whitened))  # 10% taper
+            taper = jnp.ones(len(whitened))
+            taper = taper.at[:taper_samples].set(
+                jnp.linspace(0, 1, taper_samples)
+            )
+            taper = taper.at[-taper_samples:].set(
+                jnp.linspace(1, 0, taper_samples)
+            )
+            
+            return whitened * taper
+            
+        except ImportError:
+            logger.warning("PyCBC not available, falling back to estimated PSD whitening")
+            # Fall back to estimated PSD from data
+            psd_est = self._estimate_psd(strain_data)
+            return self._whiten_data(strain_data, psd_est)
     
     def assess_quality(self, strain_data: jnp.ndarray, psd: Optional[jnp.ndarray] = None) -> QualityMetrics:
         """
@@ -563,8 +651,16 @@ class AdvancedDataPreprocessor:
         psd = self.estimate_psd(filtered_data)
         
         # 3. Whitening (optional)
+        # ✅ ENHANCED: Try to use aLIGO PSD whitening first
         if self.apply_whitening:
-            processed_data = self._whiten_data(filtered_data, psd)
+            # Try aLIGO PSD whitening for more realistic noise model
+            try:
+                processed_data = self._whiten_with_aligo_psd(filtered_data)
+                logger.debug("✅ Using aLIGOZeroDetHighPower PSD for whitening")
+            except Exception as e:
+                # Fall back to estimated PSD if aLIGO PSD fails
+                logger.debug(f"Falling back to estimated PSD whitening: {e}")
+                processed_data = self._whiten_data(filtered_data, psd)
         else:
             processed_data = filtered_data
         

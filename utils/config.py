@@ -312,7 +312,8 @@ class WandbConfig(BaseConfig):
         # Auto-generate run name if not provided
         if not self.name:
             import time
-            self.name = f"neuromorphic-gw-{int(time.time())}"
+            # ✅ FIXED: Use deterministic name based on seed
+            self.name = f"neuromorphic-gw-{self.seed if hasattr(self, 'seed') else 42}"
         
         # Auto-generate notes if not provided
         if not self.notes:

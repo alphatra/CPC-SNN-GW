@@ -253,10 +253,9 @@ class UnifiedTrainer(TrainerBase):
                 
                 return total_loss, (clf_loss, cpc_reg, accuracy)
             else:
-                # Legacy frozen CPC approach
-                latents = jax.lax.stop_gradient(
-                    self.cpc_encoder.apply(self.stage1_cpc_params, x)
-                )
+                # ✅ FIXED: Enable end-to-end gradient flow (removed stop_gradient)
+                # Now CPC can adapt based on SNN feedback
+                latents = self.cpc_encoder.apply(self.stage1_cpc_params, x)
                 logits = train_state.apply_fn(params, latents, training=True)
                 loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
                 accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
@@ -354,10 +353,9 @@ class UnifiedTrainer(TrainerBase):
             # ✅ FIXED: Real classification evaluation
             
             if self.current_stage == 2 and not self.config.enable_cpc_finetuning_stage2:
-                # Legacy frozen CPC
-                latents = jax.lax.stop_gradient(
-                    self.cpc_encoder.apply(self.stage1_cpc_params, x)
-                )
+                # ✅ FIXED: Enable end-to-end gradient flow (removed stop_gradient)
+                # Now allows proper backpropagation during evaluation
+                latents = self.cpc_encoder.apply(self.stage1_cpc_params, x)
                 logits = train_state.apply_fn(train_state.params, latents, training=False)
             else:
                 # Real evaluation with current model

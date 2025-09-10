@@ -156,7 +156,8 @@ class TrainerBase(ABC):
             # Use enhanced metrics logger with comprehensive tracking
             self.enhanced_logger = create_enhanced_metrics_logger(
                 config=config.__dict__ if hasattr(config, '__dict__') else vars(config),
-                experiment_name=getattr(config, 'experiment_name', f"base-trainer-{int(time.time())}"),
+                # ✅ FIXED: Use deterministic experiment name
+                experiment_name=getattr(config, 'experiment_name', f"base-trainer-{config.seed if hasattr(config, 'seed') else 42}"),
                 output_dir=config.output_dir
             )
             self.tracker = self.enhanced_logger  # Use enhanced logger as tracker

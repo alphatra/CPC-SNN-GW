@@ -33,10 +33,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SNNConfig:
     """Configuration for SNN classifier."""
-    # Architecture
-    hidden_size: int = 128
+    # Architecture - ✅ ENHANCED: 3 layers with different sizes
+    hidden_sizes: Tuple[int, ...] = (256, 128, 64)  # ✅ FIXED: 3 layers as per audit recommendation
     num_classes: int = 3  # NOISE=0, CONTINUOUS_GW=1, BINARY_MERGER=2
-    num_layers: int = 2
+    num_layers: int = 3  # ✅ FIXED: Increased from 2 to 3
+    hidden_size: int = 128  # Legacy compatibility
     
     # LIF parameters
     tau_mem: float = 20e-3  # Membrane time constant
@@ -327,11 +328,13 @@ class VectorizedLIFLayer(nn.Module):
 class EnhancedSNNClassifier(nn.Module):
     """
     Enhanced SNN classifier with vectorized LIF and surrogate gradients.
+    ✅ ENHANCED: Now with 3 layers (256-128-64) and LayerNorm as per audit recommendation.
     
     Features:
+    - 3 deep layers with decreasing sizes for better feature extraction
+    - LayerNorm after each layer for gradient stability
     - Vectorized LIF layers for optimal GPU/TPU performance
     - Configurable surrogate gradient methods
-    - Batch normalization and dropout support
     - Memory-efficient implementations
     - 🚀 ENHANCED: Now supports enhanced LIF with refractory period and adaptation
     """
@@ -342,9 +345,10 @@ class EnhancedSNNClassifier(nn.Module):
     def __call__(self, spikes: jnp.ndarray, training: bool = False, training_progress: float = 0.0) -> jnp.ndarray:
         """
         Forward pass through SNN classifier.
+        ✅ ENHANCED: 3-layer architecture with LayerNorm for stability.
         
         Args:
-            spikes: Input spikes [batch, time, input_dim]
+            spikes: Input spikes [batch, time, input_dim] or [batch, time, seq_len, feature_dim]
             training: Training mode flag
             training_progress: Training progress (0.0 to 1.0) for adaptive components
             
@@ -353,29 +357,79 @@ class EnhancedSNNClassifier(nn.Module):
         """
         x = spikes
         
-        # Multiple enhanced LIF layers
-        for i in range(self.config.num_layers):
-            x = VectorizedLIFLayer(
-                config=self.config,
-                name=f'lif_layer_{i}'
+        # ✅ ENHANCED: Handle both 3D and 4D input shapes
+        if len(x.shape) == 4:
+            batch_size, time_steps, seq_len, feature_dim = x.shape
+            # Flatten spatial dimensions
+            x = x.reshape(batch_size, time_steps, seq_len * feature_dim)
+            input_dim = seq_len * feature_dim
+        else:
+            batch_size, time_steps, input_dim = x.shape
+        
+        # ✅ FIXED: 3 deep layers with specific sizes (256-128-64)
+        layer_sizes = self.config.hidden_sizes if hasattr(self.config, 'hidden_sizes') else (256, 128, 64)
+        
+        # First projection to match first layer size
+        x = nn.Dense(
+            layer_sizes[0],
+            kernel_init=nn.initializers.xavier_uniform(),
+            bias_init=nn.initializers.zeros,
+            name='input_projection'
+        )(x)
+        
+        # ✅ ENHANCED: 3 LIF layers with LayerNorm after each
+        for i, hidden_size in enumerate(layer_sizes):
+            # Create layer-specific config with proper size
+            layer_config = SNNConfig(
+                hidden_size=hidden_size,
+                num_classes=self.config.num_classes,
+                num_layers=1,  # Single layer at a time
+                tau_mem=self.config.tau_mem,
+                tau_syn=self.config.tau_syn,
+                threshold=self.config.threshold,
+                dt=self.config.dt,
+                use_enhanced_lif=self.config.use_enhanced_lif,
+                tau_ref=self.config.tau_ref if hasattr(self.config, 'tau_ref') else 2e-3,
+                tau_adaptation=self.config.tau_adaptation if hasattr(self.config, 'tau_adaptation') else 100e-3,
+                use_refractory_period=self.config.use_refractory_period if hasattr(self.config, 'use_refractory_period') else True,
+                use_adaptation=self.config.use_adaptation if hasattr(self.config, 'use_adaptation') else True,
+                use_learnable_dynamics=self.config.use_learnable_dynamics if hasattr(self.config, 'use_learnable_dynamics') else True,
+                surrogate_type=self.config.surrogate_type,
+                surrogate_beta=self.config.surrogate_beta * (1.0 + i * 0.5),  # ✅ Increase beta for deeper layers
+                dropout_rate=0.0,  # Handle dropout separately
+                use_batch_norm=False,  # Handle normalization separately
+                use_fused_kernel=self.config.use_fused_kernel if hasattr(self.config, 'use_fused_kernel') else True,
+                memory_efficient=self.config.memory_efficient if hasattr(self.config, 'memory_efficient') else True
+            )
+            
+            # LIF layer
+            x = EnhancedLIFWithMemory(
+                config=layer_config,
+                name=f'enhanced_lif_layer_{i}'
             )(x, training=training, training_progress=training_progress)
             
-            # Optional batch normalization
-            if self.config.use_batch_norm:
-                x = nn.BatchNorm(
-                    use_running_average=not training,
-                    name=f'batch_norm_{i}'
-                )(x)
+            # ✅ CRITICAL: LayerNorm after each layer (as per audit recommendation)
+            x = nn.LayerNorm(
+                epsilon=1e-6,
+                name=f'layer_norm_{i}'
+            )(x)
             
-            # Optional dropout
-            if self.config.dropout_rate > 0:
+            # Optional dropout (lighter than before to compensate for LayerNorm)
+            if self.config.dropout_rate > 0 and training:
+                dropout_rate = self.config.dropout_rate * (0.8 ** i)  # Decrease dropout for deeper layers
                 x = nn.Dropout(
-                    rate=self.config.dropout_rate,
+                    rate=dropout_rate,
                     deterministic=not training
                 )(x)
         
         # Global average pooling over time
         x_pooled = jnp.mean(x, axis=1)  # [batch, hidden_size]
+        
+        # ✅ ENHANCED: Additional LayerNorm before final classification
+        x_pooled = nn.LayerNorm(
+            epsilon=1e-6,
+            name='final_layer_norm'
+        )(x_pooled)
         
         # Final classification layer with enhanced initialization
         logits = nn.Dense(

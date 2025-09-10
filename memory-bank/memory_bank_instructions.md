@@ -132,4 +132,29 @@ Ten Memory Bank stanowi centralną bazę wiedzy dla projektu detekcji fal grawit
 1. **Daily**: Update activeContext.md with progress and blockers
 2. **Weekly**: Document training results and performance metrics in progress.md  
 3. **Per milestone**: Update systemPatterns.md with new implementations
-4. **Critical decisions**: Record rationale in appropriate context files 
+4. **Critical decisions**: Record rationale in appropriate context files
+
+---
+
+## ⚠️ CRITICAL LESSONS LEARNED (2025-09-10)
+
+### 1. Always Verify Training Data Volume
+- **Red Flag**: Training with <100 samples is not real ML training
+- **Mock/Quick Mode**: Often uses tiny datasets (e.g., 11 samples) - useless for learning
+- **Real Training**: Requires 1000+ samples minimum for meaningful results
+- **Check for**: `--quick-mode` flags, suspiciously fast training (<10 min), small batch counts
+
+### 2. Validate Results Skeptically  
+- **Too Good = Suspicious**: 100% sensitivity, perfect metrics = likely overfitting or mock data
+- **Test Set Size Matters**: 4 test samples = meaningless (need 100+ for statistical significance)
+- **Always Ask**: "How many training/test samples?" before trusting any results
+
+### 3. Data Quality Over Quick Wins
+- **Mock Results**: 75% accuracy on 4 samples = 3 correct guesses (coin flip)
+- **Real Results**: Lower initial accuracy on 1000+ samples = actual learning
+- **Patience**: Real training takes hours, not minutes
+
+### 4. Document Data Sources
+- Always log: dataset size, source (real/synthetic), augmentation methods
+- Track: class balance, window sizes, preprocessing steps
+- Verify: MLGWSC-1 (100k+ samples) vs toy datasets (dozens of samples) 

@@ -336,15 +336,18 @@ def create_enhanced_ligo_dataset(num_samples: int = 2000,
         if data_augmentation and len(signals) > 0:
             logger.info("🔄 Applying data augmentation to real LIGO data...")
             
+            # Convert to numpy for augmentation
+            signals_np = np.array(signals)
+            
             for amp_factor in [0.8, 1.2, 1.5]:  # Amplitude variations
-                aug_signals = signals * amp_factor
-                all_signals.extend(aug_signals)
+                aug_signals = signals_np * amp_factor
+                all_signals.extend(aug_signals.tolist())
                 all_labels.extend(labels)
                 
             for noise_level in [0.5, 2.0]:  # Noise level variations
-                noise = jax.random.normal(jax.random.PRNGKey(42), signals.shape) * 1e-21
-                aug_signals = signals + noise_level * noise
-                all_signals.extend(aug_signals)
+                noise = jax.random.normal(jax.random.PRNGKey(42), signals_np.shape) * 1e-21
+                aug_signals = signals_np + noise_level * noise
+                all_signals.extend(aug_signals.tolist())
                 all_labels.extend(labels)
                 
             logger.info(f"✅ Augmented data: +{len(signals) * 5} samples")

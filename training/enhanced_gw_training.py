@@ -266,7 +266,8 @@ class EnhancedGWTrainer(TrainerBase):
         def loss_fn(params):
             logits = train_state.apply_fn(
                 params, x, train=True,
-                rngs={'spike_bridge': jax.random.PRNGKey(int(time.time()))}
+                # ✅ FIXED: Use deterministic seed for reproducibility
+                rngs={'spike_bridge': jax.random.PRNGKey(42)}
             )
             loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
             accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)

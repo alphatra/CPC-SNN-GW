@@ -355,7 +355,8 @@ class OptimizedDataLoader:
         """✅ Fast iteration: Just slice pre-generated device data."""
         num_samples = len(self.device_data['strain'])
         indices = jax.random.permutation(
-            jax.random.PRNGKey(int(time.time())), num_samples
+            # ✅ FIXED: Use deterministic seed for reproducibility
+            jax.random.PRNGKey(42), num_samples
         )
         
         for start in range(0, num_samples, self.batch_size):
