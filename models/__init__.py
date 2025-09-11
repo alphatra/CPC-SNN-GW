@@ -20,54 +20,73 @@ logger = logging.getLogger(__name__)
 
 # Core component imports - simplified lazy loading
 _LAZY_IMPORTS = {
-    # CPC Encoder - main components only
-    "CPCEncoder": ("cpc_encoder", "CPCEncoder"),
-    "EnhancedCPCEncoder": ("cpc_encoder", "EnhancedCPCEncoder"),
-    "ExperimentConfig": ("cpc_encoder", "ExperimentConfig"),
+    # CPC Encoder - main components (MODULAR)
+    "CPCEncoder": ("cpc.core", "CPCEncoder"),
+    "RealCPCEncoder": ("cpc.core", "RealCPCEncoder"),
+    "EnhancedCPCEncoder": ("cpc.core", "EnhancedCPCEncoder"),
+    "TemporalTransformerCPC": ("cpc.transformer", "TemporalTransformerCPC"),
+    "TemporalTransformerConfig": ("cpc.config", "TemporalTransformerConfig"),
+    "RealCPCConfig": ("cpc.config", "RealCPCConfig"),
+    "ExperimentConfig": ("cpc.config", "ExperimentConfig"),
+    "CPCTrainer": ("cpc.trainer", "CPCTrainer"),
     
-    # CPC Components and Losses
+    # CPC Components and Losses (MODULAR)
     "RMSNorm": ("cpc_components", "RMSNorm"),
     "WeightNormDense": ("cpc_components", "WeightNormDense"),
-    "enhanced_info_nce_loss": ("cpc_losses", "enhanced_info_nce_loss"),
-    "info_nce_loss": ("cpc_losses", "info_nce_loss"),
+    "enhanced_info_nce_loss": ("cpc.losses", "enhanced_info_nce_loss"),
+    "info_nce_loss": ("cpc.losses", "info_nce_loss"),
+    "temporal_info_nce_loss": ("cpc.losses", "temporal_info_nce_loss"),
+    "contrastive_accuracy": ("cpc.metrics", "contrastive_accuracy"),
+    "cosine_similarity_matrix": ("cpc.metrics", "cosine_similarity_matrix"),
+    "MomentumHardNegativeMiner": ("cpc.miners", "MomentumHardNegativeMiner"),
+    "AdaptiveTemperatureController": ("cpc.miners", "AdaptiveTemperatureController"),
     
-    # SNN Classifier - main components only
-    "SNNClassifier": ("snn_classifier", "SNNClassifier"),
-    "EnhancedSNNClassifier": ("snn_classifier", "EnhancedSNNClassifier"),
-    "VectorizedLIFLayer": ("snn_classifier", "VectorizedLIFLayer"),
-    "SNNConfig": ("snn_classifier", "SNNConfig"),
-    "SNNTrainer": ("snn_classifier", "SNNTrainer"),
-    "LIFLayer": ("snn_classifier", "LIFLayer"),
+    # SNN Classifier - main components (MODULAR)
+    "SNNClassifier": ("snn.core", "SNNClassifier"),
+    "EnhancedSNNClassifier": ("snn.core", "EnhancedSNNClassifier"),
+    "LIFLayer": ("snn.layers", "LIFLayer"),
+    "VectorizedLIFLayer": ("snn.layers", "VectorizedLIFLayer"),
+    "EnhancedLIFWithMemory": ("snn.layers", "EnhancedLIFWithMemory"),
+    "SNNConfig": ("snn.config", "SNNConfig"),
+    "EnhancedSNNConfig": ("snn.config", "EnhancedSNNConfig"),
+    "SNNTrainer": ("snn.trainer", "SNNTrainer"),
     
     # SNN Utils
     "SurrogateGradientType": ("snn_utils", "SurrogateGradientType"),
     "BatchedSNNValidator": ("snn_utils", "BatchedSNNValidator"),
     "create_surrogate_gradient_fn": ("snn_utils", "create_surrogate_gradient_fn"),
     
-    # Spike Bridge - main components only
-    "SpikeBridge": ("spike_bridge", "SpikeBridge"),
-    "OptimizedSpikeBridge": ("spike_bridge", "OptimizedSpikeBridge"),
-    "SpikeBridgeConfig": ("spike_bridge", "SpikeBridgeConfig"),
-    "SpikeEncodingStrategy": ("spike_bridge", "SpikeEncodingStrategy"),
-    "ThroughputMetrics": ("spike_bridge", "ThroughputMetrics"),
+    # Spike Bridge - main components (MODULAR)
+    "ValidatedSpikeBridge": ("bridge.core", "ValidatedSpikeBridge"),
+    "TemporalContrastEncoder": ("bridge.encoders", "TemporalContrastEncoder"),
+    "LearnableMultiThresholdEncoder": ("bridge.encoders", "LearnableMultiThresholdEncoder"),
+    "PhasePreservingEncoder": ("bridge.encoders", "PhasePreservingEncoder"),
+    "GradientFlowMonitor": ("bridge.gradients", "GradientFlowMonitor"),
+    "EnhancedSurrogateGradients": ("bridge.gradients", "EnhancedSurrogateGradients"),
 }
 
 # Factory functions mapping
 _FACTORY_FUNCTIONS = {
-    # CPC Encoder factories
-    "create_cpc_encoder": ("cpc_encoder", "create_cpc_encoder"),
-    "create_enhanced_cpc_encoder": ("cpc_encoder", "create_enhanced_cpc_encoder"),
+    # CPC Encoder factories (MODULAR)
+    "create_cpc_encoder": ("cpc.factory", "create_cpc_encoder"),
+    "create_enhanced_cpc_encoder": ("cpc.factory", "create_enhanced_cpc_encoder"),
+    "create_real_cpc_encoder": ("cpc.factory", "create_real_cpc_encoder"),
+    "create_real_cpc_trainer": ("cpc.factory", "create_real_cpc_trainer"),
+    "create_standard_cpc_encoder": ("cpc.factory", "create_standard_cpc_encoder"),
+    "create_experiment_config": ("cpc.factory", "create_experiment_config"),
     
-    # SNN Classifier factories
-    "create_snn_classifier": ("snn_classifier", "create_snn_classifier"),
-    "create_enhanced_snn_classifier": ("snn_classifier", "create_enhanced_snn_classifier"),
-    "create_snn_config": ("snn_classifier", "create_snn_config"),
+    # SNN Classifier factories (MODULAR)
+    "create_snn_classifier": ("snn.factory", "create_snn_classifier"),
+    "create_enhanced_snn_classifier": ("snn.factory", "create_enhanced_snn_classifier"),
+    "create_snn_config": ("snn.factory", "create_snn_config"),
+    "create_enhanced_snn_config": ("snn.factory", "create_enhanced_snn_config"),
+    "create_lif_layer": ("snn.factory", "create_lif_layer"),
+    "create_snn_trainer": ("snn.factory", "create_snn_trainer"),
     
-    # Spike Bridge factories
-    "create_optimized_spike_bridge": ("spike_bridge", "create_optimized_spike_bridge"),
-    "create_int8_spike_bridge": ("spike_bridge", "create_int8_spike_bridge"),
-    "create_cosine_spike_bridge": ("spike_bridge", "create_cosine_spike_bridge"),
-    "create_default_spike_bridge": ("spike_bridge", "create_default_spike_bridge"),
+    # Spike Bridge factories (MODULAR)
+    "create_validated_spike_bridge": ("bridge.core", "create_validated_spike_bridge"),
+    "test_gradient_flow": ("bridge.testing", "test_gradient_flow"),
+    "test_spike_bridge_comprehensive": ("bridge.testing", "test_spike_bridge_comprehensive"),
 }
 
 # Combine all imports

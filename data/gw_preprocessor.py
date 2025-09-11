@@ -1,28 +1,31 @@
 """
-GW Data Preprocessor
+GW Data Preprocessor (MODULAR)
 
-Enhanced preprocessing pipeline for gravitational wave strain data with 
-JAX-optimized operations and comprehensive quality control.
+This file now delegates to modular preprocessing components for better maintainability.
+The actual implementation has been split into:
+- preprocessing/sampler.py: SegmentSampler
+- preprocessing/core.py: AdvancedDataPreprocessor  
+- preprocessing/utils.py: Utility functions
 
-Key features:
-- Band-pass filtering with Chebyshev Type II filters
-- Whitening using estimated PSD
-- Advanced quality metrics (SNR, kurtosis, spectral coherence)
-- Optimized batch processing with proper memory management
-- Apple Silicon Metal backend optimization
+This file maintains backward compatibility through delegation.
 """
 
-import jax
-import jax.numpy as jnp
-import numpy as np
-from typing import Dict, List, Optional, Union, Tuple
-from dataclasses import dataclass
 import logging
-from pathlib import Path
-import time
+import warnings
 
-from data.readligo_data_sources import QualityMetrics, ProcessingResult
-from data.cache_manager import create_professional_cache
+# Import from new modular components
+from .preprocessing.sampler import SegmentSampler
+from .preprocessing.core import AdvancedDataPreprocessor, PreprocessingConfig
+from .preprocessing.utils import (
+    preprocess_strain_data,
+    validate_data_quality,
+    batch_preprocess_strains,
+    create_preprocessing_pipeline,
+    get_default_preprocessing_config
+)
+
+# Re-export types for compatibility
+from .readligo_data_sources import QualityMetrics, ProcessingResult
 
 logger = logging.getLogger(__name__)
 

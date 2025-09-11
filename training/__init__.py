@@ -44,6 +44,16 @@ from .enhanced_gw_training import (
     run_enhanced_training_experiment
 )
 
+# ✅ NEW: Complete Enhanced Training (MODULAR)
+from .enhanced import (
+    CompleteEnhancedTrainer,
+    CompleteEnhancedConfig,
+    CompleteEnhancedModel,
+    TrainStateWithBatchStats,
+    create_complete_enhanced_trainer,
+    run_complete_enhanced_experiment
+)
+
 from .pretrain_cpc import (
     CPCPretrainer,
     CPCPretrainConfig,
@@ -70,6 +80,37 @@ from .training_metrics import (
     EarlyStoppingMonitor,
     PerformanceProfiler,
     create_training_metrics
+)
+
+# Modular training components (NEW)
+from .stages import (
+    _cpc_train_step,
+    _snn_train_step,
+    _joint_train_step,
+    train_stage
+)
+
+from .pipeline import (
+    train_unified_pipeline,
+    _compute_real_evaluation_metrics
+)
+
+from .metrics import (
+    eval_step,
+    compute_comprehensive_metrics,
+    validate_and_log_step
+)
+
+# ✅ NEW: Modular utils components
+from .utils import (
+    setup_professional_logging,
+    setup_directories,
+    optimize_jax_for_device,
+    ProgressTracker,
+    format_training_time,
+    monitor_memory_usage,
+    compute_gradient_norm,
+    check_for_nans
 )
 
 # All available trainers
@@ -184,6 +225,14 @@ __all__ = [
     'EnhancedGWTrainer', 
     'EnhancedGWConfig',
     'create_enhanced_trainer',
+    
+    # Complete Enhanced Training (MODULAR)
+    'CompleteEnhancedTrainer',
+    'CompleteEnhancedConfig',
+    'CompleteEnhancedModel',
+    'TrainStateWithBatchStats',
+    'create_complete_enhanced_trainer',
+    'run_complete_enhanced_experiment',
     'CPCPretrainer',
     'CPCPretrainConfig',
     'create_cpc_pretrainer',
@@ -209,6 +258,17 @@ __all__ = [
     # Experiments
     'run_enhanced_training_experiment', 
     'run_cpc_pretraining_experiment',
+    
+    # Modular components (NEW)
+    '_cpc_train_step',
+    '_snn_train_step',
+    '_joint_train_step',
+    'train_stage',
+    'train_unified_pipeline',
+    '_compute_real_evaluation_metrics',
+    'eval_step',
+    'compute_comprehensive_metrics',
+    'validate_and_log_step',
     
     # Factory functions
     'create_trainer',

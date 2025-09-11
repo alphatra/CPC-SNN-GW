@@ -1,0 +1,105 @@
+# Fixed configuration for CPC-SNN-GW training
+# ✅ CRITICAL FIX: Changed num_classes from 3 to 2 to match dataset
+
+data:
+  batch_size: 32  # Increased from 16 for better GPU utilization
+  num_classes: 2  # ✅ FIXED: Was 3, but dataset has only 2 classes
+  sample_rate: 4096
+  sequence_length: 4096
+  duration: 4.0
+  signal_snr_range: [8.0, 50.0]
+  noise_floor: 5.0e-23
+  class_distribution:
+    noise: 0.65  # Class 0
+    gw_signal: 0.35  # Class 1
+  stratified_sampling: true
+  random_seed: 42
+  enable_augmentation: true
+  augmentation_factor: 2.0
+
+model:
+  # CPC Configuration
+  cpc_latent_dim: 128  # Increased from 64
+  cpc_context_length: 64
+  cpc_downsample_factor: 4
+  cpc_num_negatives: 128
+  cpc_temperature: 0.07  # Slightly reduced for harder learning
+  
+  # SNN Configuration
+  num_classes: 2  # ✅ FIXED: Binary classification (noise vs GW)
+  snn_layer_sizes: [256, 128, 64]
+  snn_num_layers: 3
+  snn_layer_norm: true
+  snn_surrogate_slope: 10.0  # Increased from 4.0
+  snn_tau_mem: 0.02
+  snn_tau_syn: 0.005
+  snn_threshold: 1.0
+  snn_dropout_rate: 0.1
+  
+  # Spike encoding
+  spike_encoding: temporal_contrast
+  spike_threshold_pos: 0.1
+  spike_threshold_neg: -0.1
+  spike_time_steps: 16
+
+training:
+  # Epochs and batch settings
+  num_epochs: 100
+  batch_size: 32  # Increased for better GPU utilization
+  grad_accumulation_steps: 2  # Effective batch = 64
+  
+  # Learning rates
+  cpc_epochs: 30
+  cpc_lr: 3e-4  # Reduced from 5e-4
+  snn_epochs: 30
+  snn_lr: 1e-3
+  joint_epochs: 40
+  joint_lr: 1e-4
+  
+  # Optimizer settings
+  optimizer: adamw
+  weight_decay: 1e-5
+  scheduler: cosine_with_warmup
+  warmup_epochs: 3
+  gradient_clip: 1.0
+  
+  # Training flags
+  enable_cpc_finetuning_stage2: true
+  enable_mixed_precision: true
+  
+  # Evaluation
+  eval_every_epochs: 2
+  save_best_only: true
+  early_stopping_patience: 15
+  early_stopping_metric: balanced_accuracy
+  
+  # Metrics
+  compute_roc_auc: true
+  bootstrap_samples: 100
+  target_far: 3.858e-07  # 1/(30 days)
+  save_predictions: true
+  
+  # Reproducibility
+  random_seed: 42
+  deterministic: true
+
+platform:
+  device: gpu
+  precision: mixed16  # Use mixed precision for speed
+  memory_fraction: 0.8  # Use more GPU memory
+  enable_jit: true
+  cache_compilation: true
+  xla_flags: "--xla_gpu_cuda_data_dir=/usr/local/cuda"
+
+logging:
+  level: INFO
+  log_every_n_steps: 50
+  save_every_n_epochs: 5
+  checkpoint_dir: outputs/fixed_training
+  use_tensorboard: true
+  use_wandb: false
+
+# Output settings
+output_dir: outputs/fixed_training
+experiment_name: cpc-snn-gw-2class-fixed
+run_name: run_${timestamp}

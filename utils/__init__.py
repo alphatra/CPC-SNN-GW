@@ -6,6 +6,7 @@ Production-ready utilities following ML4GW standards.
 
 import logging
 import sys
+import warnings
 from pathlib import Path
 from typing import Optional, Union
 
@@ -197,4 +198,65 @@ __all__ = [
     "validate_array_shape",
     "create_directory_structure",
     "ML4GW_PROJECT_STRUCTURE",
+    # Deprecated functions
+    "safe_array_to_device",
+    "validate_jax_array",
 ]
+
+
+# ===== DEPRECATED COMPATIBILITY WRAPPERS =====
+# For functions that were removed from deleted files
+
+def safe_array_to_device(array, device=None, dtype=None):
+    """Deprecated wrapper for safe_array_to_device. Use jax.device_put instead."""
+    warnings.warn(
+        "safe_array_to_device from jax_safety is deprecated. "
+        "Use jax.device_put(jnp.array(...)) instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    try:
+        import numpy as np
+        
+        # Convert to array if needed
+        if not isinstance(array, (jnp.ndarray, np.ndarray)):
+            array = np.array(array, dtype=dtype)
+        else:
+            array = jnp.array(array, dtype=dtype) if dtype else jnp.array(array)
+            
+        # Put on device
+        if device is not None:
+            return jax.device_put(array, device)
+        else:
+            return jax.device_put(array)
+    except Exception as e:
+        logging.getLogger(__name__).error(f"safe_array_to_device fallback failed: {e}")
+        raise
+
+
+def validate_jax_array(array, min_dims=None, max_dims=None, dtypes=None):
+    """Deprecated wrapper for validate_jax_array. Use validate_array_shape instead."""
+    warnings.warn(
+        "validate_jax_array from jax_safety is deprecated. "
+        "Use validate_array_shape instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    try:
+        # Basic validation using existing function
+        if min_dims is not None and len(array.shape) < min_dims:
+            raise ValueError(f"Array has {len(array.shape)} dimensions, minimum required: {min_dims}")
+        
+        if max_dims is not None and len(array.shape) > max_dims:
+            raise ValueError(f"Array has {len(array.shape)} dimensions, maximum allowed: {max_dims}")
+            
+        if dtypes is not None:
+            if not isinstance(dtypes, (list, tuple)):
+                dtypes = [dtypes]
+            if array.dtype not in dtypes:
+                raise ValueError(f"Array dtype {array.dtype} not in allowed types: {dtypes}")
+                
+        return True
+    except Exception as e:
+        logging.getLogger(__name__).error(f"validate_jax_array fallback failed: {e}")
+        raise

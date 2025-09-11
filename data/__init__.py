@@ -8,6 +8,7 @@ Includes continuous GW generation and unified label management.
 
 import importlib
 import logging
+import warnings
 
 # Module version
 __version__ = "1.0.0"
@@ -32,11 +33,11 @@ _LAZY_IMPORTS = {
     "ReadLIGODataFetcher": ("gw_download", "ReadLIGODataFetcher"),
     "LIGODataValidator": ("gw_download", "LIGODataValidator"),
     
-    # ✅ Real LIGO data integration
-    "download_gw150914_data": ("real_ligo_integration", "download_gw150914_data"),
-    "create_proper_windows": ("real_ligo_integration", "create_proper_windows"),
-    "create_real_ligo_dataset": ("real_ligo_integration", "create_real_ligo_dataset"),
-    "create_simulated_gw150914_strain": ("real_ligo_integration", "create_simulated_gw150914_strain"),
+    # ✅ Real LIGO data integration (migrated to gw_synthetic_generator)
+    "download_gw150914_data": ("gw_synthetic_generator", "download_gw150914_data"),
+    "create_proper_windows": ("gw_synthetic_generator", "create_proper_windows"),
+    "create_real_ligo_dataset": ("gw_synthetic_generator", "create_real_ligo_dataset"),
+    "create_simulated_gw150914_strain": ("gw_synthetic_generator", "create_simulated_gw150914_strain"),
     
     # ⚠️ DEPRECATED: GWOSC (with warnings)
     "GWOSCDownloader": ("gw_download", "GWOSCDownloader"),
@@ -53,27 +54,33 @@ _LAZY_IMPORTS = {
     "SignalConfiguration": ("continuous_gw_generator", "SignalConfiguration"),
     "create_mixed_gw_dataset": ("continuous_gw_generator", "create_mixed_gw_dataset"),
     
-    # Label utilities
-    "GWSignalType": ("label_utils", "GWSignalType"),
-    "CANONICAL_LABELS": ("label_utils", "CANONICAL_LABELS"),
-    "LABEL_NAMES": ("label_utils", "LABEL_NAMES"),
-    "LABEL_DESCRIPTIONS": ("label_utils", "LABEL_DESCRIPTIONS"),
-    "LABEL_COLORS": ("label_utils", "LABEL_COLORS"),
-    "LABEL_COLORS_SCIENTIFIC": ("label_utils", "LABEL_COLORS_SCIENTIFIC"),
-    "LABEL_COLORS_COLORBLIND": ("label_utils", "LABEL_COLORS_COLORBLIND"),
-    "COLOR_SCHEMES": ("label_utils", "COLOR_SCHEMES"),
-    "LabelError": ("label_utils", "LabelError"),
-    "LabelValidationResult": ("label_utils", "LabelValidationResult"),
-    "normalize_labels": ("label_utils", "normalize_labels"),
-    "convert_legacy_labels": ("label_utils", "convert_legacy_labels"),
-    "validate_labels": ("label_utils", "validate_labels"),
-    "validate_dataset_labels": ("label_utils", "validate_dataset_labels"),
-    "get_class_weights": ("label_utils", "get_class_weights"),
-    "get_cmap_colors": ("label_utils", "get_cmap_colors"),
-    "create_label_visualization_config": ("label_utils", "create_label_visualization_config"),
-    "create_label_report": ("label_utils", "create_label_report"),
-    "dataset_to_canonical": ("label_utils", "dataset_to_canonical"),
-    "log_dataset_info": ("label_utils", "log_dataset_info"),
+    # Label utilities (from remaining files)
+    "GWSignalType": ("label_enums", "GWSignalType"),
+    "CANONICAL_LABELS": ("label_enums", "CANONICAL_LABELS"),
+    "LABEL_NAMES": ("label_enums", "LABEL_NAMES"),
+    "LABEL_DESCRIPTIONS": ("label_enums", "LABEL_DESCRIPTIONS"),
+    "LABEL_COLORS": ("label_enums", "LABEL_COLORS"),
+    
+    # ✅ NEW: Modular preprocessing components
+    "SegmentSampler": ("preprocessing.sampler", "SegmentSampler"),
+    "AdvancedDataPreprocessor": ("preprocessing.core", "AdvancedDataPreprocessor"),
+    "PreprocessingConfig": ("preprocessing.core", "PreprocessingConfig"),
+    "preprocess_strain_data": ("preprocessing.utils", "preprocess_strain_data"),
+    "validate_data_quality": ("preprocessing.utils", "validate_data_quality"),
+    
+    # ✅ NEW: Modular dataset builder components
+    "GWDatasetBuilder": ("builders.core", "GWDatasetBuilder"),
+    "create_mixed_gw_dataset": ("builders.factory", "create_mixed_gw_dataset"),
+    "create_evaluation_dataset": ("builders.factory", "create_evaluation_dataset"),
+    "test_dataset_builder": ("builders.testing", "test_dataset_builder"),
+    
+    # ✅ NEW: Modular cache components  
+    "ProfessionalCacheManager": ("cache.manager", "ProfessionalCacheManager"),
+    "CacheMetadata": ("cache.manager", "CacheMetadata"),
+    "CacheStatistics": ("cache.manager", "CacheStatistics"),
+    "get_cache_manager": ("cache.manager", "get_cache_manager"),
+    "create_professional_cache": ("cache.manager", "create_professional_cache"),
+    "cache_decorator": ("cache.operations", "cache_decorator"),
 }
 
 # Dependency requirements for specific modules
@@ -133,27 +140,33 @@ __all__ = [
     "SignalConfiguration",
     "create_mixed_gw_dataset",
     
-    # Label utilities
+    # Label utilities (remaining)
     "GWSignalType",
     "CANONICAL_LABELS",
     "LABEL_NAMES", 
     "LABEL_DESCRIPTIONS",
     "LABEL_COLORS",
-    "LABEL_COLORS_SCIENTIFIC",
-    "LABEL_COLORS_COLORBLIND",
-    "COLOR_SCHEMES",
-    "LabelError",
-    "LabelValidationResult",
-    "normalize_labels",
-    "convert_legacy_labels",
-    "validate_labels",
-    "validate_dataset_labels",
-    "get_class_weights",
-    "get_cmap_colors",
-    "create_label_visualization_config",
-    "create_label_report",
-    "dataset_to_canonical",
-    "log_dataset_info",
+    
+    # ✅ NEW: Modular preprocessing components
+    "SegmentSampler",
+    "AdvancedDataPreprocessor",
+    "PreprocessingConfig", 
+    "preprocess_strain_data",
+    "validate_data_quality",
+    
+    # ✅ NEW: Modular dataset builder components
+    "GWDatasetBuilder",
+    "create_mixed_gw_dataset",
+    "create_evaluation_dataset", 
+    "test_dataset_builder",
+    
+    # ✅ NEW: Modular cache components
+    "ProfessionalCacheManager",
+    "CacheMetadata",
+    "CacheStatistics",
+    "get_cache_manager",
+    "create_professional_cache",
+    "cache_decorator",
     
     # Health check function
     "run_health_check",
@@ -374,4 +387,41 @@ def run_health_check():
     else:
         logger.error("❌ Health check failed. Please install missing dependencies.")
         
-    return all_ok 
+    return all_ok
+
+
+# ===== DEPRECATED COMPATIBILITY WRAPPERS =====
+# For functions that were removed from deleted files
+
+def create_real_ligo_dataset_deprecated(*args, **kwargs):
+    """Deprecated wrapper for create_real_ligo_dataset. Use gw_synthetic_generator instead."""
+    warnings.warn(
+        "create_real_ligo_dataset from real_ligo_integration is deprecated. "
+        "Use ContinuousGWGenerator.create_real_ligo_dataset instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    try:
+        from .gw_synthetic_generator import ContinuousGWGenerator
+        generator = ContinuousGWGenerator()
+        return generator.create_real_ligo_dataset(*args, **kwargs)
+    except Exception as e:
+        logger.error(f"Fallback to gw_synthetic_generator failed: {e}")
+        raise ImportError("real_ligo_integration module was removed. Use gw_synthetic_generator instead.")
+
+
+def download_gw150914_data_deprecated(*args, **kwargs):
+    """Deprecated wrapper for download_gw150914_data. Use gw_synthetic_generator instead."""
+    warnings.warn(
+        "download_gw150914_data from real_ligo_integration is deprecated. "
+        "Use ContinuousGWGenerator.download_gw150914_data instead.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    try:
+        from .gw_synthetic_generator import ContinuousGWGenerator
+        generator = ContinuousGWGenerator()
+        return generator.download_gw150914_data(*args, **kwargs)
+    except Exception as e:
+        logger.error(f"Fallback to gw_synthetic_generator failed: {e}")
+        raise ImportError("real_ligo_integration module was removed. Use gw_synthetic_generator instead.") 

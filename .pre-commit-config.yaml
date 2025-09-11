@@ -1,0 +1,123 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # Built-in hooks for basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+        exclude: '\.md$'
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-added-large-files
+        args: ['--maxkb=10000']  # 10MB max
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: debug-statements
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: check-docstring-first
+      - id: check-executables-have-shebangs
+      - id: fix-byte-order-marker
+
+  # Ruff for linting (replaces flake8, isort, and many others)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: ^(outputs/|logs/|checkpoints/|\.git/|__pycache__/|.*\.egg-info/)
+      - id: ruff-format  # Ruff's formatter (replaces black)
+        exclude: ^(outputs/|logs/|checkpoints/|\.git/|__pycache__/|.*\.egg-info/)
+
+  # Black for code formatting (as backup/alternative to ruff-format)
+  - repo: https://github.com/psf/black
+    rev: 23.11.0
+    hooks:
+      - id: black
+        language_version: python3.10
+        exclude: ^(outputs/|logs/|checkpoints/|\.git/|__pycache__/|.*\.egg-info/)
+
+  # isort for import sorting (as backup to ruff)
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--filter-files"]
+        exclude: ^(outputs/|logs/|checkpoints/|\.git/|__pycache__/|.*\.egg-info/)
+
+  # MyPy for type checking (optional but recommended)
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.7.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [
+          types-PyYAML,
+          types-requests,
+          types-setuptools,
+        ]
+        args: [--ignore-missing-imports, --no-strict-optional]
+        exclude: ^(tests/|outputs/|logs/|checkpoints/|scripts/|examples/)
+
+  # Security checks with bandit
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        exclude: ^(tests/|outputs/|logs/|checkpoints/)
+
+  # Jupyter notebook checks
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.7.1
+    hooks:
+      - id: nbqa-ruff
+        args: [--fix]
+      - id: nbqa-black
+      - id: nbqa-isort
+        args: [--profile=black]
+
+  # Documentation checks
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: [--convention=google]
+        exclude: ^(tests/|outputs/|logs/|checkpoints/|scripts/|examples/)
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.0.3
+    hooks:
+      - id: prettier
+        types_or: [yaml, json]
+        exclude: ^(outputs/|logs/|checkpoints/)
+
+  # Additional Python security and quality checks
+  - repo: https://github.com/PyCQA/safety
+    rev: 2.3.5
+    hooks:
+      - id: safety
+        exclude: ^(outputs/|logs/|checkpoints/)
+
+# Global configuration
+default_install_hook_types: [pre-commit, prepare-commit-msg, commit-msg]
+default_stages: [commit]
+
+# CI configuration
+ci:
+    autofix_commit_msg: |
+        [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+        for more information, see https://pre-commit.ci
+    autofix_prs: true
+    autoupdate_branch: ''
+    autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+    autoupdate_schedule: weekly
+    skip: [mypy, safety]  # Skip expensive hooks in CI
+    submodules: false
+

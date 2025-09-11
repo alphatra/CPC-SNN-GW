@@ -29,6 +29,11 @@ from .base_trainer import TrainerBase, TrainingConfig
 from .training_utils import ProgressTracker, format_training_time
 from .training_metrics import create_training_metrics
 
+# Import new modular components
+from .stages import _cpc_train_step, _snn_train_step, _joint_train_step, train_stage
+from .pipeline import train_unified_pipeline, _compute_real_evaluation_metrics
+from .metrics import eval_step, validate_and_log_step, compute_comprehensive_metrics
+
 # Import models
 from models.cpc_encoder import CPCEncoder, enhanced_info_nce_loss  
 from models.snn_classifier import SNNClassifier
@@ -201,284 +206,32 @@ class UnifiedTrainer(TrainerBase):
             return self._joint_train_step(train_state, batch)
     
     def _cpc_train_step(self, train_state, batch):
-        """CPC pretraining step with InfoNCE loss."""
-        x, _ = batch  # Ignore labels for self-supervised learning
-        
-        def loss_fn(params):
-            # Forward pass through CPC encoder
-            latents = train_state.apply_fn(params, x)
-            
-            # InfoNCE contrastive loss
-            loss = enhanced_info_nce_loss(
-                latents[:, :-1],  # context
-                latents[:, 1:],   # targets
-                temperature=0.1
-            )
-            return loss
-        
-        loss, grads = jax.value_and_grad(loss_fn)(train_state.params)
-        train_state = train_state.apply_gradients(grads=grads)
-        
-        # ✅ FIXED: Real epoch tracking
-        metrics = create_training_metrics(
-            step=train_state.step,
-            epoch=self.current_epoch,  # ✅ Real epoch, not 0
-            loss=float(loss),
-            cpc_loss=float(loss)
-        )
-        
-        return train_state, metrics
+        """CPC pretraining step with InfoNCE loss. Delegated to stages module."""
+        return _cpc_train_step(self, train_state, batch)
     
     def _snn_train_step(self, train_state, batch):
-        """✅ FIXED: SNN training step with OPTIONAL CPC fine-tuning."""
-        x, y = batch
-        
-        def loss_fn(params):
-            # ✅ FIX: No key needed for SpikeBridge anymore
-            
-            if self.config.enable_cpc_finetuning_stage2:
-                # ✅ SOLUTION: CPC fine-tuning enabled (real gradients)
-                logits, latents = train_state.apply_fn(params, x, training=True)
-                
-                # Classification loss
-                clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-                
-                # Optional: Add small CPC regularization
-                cpc_reg = enhanced_info_nce_loss(
-                    latents[:, :-1], latents[:, 1:], temperature=0.1
-                )
-                
-                total_loss = clf_loss + 0.1 * cpc_reg  # Small CPC regularization
-                accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
-                
-                return total_loss, (clf_loss, cpc_reg, accuracy)
-            else:
-                # ✅ FIXED: Enable end-to-end gradient flow (removed stop_gradient)
-                # Now CPC can adapt based on SNN feedback
-                latents = self.cpc_encoder.apply(self.stage1_cpc_params, x)
-                logits = train_state.apply_fn(params, latents, training=True)
-                loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-                accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
-                return loss, accuracy
-        
-        if self.config.enable_cpc_finetuning_stage2:
-            (total_loss, (clf_loss, cpc_reg, accuracy)), grads = jax.value_and_grad(
-                loss_fn, has_aux=True
-            )(train_state.params)
-            train_state = train_state.apply_gradients(grads=grads)
-            
-            # ✅ FIXED: Real epoch tracking
-            metrics = create_training_metrics(
-                step=train_state.step,
-                epoch=self.current_epoch,  # ✅ Real epoch
-                loss=float(total_loss),
-                accuracy=float(accuracy),
-                snn_loss=float(clf_loss),
-                cpc_loss=float(cpc_reg)
-            )
-        else:
-            (loss, accuracy), grads = jax.value_and_grad(
-                loss_fn, has_aux=True
-            )(train_state.params)
-            train_state = train_state.apply_gradients(grads=grads)
-            
-            metrics = create_training_metrics(
-                step=train_state.step,
-                epoch=self.current_epoch,  # ✅ Real epoch
-                loss=float(loss),
-                accuracy=float(accuracy),
-                snn_loss=float(loss)
-            )
-        
-        return train_state, metrics
+        """SNN training step with optional CPC fine-tuning. Delegated to stages module."""
+        return _snn_train_step(self, train_state, batch)
     
     def _joint_train_step(self, train_state, batch):
-        """Joint training step with both CPC and classification losses."""
-        x, y = batch
-        
-        def loss_fn(params):
-            # ✅ FIX: No key needed, use training=True
-            logits, latents = train_state.apply_fn(params, x, training=True)
-            
-            # Classification loss
-            clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-            
-            # CPC contrastive loss
-            cpc_loss = enhanced_info_nce_loss(
-                latents[:, :-1],
-                latents[:, 1:],
-                temperature=0.1
-            )
-            
-            # Combined loss
-            total_loss = (self.config.snn_loss_weight * clf_loss + 
-                         self.config.cpc_loss_weight * cpc_loss)
-            
-            accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
-            return total_loss, (clf_loss, cpc_loss, accuracy)
-        
-        (total_loss, (clf_loss, cpc_loss, accuracy)), grads = jax.value_and_grad(
-            loss_fn, has_aux=True
-        )(train_state.params)
-        
-        train_state = train_state.apply_gradients(grads=grads)
-        
-        # ✅ FIXED: Real epoch tracking
-        metrics = create_training_metrics(
-            step=train_state.step,
-            epoch=self.current_epoch,  # ✅ Real epoch
-            loss=float(total_loss),
-            accuracy=float(accuracy),
-            cpc_loss=float(cpc_loss),
-            snn_loss=float(clf_loss)
-        )
-        
-        return train_state, metrics
+        """Joint training step with both CPC and classification losses. Delegated to stages module."""
+        return _joint_train_step(self, train_state, batch)
     
     def eval_step(self, train_state, batch):
-        """✅ FIXED: Real evaluation step for current stage."""
-        x, y = batch
-        
-        if self.current_stage == 1:
-            # CPC evaluation - use reconstruction quality
-            latents = train_state.apply_fn(train_state.params, x)
-            loss = enhanced_info_nce_loss(latents[:, :-1], latents[:, 1:])
-            
-            metrics = create_training_metrics(
-                step=train_state.step,
-                epoch=self.current_epoch,  # ✅ Real epoch
-                loss=float(loss)
-            )
-        else:
-            # ✅ FIXED: Real classification evaluation
-            
-            if self.current_stage == 2 and not self.config.enable_cpc_finetuning_stage2:
-                # ✅ FIXED: Enable end-to-end gradient flow (removed stop_gradient)
-                # Now allows proper backpropagation during evaluation
-                latents = self.cpc_encoder.apply(self.stage1_cpc_params, x)
-                logits = train_state.apply_fn(train_state.params, latents, training=False)
-            else:
-                # Real evaluation with current model
-                if self.current_stage == 2:
-                    logits, _ = train_state.apply_fn(train_state.params, x, training=False)
-                else:
-                    logits, _ = train_state.apply_fn(train_state.params, x, training=False)
-            
-            loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-            accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
-            
-            # ✅ NEW: Return predictions for ROC-AUC computation
-            predictions = jax.nn.softmax(logits)
-            
-            metrics = create_training_metrics(
-                step=train_state.step,
-                epoch=self.current_epoch,  # ✅ Real epoch
-                loss=float(loss),
-                accuracy=float(accuracy)
-            )
-            
-            # ✅ NEW: Add predictions to custom metrics for ROC-AUC
-            metrics.update_custom(
-                predictions=predictions,
-                true_labels=y
-            )
-        
-        return metrics
+        """Real evaluation step for current stage. Delegated to metrics module."""
+        return eval_step(self, train_state, batch)
     
     def train_stage(self, stage: int, dataloader, num_epochs: int) -> Dict[str, Any]:
-        """✅ FIXED: Train single stage with real epoch tracking."""
-        self.current_stage = stage
-        self.stage_start_time = time.time()
-        
-        stage_names = {1: "CPC Pretraining", 2: "SNN Training", 3: "Joint Fine-tuning"}
-        logger.info(f"Starting Stage {stage}: {stage_names[stage]} ({num_epochs} epochs)")
-        
-        # Create model if needed
-        if not self.cpc_encoder:
-            self.create_model()
-        
-        # Initialize training state
-        sample_batch = next(iter(dataloader))
-        sample_input = sample_batch[0]
-        self.train_state = self.create_train_state(None, sample_input)
-        
-        # Progress tracking
-        total_steps = num_epochs * len(list(dataloader))  # Estimate
-        progress = ProgressTracker(total_steps, log_interval=50)
-        
-        # ✅ FIXED: Real epoch tracking
-        for epoch in range(num_epochs):
-            self.current_epoch = epoch  # ✅ Update real epoch counter
-            epoch_metrics = []
-            
-            for step, batch in enumerate(dataloader):
-                # Training step
-                self.train_state, metrics = self.train_step(self.train_state, batch)
-                epoch_metrics.append(metrics)
-                
-                # Log metrics
-                if step % 50 == 0:
-                    self.validate_and_log_step(metrics, f"stage_{stage}_train")
-                
-                # Update progress
-                progress.update(epoch * 100 + step, metrics.to_dict())
-            
-            # Epoch summary
-            avg_loss = sum(m.loss for m in epoch_metrics) / len(epoch_metrics)
-            logger.info(f"Stage {stage} Epoch {epoch+1}/{num_epochs}: avg_loss={avg_loss:.4f}")
-        
-        # Save stage results
-        stage_time = time.time() - self.stage_start_time
-        stage_results = {
-            'stage': stage,
-            'stage_name': stage_names[stage],
-            'num_epochs': num_epochs,
-            'final_loss': avg_loss,
-            'training_time': stage_time,
-            'params': self.train_state.params
-        }
-        
-        # ✅ FIXED: Store CPC params for Stage 2 (if needed)
-        if stage == 1:
-            self.stage1_cpc_params = self.train_state.params
-        
-        logger.info(f"Stage {stage} completed in {format_training_time(0, stage_time)}")
-        return stage_results
+        """Train single stage with real epoch tracking. Delegated to stages module."""
+        return train_stage(self, stage, dataloader, num_epochs)
     
     def train_unified_pipeline(self, train_dataloader, val_dataloader=None) -> Dict[str, Any]:
-        """Execute complete multi-stage training pipeline."""
-        logger.info("✅ Starting FIXED unified multi-stage training pipeline")
-        
-        results = {}
-        
-        # Stage 1: CPC Pretraining
-        results['stage_1'] = self.train_stage(1, train_dataloader, self.config.cpc_epochs)
-        
-        # Stage 2: SNN Training (with optional CPC fine-tuning)
-        if self.config.enable_cpc_finetuning_stage2:
-            logger.info("✅ Stage 2: SNN Training with CPC fine-tuning (REAL GRADIENTS)")
-        else:
-            logger.info("⚠️  Stage 2: SNN Training with frozen CPC (legacy mode)")
-        results['stage_2'] = self.train_stage(2, train_dataloader, self.config.snn_epochs)
-        
-        # Stage 3: Joint Fine-tuning
-        results['stage_3'] = self.train_stage(3, train_dataloader, self.config.joint_epochs)
-        
-        # ✅ NEW: Real evaluation with ROC-AUC computation
-        if val_dataloader:
-            logger.info("✅ Running REAL evaluation with ROC-AUC computation...")
-            results['evaluation'] = self._compute_real_evaluation_metrics(val_dataloader)
-        
-        # Training summary
-        total_time = sum(r['training_time'] for r in results.values() if 'training_time' in r)
-        results['total_training_time'] = total_time
-        
-        logger.info(f"✅ FIXED unified training completed in {format_training_time(0, total_time)}")
-        return results
+        """Execute complete multi-stage training pipeline. Delegated to pipeline module."""
+        return train_unified_pipeline(self, train_dataloader, val_dataloader)
     
     def _compute_real_evaluation_metrics(self, val_dataloader) -> Dict[str, Any]:
-        """✅ NEW: Compute real evaluation metrics including ROC-AUC."""
-        import numpy as np
+        """Compute real evaluation metrics including ROC-AUC. Delegated to pipeline module."""
+        return _compute_real_evaluation_metrics(self, val_dataloader)
         from sklearn.metrics import (
             accuracy_score, precision_score, recall_score, f1_score,
             roc_auc_score, average_precision_score, classification_report,
