@@ -28,6 +28,7 @@ from .factory import (
     create_experiment_config
 )
 
+from .blocks import ConvBlock, GRUContext, ProjectionHead, FeatureEncoder
 from .losses import (
     enhanced_info_nce_loss, 
     info_nce_loss,
@@ -48,6 +49,12 @@ __all__ = [
     "CPCEncoder",
     "RealCPCEncoder", 
     "EnhancedCPCEncoder",
+    
+    # Building blocks (NEW)
+    "ConvBlock",
+    "GRUContext",
+    "ProjectionHead",
+    "FeatureEncoder",
     
     # Transformer components
     "TemporalTransformerCPC",

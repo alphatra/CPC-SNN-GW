@@ -25,6 +25,12 @@ from .gradients import (
     spike_function_bwd
 )
 from .testing import test_gradient_flow
+from .losses import (
+    sigmoid_surrogate,
+    spike_rate_loss,
+    create_surrogate_function
+)
+from .heads import SpikeProjectionHead, MultiChannelProjection, AdaptiveProjection
 
 __all__ = [
     # Core bridge components
@@ -42,6 +48,16 @@ __all__ = [
     "spike_function_with_surrogate",
     "spike_function_fwd",
     "spike_function_bwd",
+    
+    # Loss functions (NEW)
+    "sigmoid_surrogate",
+    "spike_rate_loss",
+    "create_surrogate_function",
+    
+    # Head components (NEW)
+    "SpikeProjectionHead",
+    "MultiChannelProjection",
+    "AdaptiveProjection",
     
     # Testing utilities
     "test_gradient_flow"

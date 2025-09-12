@@ -21,6 +21,8 @@ from .factory import (
     create_enhanced_snn_classifier,
     create_snn_config
 )
+from .losses import spike_reg_loss, focal_loss, snn_combined_loss
+from .heads import SNNReadout, ClassificationHead, MultiScaleReadout
 
 __all__ = [
     # Core classifiers
@@ -41,6 +43,16 @@ __all__ = [
     # Factory functions
     "create_snn_classifier",
     "create_enhanced_snn_classifier",
-    "create_snn_config"
+    "create_snn_config",
+    
+    # Loss functions (NEW)
+    "spike_reg_loss",
+    "focal_loss",
+    "snn_combined_loss",
+    
+    # Head components (NEW)
+    "SNNReadout",
+    "ClassificationHead",
+    "MultiScaleReadout"
 ]
 

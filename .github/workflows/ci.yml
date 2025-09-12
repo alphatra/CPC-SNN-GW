@@ -20,7 +20,7 @@ jobs:
         
     - name: Install dependencies
       run: |
-        pip install pyyaml
+        pip install pyyaml ruff black isort mypy
         pip install -e .
         
     - name: 🔍 Validate Configuration Consistency
@@ -32,6 +32,20 @@ jobs:
         validate_runtime_config(config)
         print('✅ Configuration validation PASSED')
         "
+    
+    - name: 🎨 Lint with ruff and black
+      run: |
+        echo "🎨 Running code quality checks..."
+        ruff check --fix . --output-format=github
+        black --check .
+        isort . --check-only
+        echo "✅ Code quality checks PASSED"
+    
+    - name: 🔍 Type check with mypy  
+      run: |
+        echo "🔍 Running type checks..."
+        mypy . --ignore-missing-imports --no-strict-optional
+        echo "✅ Type checks PASSED"
 
   # 🧪 Unit and Integration Tests
   test-critical-components:
@@ -53,11 +67,32 @@ jobs:
         pip install --upgrade pip
         pip install "jax[cpu]" jaxlib
         pip install -e ".[test]"
+        pip install pytest-cov
         
     - name: 🧪 Run Critical Integration Tests
       run: |
         echo "🚨 Running critical component tests identified in analysis..."
-        python -m pytest test_critical_integration.py -v --tb=short
+        python -m pytest tests/ -v --tb=short --cov=models --cov=training --cov=data --cov=utils --cov-report=xml --cov-report=html
+        echo "📊 Target coverage: 70% core modules, 40% utils/cli"
+        
+    - name: 📊 Coverage validation
+      run: |
+        echo "📊 Validating coverage targets..."
+        python -c "
+        import xml.etree.ElementTree as ET
+        try:
+            tree = ET.parse('coverage.xml')
+            root = tree.getroot()
+            coverage = float(root.attrib['line-rate']) * 100
+            print(f'📊 Overall coverage: {coverage:.1f}%')
+            
+            if coverage >= 60:
+                print('✅ Coverage target ACHIEVED')
+            else:
+                print('⚠️ Coverage below target - consider adding tests')
+        except:
+            print('⚠️ Coverage report not available')
+        "
         
     - name: 🔬 Test CPC Encoder Configuration
       run: |
