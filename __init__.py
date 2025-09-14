@@ -569,34 +569,34 @@ def __getattr__(name):
         from .training.pretrain_cpc import CPCPretrainer
         return CPCPretrainer
     elif name == "CPCSNNTrainer":
-        from .training.base_trainer import CPCSNNTrainer
+        from .training.base.trainer import CPCSNNTrainer
         return CPCSNNTrainer
     elif name == "HydraTrainerMixin":
-        from .training.base_trainer import HydraTrainerMixin
+        from .training.base.trainer import HydraTrainerMixin
         return HydraTrainerMixin
     elif name == "TrainerBase":
-        from .training.base_trainer import TrainerBase
+        from .training.base.trainer import TrainerBase
         return TrainerBase
     elif name == "TrainingConfig":
-        from .training.base_trainer import TrainingConfig
+        from .training.base.config import TrainingConfig
         return TrainingConfig
     elif name == "TrainingMetrics":
-        from .training.base_trainer import TrainingMetrics
+        from .training.monitoring.core import TrainingMetrics
         return TrainingMetrics
     elif name == "create_cpc_snn_cli_app":
-        from .training.base_trainer import create_cpc_snn_cli_app
+        from .training.base.factory import create_cpc_snn_cli_app
         return create_cpc_snn_cli_app
     elif name == "create_cpc_snn_trainer":
-        from .training.base_trainer import create_cpc_snn_trainer
+        from .training.base.factory import create_cpc_snn_trainer
         return create_cpc_snn_trainer
     elif name == "create_enhanced_gw_trainer":
         from .training.enhanced_gw_training import create_enhanced_gw_trainer
         return create_enhanced_gw_trainer
     elif name == "create_hydra_cli_app":
-        from .training.base_trainer import create_hydra_cli_app
+        from .training.base.factory import create_hydra_cli_app
         return create_hydra_cli_app
     elif name == "create_training_config":
-        from .training.base_trainer import create_training_config
+        from .training.base.factory import create_training_config
         return create_training_config
     elif name == "pretrain_cpc_main":
         from .training.pretrain_cpc import main as pretrain_cpc_main

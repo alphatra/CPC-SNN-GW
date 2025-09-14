@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 from flax import struct
 
-from ..base_trainer import TrainingConfig
+from ..base.config import TrainingConfig
 
 # Custom TrainState with batch_stats support
 @struct.dataclass

@@ -25,9 +25,9 @@ import optax
 from flax.training import train_state
 
 # Import base trainer and utilities
-from .base_trainer import TrainerBase, TrainingConfig
+from .base.trainer import TrainerBase, TrainingConfig
 from .utils import ProgressTracker, format_training_time
-from .training_metrics import create_training_metrics
+from .monitoring.core import create_training_metrics
 
 # Import new modular components
 from .stages import _cpc_train_step, _snn_train_step, _joint_train_step, train_stage

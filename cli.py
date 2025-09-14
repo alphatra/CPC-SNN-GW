@@ -70,9 +70,9 @@ def run_standard_training(config, args):
     try:
         # ✅ Real training implementation using CPCSNNTrainer
         try:
-            from .training.base_trainer import CPCSNNTrainer, TrainingConfig
+            from .training.base.trainer import CPCSNNTrainer, TrainingConfig
         except ImportError:
-            from training.base_trainer import CPCSNNTrainer, TrainingConfig
+            from training.base.trainer import CPCSNNTrainer, TrainingConfig
         
         # Create output directory for this training run
         training_dir = args.output_dir / f"standard_training_{config['training']['batch_size']}bs"
@@ -215,9 +215,9 @@ def run_standard_training(config, args):
                 sample_rate=4096,
                 random_seed=42
             )
-            from utils.jax_safety import safe_stack_to_device, safe_array_to_device
-            all_signals = safe_stack_to_device([sample[0] for sample in train_data], dtype=np.float32)
-            all_labels = safe_array_to_device([sample[1] for sample in train_data], dtype=np.int32)
+            # Convert to JAX arrays directly
+            all_signals = jnp.stack([sample[0] for sample in train_data])
+            all_labels = jnp.array([sample[1] for sample in train_data], dtype=jnp.int32)
             try:
                 from utils.data_split import create_stratified_split
             except ImportError:
@@ -307,9 +307,9 @@ def run_standard_training(config, args):
                     random_seed=42
                 )
                 # Safe device arrays
-                from utils.jax_safety import safe_stack_to_device, safe_array_to_device
-                all_signals = safe_stack_to_device([sample[0] for sample in train_data], dtype=np.float32)
-                all_labels = safe_array_to_device([sample[1] for sample in train_data], dtype=np.int32)
+                # Convert to JAX arrays directly
+                all_signals = jnp.stack([sample[0] for sample in train_data])
+                all_labels = jnp.array([sample[1] for sample in train_data], dtype=jnp.int32)
                 try:
                     from utils.data_split import create_stratified_split
                 except ImportError:
@@ -328,12 +328,12 @@ def run_standard_training(config, args):
             logger.info(f"   Running {trainer_config.num_epochs} epochs...")
             
             # ✅ REAL TRAINING - Use CPCSNNTrainer for actual learning
-            from training.base_trainer import CPCSNNTrainer, TrainingConfig
+            from training.base.trainer import CPCSNNTrainer, TrainingConfig
             
             logger.info("🚀 Starting REAL CPC+SNN training pipeline!")
             start_time = time.time()
             
-            # Create trainer config for base trainer
+            # Create trainer config for base trainer - only use supported parameters
             real_trainer_config = TrainingConfig(
                 learning_rate=trainer_config.learning_rate,
                 batch_size=args.batch_size if hasattr(args, 'batch_size') else trainer_config.batch_size,
@@ -346,18 +346,6 @@ def run_standard_training(config, args):
                 scheduler="cosine",
                 num_classes=2,
                 grad_accum_steps=2,
-                # SpikeBridge hyperparams from CLI
-                spike_time_steps=int(args.spike_time_steps),
-                spike_threshold=float(args.spike_threshold),
-                spike_learnable=bool(args.spike_learnable),
-                spike_threshold_levels=int(args.spike_threshold_levels),
-                spike_surrogate_type=str(args.spike_surrogate_type),
-                spike_surrogate_beta=float(args.spike_surrogate_beta),
-                spike_pool_seq=bool(args.spike_pool_seq),
-                # CPC/SNN
-                cpc_attention_heads=int(args.cpc_heads),
-                cpc_transformer_layers=int(args.cpc_layers),
-                snn_hidden_size=int(args.snn_hidden),
                 early_stopping_metric=("balanced_accuracy" if args.balanced_early_stop else "loss"),
                 early_stopping_mode=("max" if args.balanced_early_stop else "min")
             )
@@ -1388,7 +1376,8 @@ def train_cmd():
         if 'cpc_pretrain' in config['training']:
             config['training']['cpc_pretrain']['learning_rate'] = args.learning_rate
     if args.device and args.device != 'auto':
-        config['platform']['device'] = args.device
+        config.setdefault('system', {})
+        config['system']['device'] = args.device
     if args.wandb:
         config['logging']['wandb_project'] = "cpc-snn-training"
     
@@ -1413,7 +1402,7 @@ def train_cmd():
         spike_encoding = config.get('model', {}).get('spike_bridge', {}).get('encoding_strategy', 'N/A')
         snn_hidden_size = config.get('model', {}).get('snn', {}).get('hidden_sizes', [0])[0]
         
-        logger.info(f"📋 Configuration loaded: {config.get('platform', {}).get('device', 'N/A')} device, {cpc_latent_dim} latent dim")
+        logger.info(f"📋 Configuration loaded: {config.get('system', {}).get('device', 'N/A')} device, {cpc_latent_dim} latent dim")
         logger.info(f"📋 Spike encoding: {spike_encoding}")
         logger.info(f"📋 SNN hidden size: {snn_hidden_size}")
         

@@ -8,7 +8,7 @@ Split from base_trainer.py for better maintainability.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from .config import TrainingConfig
 from .trainer import CPCSNNTrainer

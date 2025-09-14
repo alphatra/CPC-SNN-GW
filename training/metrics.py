@@ -16,7 +16,7 @@ import optax
 
 # Import models and utilities
 from models.cpc.losses import enhanced_info_nce_loss
-from .training_metrics import create_training_metrics
+from .monitoring.core import create_training_metrics
 
 logger = logging.getLogger(__name__)
 

@@ -11,9 +11,11 @@ from typing import Dict, Any
 import optuna
 
 try:
-    from training.base_trainer import CPCSNNTrainer, TrainingConfig
+    from training.base.trainer import CPCSNNTrainer
+    from training.base.config import TrainingConfig
 except Exception:  # fallback for direct import contexts
-    from ..training.base_trainer import CPCSNNTrainer, TrainingConfig  # type: ignore
+    from ..training.base.trainer import CPCSNNTrainer  # type: ignore
+    from ..training.base.config import TrainingConfig  # type: ignore
 
 
 def objective(trial: optuna.trial.Trial) -> float:

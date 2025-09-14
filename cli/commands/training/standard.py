@@ -38,7 +38,8 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
             raise RuntimeError("Training environment setup failed")
         
         # Import training components
-        from training.base_trainer import CPCSNNTrainer, TrainingConfig
+        from training.base.trainer import CPCSNNTrainer
+        from training.base.config import TrainingConfig
         
         # Create output directory
         training_dir = args.output_dir / f"standard_training_{config['training']['batch_size']}bs"

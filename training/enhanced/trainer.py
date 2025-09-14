@@ -16,8 +16,8 @@ import optax
 
 from .config import CompleteEnhancedConfig, TrainStateWithBatchStats
 from .model import CompleteEnhancedModel
-from ..base_trainer import TrainerBase
-from ..training_metrics import create_training_metrics
+from ..base.trainer import TrainerBase
+from ..monitoring.core import create_training_metrics
 
 # Import enhanced models
 from models.cpc.losses import (

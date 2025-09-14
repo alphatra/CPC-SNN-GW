@@ -18,12 +18,12 @@ __version__ = "1.0.0"
 logger = logging.getLogger(__name__)
 
 # Core trainer exports
-from .base_trainer import (
+from .base.trainer import (
     TrainerBase,
     TrainingConfig, 
-    CPCSNNTrainer,
-    create_cpc_snn_trainer
+    CPCSNNTrainer
 )
+from .base.factory import create_cpc_snn_trainer
 
 # Specialized trainers
 from .unified_trainer import (
@@ -74,13 +74,13 @@ from .utils import (
     format_training_time
 )
 
-from .training_metrics import (
+from .monitoring.core import (
     TrainingMetrics,
     ExperimentTracker,
-    EarlyStoppingMonitor,
-    PerformanceProfiler,
     create_training_metrics
 )
+from .monitoring.stopping import EarlyStoppingMonitor
+from .monitoring.profiler import PerformanceProfiler
 
 # Modular training components (NEW)
 from .stages import (

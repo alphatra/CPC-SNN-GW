@@ -26,7 +26,8 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
     
     try:
         # Import training modules
-        from ...training.base_trainer import CPCSNNTrainer, TrainingConfig
+        from ...training.base.trainer import CPCSNNTrainer
+        from ...training.base.config import TrainingConfig
         from ...data.gw_dataset_builder import create_evaluation_dataset
         
         # Create training config
