@@ -1,116 +1,121 @@
 """
-Training Command (MODULAR)
+Training command implementation.
 
-This file delegates to modular training components for better maintainability.
-The actual implementation has been split into:
-- training/initializer.py: Environment setup
-- training/data_loader.py: Data loading strategies
-- training/standard.py: Standard training implementation
-- training/enhanced.py: Enhanced training implementations
-
-This file maintains CLI interface through delegation.
+Extracted from cli.py for better modularity.
 """
 
 import logging
+from pathlib import Path
 
-from .training import (
-    setup_training_environment,
-    load_training_data,
-    run_standard_training,
-    run_enhanced_training,
-    run_complete_enhanced_training
-)
-from ..parsers.base import create_training_parser
+from ..parsers.base import get_base_parser
 
 logger = logging.getLogger(__name__)
 
 
 def train_cmd():
     """Main training command entry point."""
-    parser = create_training_parser()
+    parser = get_base_parser()
+    parser.description = "Train CPC+SNN neuromorphic gravitational wave detector"
+    
+    # Training specific arguments
+    parser.add_argument(
+        "--output-dir", "-o",
+        type=Path,
+        default=Path("./outputs"),
+        help="Output directory for training artifacts"
+    )
+    
+    parser.add_argument(
+        "--data-dir",
+        type=Path, 
+        default=Path("./data"),
+        help="Data directory"
+    )
+    
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=100,
+        help="Number of training epochs"
+    )
+    
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="Training batch size"
+    )
+    
+    # SpikeBridge hyperparameters via CLI
+    parser.add_argument("--spike-time-steps", type=int, default=24, 
+                       help="SpikeBridge time steps T")
+    parser.add_argument("--spike-threshold", type=float, default=0.1, 
+                       help="Base threshold for encoders")
+    parser.add_argument("--spike-learnable", action="store_true", 
+                       help="Use learnable multi-threshold encoding")
+    parser.add_argument("--no-spike-learnable", dest="spike_learnable", 
+                       action="store_false", help="Disable learnable encoding")
+    parser.set_defaults(spike_learnable=True)
+    parser.add_argument("--spike-threshold-levels", type=int, default=4, 
+                       help="Number of threshold levels")
+    parser.add_argument("--spike-surrogate-type", type=str, default="adaptive_multi_scale", 
+                       help="Surrogate type for spikes")
+    parser.add_argument("--spike-surrogate-beta", type=float, default=4.0, 
+                       help="Surrogate beta")
+    
+    # CPC/Transformer params
+    parser.add_argument("--cpc-heads", type=int, default=8, 
+                       help="Temporal attention heads")
+    parser.add_argument("--cpc-layers", type=int, default=4, 
+                       help="Temporal transformer layers")
+    
+    # SNN params
+    parser.add_argument("--snn-hidden", type=int, default=32, 
+                       help="SNN hidden size")
+    
+    # Early stop and thresholding
+    parser.add_argument("--balanced-early-stop", action="store_true", 
+                       help="Use balanced accuracy/F1 early stopping")
+    parser.add_argument("--opt-threshold", action="store_true", 
+                       help="Optimize decision threshold by F1/balanced acc")
+    
+    parser.add_argument(
+        "--learning-rate", "--lr",
+        type=float,
+        default=1e-3,
+        help="Learning rate"
+    )
+    
     args = parser.parse_args()
     
+    # Import training runners
+    from ..runners.standard import run_standard_training
+    from ..runners.enhanced import run_enhanced_training
+    
     # Setup logging
-    from utils import setup_logging
+    from ...utils.setup_logging import setup_logging
     setup_logging(
         level=logging.INFO if args.verbose == 0 else logging.DEBUG,
         log_file=args.log_file
     )
     
-    logger.info(f"🚀 Starting CPC+SNN training")
-    logger.info(f"   Output directory: {args.output_dir}")
-    logger.info(f"   Mode: {args.mode}")
+    logger.info("🚀 Starting CPC+SNN training")
     
     # Load configuration
-    from utils.config import load_config, save_config
+    from ...utils.config import load_config
     config = load_config(args.config)
     
-    # Update config with CLI args
-    _update_config_from_args(config, args)
-    
-    # Create output directory and save config
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    config_path = args.output_dir / "config.yaml"
-    save_config(config, config_path)
-    
     try:
-        logger.info(f"🎯 Starting {args.mode} training mode...")
+        # Determine training mode
+        training_mode = config.get('training', {}).get('mode', 'standard')
         
-        # Route to appropriate training implementation
-        if args.mode == "standard":
-            training_result = run_standard_training(config, args)
-        elif args.mode == "enhanced":
-            training_result = run_enhanced_training(config, args)
-        elif args.mode == "complete_enhanced":
-            training_result = run_complete_enhanced_training(config, args)
+        if training_mode == 'enhanced':
+            return run_enhanced_training(config, args)
         else:
-            raise ValueError(f"Unknown training mode: {args.mode}")
-        
-        # Check results
-        if training_result and training_result.get('success', False):
-            logger.info("✅ Training completed successfully!")
-            logger.info(f"📊 Final metrics: {training_result.get('metrics', {})}")
-            return 0
-        else:
-            logger.error("❌ Training failed!")
-            return 1
+            return run_standard_training(config, args)
             
     except Exception as e:
-        logger.error(f"❌ Training error: {e}")
+        logger.error(f"❌ Training failed: {e}")
+        import traceback
+        traceback.print_exc()
         return 1
-
-
-def _update_config_from_args(config: Dict, args):
-    """Update configuration with CLI arguments."""
-    # Basic parameter overrides
-    if args.output_dir:
-        config.setdefault('logging', {})
-        config['logging']['checkpoint_dir'] = str(args.output_dir)
-    
-    if args.epochs is not None:
-        config.setdefault('training', {})
-        config['training']['cpc_epochs'] = args.epochs
-    
-    if args.batch_size is not None:
-        config.setdefault('training', {})
-        config['training']['batch_size'] = args.batch_size
-    
-    if args.learning_rate is not None:
-        config.setdefault('training', {})
-        config['training']['cpc_lr'] = args.learning_rate
-    
-    # Device configuration
-    if args.device and args.device != 'auto':
-        config.setdefault('platform', {})
-        config['platform']['device'] = args.device
-    
-    # Logging configuration
-    if args.wandb:
-        config.setdefault('logging', {})
-        config['logging']['wandb_project'] = "cpc-snn-training"
-
-
-# Export training command
-__all__ = [
-    "train_cmd"
-]

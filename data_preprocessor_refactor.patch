@@ -1,0 +1,686 @@
+--- a/data/gw_preprocessor.py
++++ b/data/gw_preprocessor.py
+@@ -1,764 +1,50 @@
+ """
+-GW Data Preprocessor (MODULAR)
++DEPRECATED: Legacy GW preprocessor - Use modular data.preprocessing package instead.
+ 
+-This file now delegates to modular preprocessing components for better maintainability.
+-The actual implementation has been split into:
+-- preprocessing/sampler.py: SegmentSampler
+-- preprocessing/core.py: AdvancedDataPreprocessor  
+-- preprocessing/utils.py: Utility functions
+-
+-This file maintains backward compatibility through delegation.
++This file provides backward compatibility wrappers.
++New code should import from data.preprocessing modules.
+ """
+ 
+ import logging
+ import warnings
++from typing import Optional, List, Tuple, Dict, Any
+ 
+-# Import from new modular components
+-from .preprocessing.sampler import SegmentSampler
+-from .preprocessing.core import AdvancedDataPreprocessor, PreprocessingConfig
+-from .preprocessing.utils import (
+-    preprocess_strain_data,
+-    validate_data_quality,
+-    batch_preprocess_strains,
+-    create_preprocessing_pipeline,
+-    get_default_preprocessing_config
+-)
+-
+-# Re-export types for compatibility
+-from .readligo_data_sources import QualityMetrics, ProcessingResult
+-
+ logger = logging.getLogger(__name__)
+ 
++# Backward compatibility wrappers with deprecation warnings
++def _deprecated_import(name: str, new_path: str):
++    """Helper for deprecated imports"""
++    warnings.warn(
++        f"{name} from gw_preprocessor.py is deprecated. "
++        f"Use: from {new_path} import {name}",
++        DeprecationWarning,
++        stacklevel=3
++    )
+ 
+ class SegmentSampler:
+-    """
+-    Intelligent segment sampler for gravitational wave data.
+-    
+-    Implements mixed sampling strategy combining noise periods and known GW events.
+-    """
+-    
+-    def __init__(self, mode: str = "mixed", seed: Optional[int] = None):
+-        """
+-        Initialize segment sampler.
+-        
+-        Args:
+-            mode: Sampling mode ("noise", "event", "mixed")
+-            seed: Random seed for reproducible experiments
+-        """
+-        if mode not in ["noise", "event", "mixed"]:
+-            raise ValueError(f"Invalid mode: {mode}. Must be 'noise', 'event', or 'mixed'.")
+-        
+-        self.mode = mode
+-        self.seed = seed
+-        
+-        # Known GW events for training
+-        self.known_events = [
+-            # GPS time, detector, description
+-            (1126259446, ['H1', 'L1'], 'GW150914'),  # First detection
+-            (1128678900, ['H1', 'L1'], 'GW151012'),  # Second detection
+-            (1135136350, ['H1', 'L1'], 'GW151226'),  # Third detection
+-            (1167559936, ['H1', 'L1'], 'GW170104'),  # Fourth detection
+-            (1180922494, ['H1', 'L1'], 'GW170608'),  # Fifth detection
+-            (1185389807, ['H1', 'L1'], 'GW170814'),  # Triple detection
+-            (1187008882, ['H1', 'L1'], 'GW170823'),  # Sixth detection
+-        ]
+-        
+-        # Noise periods (GPS times with good data quality but no known events)
+-        self.noise_periods = [
+-            (1126258000, ['H1', 'L1']),  # Before GW150914
+-            (1126261000, ['H1', 'L1']),  # After GW150914
+-            (1128677000, ['H1', 'L1']),  # Before GW151012
+-            (1128680000, ['H1', 'L1']),  # After GW151012
+-            (1135135000, ['H1', 'L1']),  # Before GW151226
+-            (1135138000, ['H1', 'L1']),  # After GW151226
+-            (1167558000, ['H1', 'L1']),  # Before GW170104
+-            (1167561000, ['H1', 'L1']),  # After GW170104
+-            (1180921000, ['H1', 'L1']),  # Before GW170608
+-            (1180924000, ['H1', 'L1']),  # After GW170608
+-        ]
++    """DEPRECATED: Use data.preprocessing.SegmentSampler instead."""
++    def __init__(self, *args, **kwargs):
++        _deprecated_import("SegmentSampler", "data.preprocessing")
++        from .preprocessing.sampler import SegmentSampler as _SegmentSampler
++        self._sampler = _SegmentSampler(*args, **kwargs)
+     
+-    def sample_segments(self, num_segments: int, duration: float = 4.0) -> List[Tuple[str, int, float]]:
+-        """
+-        Sample segments according to the specified mode.
+-        
+-        Args:
+-            num_segments: Number of segments to sample
+-            duration: Duration of each segment in seconds
+-            
+-        Returns:
+-            List of (detector, start_time, duration) tuples
+-        """
+-        segments = []
+-        
+-        if self.mode == "noise":
+-            segments = self._sample_noise_segments(num_segments, duration)
+-        elif self.mode == "event":
+-            segments = self._sample_event_segments(num_segments, duration)
+-        elif self.mode == "mixed":
+-            # Mixed strategy: 50% events, 50% noise
+-            num_events = num_segments // 2
+-            num_noise = num_segments - num_events
+-            
+-            event_segments = self._sample_event_segments(num_events, duration)
+-            noise_segments = self._sample_noise_segments(num_noise, duration)
+-            
+-            segments = event_segments + noise_segments
+-        
+-        logger.info(f"Sampled {len(segments)} segments using '{self.mode}' strategy")
+-        return segments
+-    
+-    def _sample_event_segments(self, num_segments: int, duration: float, key=None) -> List[Tuple[str, int, float]]:
+-        """Sample segments around known GW events."""
+-        import random
+-        if self.seed is not None:
+-            random.seed(self.seed)
+-        
+-        segments = []
+-        
+-        for i in range(num_segments):
+-            # Choose a random event
+-            event = random.choice(self.known_events)
+-            gps_time, detectors, event_name = event
+-            
+-            # Choose random detector
+-            detector = random.choice(detectors)
+-            
+-            # Add some random offset around the event (±30 seconds)
+-            offset = random.uniform(-30, 30)
+-            start_time = gps_time + offset
+-            
+-            segments.append((detector, int(start_time), duration))
+-            
+-            logger.debug(f"Sampled event segment: {detector} at {start_time} ({event_name})")
+-        
+-        return segments
+-    
+-    def _sample_noise_segments(self, num_segments: int, duration: float, key=None) -> List[Tuple[str, int, float]]:
+-        """Sample segments from noise periods."""
+-        import random
+-        if self.seed is not None:
+-            random.seed(self.seed)
+-        
+-        segments = []
+-        
+-        for i in range(num_segments):
+-            # Choose a random noise period
+-            period = random.choice(self.noise_periods)
+-            gps_time, detectors = period
+-            
+-            # Choose random detector
+-            detector = random.choice(detectors)
+-            
+-            # Add some random offset within the noise period (±1000 seconds)
+-            offset = random.uniform(-1000, 1000)
+-            start_time = gps_time + offset
+-            
+-            segments.append((detector, int(start_time), duration))
+-            
+-            logger.debug(f"Sampled noise segment: {detector} at {start_time}")
+-        
+-        return segments
++    def __getattr__(self, name):
++        return getattr(self._sampler, name)
+ 
+ class AdvancedDataPreprocessor:
+-    """
+-    Advanced data preprocessor for gravitational wave signals.
+-    
+-    Features:
+-    - Butterworth bandpass filtering with JAX acceleration
+-    - PSD estimation and whitening
+-    - Quality assessment and glitch detection
+-    - Batch processing support
+-    - aLIGO noise curve integration
+-    """
+-    
+-    def __init__(self, 
+-                 sample_rate: int = 4096,
+-                 bandpass: tuple = (20, 512),
+-                 apply_whitening: bool = True,
+-                 psd_length: int = 8,  # seconds for PSD estimation
+-                 quality_threshold: float = 0.7):
+-        self.sample_rate = sample_rate
+-        self.bandpass = bandpass
+-        self.apply_whitening = apply_whitening
+-        self.psd_length = psd_length
+-        self.quality_threshold = quality_threshold
+-        
+-        # Pre-compute filter coefficients for efficiency
+-        self._setup_filters()
+-        
+-        logger.info(f"AdvancedDataPreprocessor initialized:")
+-        logger.info(f"  Sample rate: {sample_rate} Hz")
+-        logger.info(f"  Bandpass: {bandpass} Hz")
+-        logger.info(f"  Whitening: {apply_whitening}")
+-        logger.info(f"  PSD length: {psd_length} seconds")
+-    
+-    def _setup_filters(self):
+-        """Pre-compute filter coefficients using JAX."""
+-        import jax.numpy as jnp
+-        from jax.scipy import signal as jax_signal
+-        
+-        # Design Butterworth filter
+-        order = 8
+-        low_freq = self.bandpass[0]
+-        high_freq = self.bandpass[1]
+-        
+-        # Normalize frequencies
+-        nyquist = 0.5 * self.sample_rate
+-        low_norm = low_freq / nyquist
+-        high_norm = high_freq / nyquist
+-        
+-        # Store filter coefficients
+-        self.filter_coeffs = self._design_jax_butterworth_filter(order, low_norm, high_norm)
+-        
+-        logger.debug(f"Filter coefficients computed for {order}th order Butterworth filter")
+-    
+-    def _design_jax_butterworth_filter(self, order: int, low_freq: float, high_freq: float):
+-        """Design Butterworth filter using JAX-compatible operations."""
+-        import jax.numpy as jnp
+-        from jax.scipy import signal as jax_signal
+-        
+-        # Use scipy for initial design (will be converted to JAX arrays)
+-        from scipy import signal as scipy_signal
+-        
+-        try:
+-            # Design the filter using scipy
+-            b, a = scipy_signal.butter(order, [low_freq, high_freq], btype='band')
+-            
+-            # Convert to JAX arrays
+-            b_jax = jnp.array(b)
+-            a_jax = jnp.array(a)
+-            
+-            return {'b': b_jax, 'a': a_jax}
+-            
+-        except Exception as e:
+-            logger.warning(f"Filter design failed: {e}")
+-            # Fallback to simple coefficients
+-            return {
+-                'b': jnp.array([1.0]),
+-                'a': jnp.array([1.0])
+-            }
++    """DEPRECATED: Use data.preprocessing.AdvancedDataPreprocessor instead."""
++    def __init__(self, *args, **kwargs):
++        _deprecated_import("AdvancedDataPreprocessor", "data.preprocessing")
++        from .preprocessing.core import AdvancedDataPreprocessor as _AdvancedDataPreprocessor
++        self._preprocessor = _AdvancedDataPreprocessor(*args, **kwargs)
+     
+-    def _complete_filter_setup(self):
+-        """Complete filter setup if needed."""
+-        if not hasattr(self, 'filter_coeffs'):
+-            self._setup_filters()
+-    
+-    def _bandpass_filter_jax(self, data):
+-        """Apply bandpass filter using JAX operations."""
+-        import jax.numpy as jnp
+-        from jax.scipy import signal as jax_signal
+-        
+-        try:
+-            # Ensure filter is set up
+-            self._complete_filter_setup()
+-            
+-            # Apply filter using JAX
+-            filtered_data = jax_signal.lfilter(
+-                self.filter_coeffs['b'], 
+-                self.filter_coeffs['a'], 
+-                data
+-            )
+-            
+-            return filtered_data
+-            
+-        except Exception as e:
+-            logger.warning(f"JAX filtering failed: {e}, using fallback")
+-            return self._bandpass_filter_fallback(data)
+-    
+-    def _bandpass_filter_fallback(self, data):
+-        """Fallback bandpass filter using scipy."""
+-        from scipy import signal as scipy_signal
+-        import numpy as np
+-        
+-        try:
+-            # Convert to numpy if needed
+-            data_np = np.array(data)
+-            
+-            # Design and apply filter
+-            nyquist = 0.5 * self.sample_rate
+-            low = self.bandpass[0] / nyquist
+-            high = self.bandpass[1] / nyquist
+-            
+-            b, a = scipy_signal.butter(8, [low, high], btype='band')
+-            filtered_data = scipy_signal.lfilter(b, a, data_np)
+-            
+-            return filtered_data
+-            
+-        except Exception as e:
+-            logger.error(f"Fallback filtering failed: {e}")
+-            return data  # Return unfiltered data as last resort
+-    
+-    def _bandpass_filter_batch(self, data_batch):
+-        """Apply bandpass filter to batch of data."""
+-        import jax
+-        
+-        # Vectorize the filter function
+-        filter_fn = jax.vmap(self._bandpass_filter_jax, in_axes=0)
+-        
+-        try:
+-            return filter_fn(data_batch)
+-        except Exception as e:
+-            logger.warning(f"Batch filtering failed: {e}")
+-            # Fallback to sequential processing
+-            return jnp.array([self._bandpass_filter_jax(data) for data in data_batch])
+-    
+-    def estimate_psd(self, strain_data):
+-        """
+-        Estimate Power Spectral Density using Welch's method.
+-        
+-        Args:
+-            strain_data: Input strain data
+-            
+-        Returns:
+-            Tuple of (frequencies, psd_values)
+-        """
+-        import jax.numpy as jnp
+-        import numpy as np
+-        from scipy import signal as scipy_signal
+-        
+-        try:
+-            # Convert to numpy for scipy operations
+-            strain_np = np.array(strain_data)
+-            
+-            # Calculate PSD using Welch's method
+-            segment_length = int(self.psd_length * self.sample_rate)
+-            
+-            # Ensure we have enough data
+-            if len(strain_np) < segment_length:
+-                segment_length = len(strain_np) // 4
+-            
+-            freqs, psd = scipy_signal.welch(
+-                strain_np,
+-                fs=self.sample_rate,
+-                nperseg=segment_length,
+-                noverlap=segment_length//2,
+-                window='hann'
+-            )
+-            
+-            # Convert back to JAX arrays
+-            freqs_jax = jnp.array(freqs)
+-            psd_jax = jnp.array(psd)
+-            
+-            # Apply bandpass limits to PSD
+-            freq_mask = (freqs_jax >= self.bandpass[0]) & (freqs_jax <= self.bandpass[1])
+-            
+-            return freqs_jax[freq_mask], psd_jax[freq_mask]
+-            
+-        except Exception as e:
+-            logger.warning(f"PSD estimation failed: {e}")
+-            # Return dummy PSD
+-            freqs = jnp.linspace(self.bandpass[0], self.bandpass[1], 100)
+-            psd = jnp.ones_like(freqs) * 1e-46  # Typical LIGO noise level
+-            return freqs, psd
+-    
+-    def estimate_psd_batch(self, strain_batch):
+-        """Estimate PSD for batch of strain data."""
+-        import jax
+-        
+-        # Vectorize PSD estimation
+-        psd_fn = jax.vmap(self.estimate_psd, in_axes=0)
+-        
+-        try:
+-            return psd_fn(strain_batch)
+-        except Exception as e:
+-            logger.warning(f"Batch PSD estimation failed: {e}")
+-            # Sequential fallback
+-            return [self.estimate_psd(strain) for strain in strain_batch]
+-    
+-    def _whiten_data(self, strain_data, psd):
+-        """
+-        Whiten strain data using estimated PSD.
+-        
+-        Args:
+-            strain_data: Input strain data
+-            psd: Power spectral density (frequencies, psd_values)
+-            
+-        Returns:
+-            Whitened strain data
+-        """
+-        import jax.numpy as jnp
+-        from jax.scipy.fft import fft, ifft
+-        
+-        try:
+-            freqs, psd_values = psd
+-            
+-            # FFT of strain data
+-            strain_fft = fft(strain_data)
+-            
+-            # Create whitening filter
+-            # We need to interpolate PSD to match FFT frequencies
+-            fft_freqs = jnp.fft.fftfreq(len(strain_data), 1/self.sample_rate)
+-            fft_freqs = jnp.abs(fft_freqs)  # Use absolute frequencies
+-            
+-            # Interpolate PSD values
+-            psd_interp = jnp.interp(fft_freqs, freqs, psd_values)
+-            
+-            # Avoid division by zero
+-            psd_interp = jnp.where(psd_interp < 1e-50, 1e-50, psd_interp)
+-            
+-            # Apply whitening filter
+-            whitened_fft = strain_fft / jnp.sqrt(psd_interp)
+-            
+-            # Convert back to time domain
+-            whitened_data = jnp.real(ifft(whitened_fft))
+-            
+-            return whitened_data
+-            
+-        except Exception as e:
+-            logger.warning(f"Data whitening failed: {e}")
+-            return strain_data  # Return unwhitened data
+-    
+-    def _whiten_with_aligo_psd(self, strain_data):
+-        """
+-        Whiten data using aLIGO design sensitivity curve.
+-        
+-        This provides a standardized whitening approach using the theoretical
+-        aLIGO noise curve, which is useful for training and comparison.
+-        """
+-        import jax.numpy as jnp
+-        
+-        try:
+-            # Try to use PyCBC's aLIGO PSD
+-            from pycbc.psd import aLIGOZeroDetHighPower
+-            from pycbc.psd import interpolate, inverse_spectrum_truncation
+-            
+-            # Create frequency array
+-            delta_f = 1.0 / len(strain_data) * self.sample_rate
+-            flen = len(strain_data) // 2 + 1
+-            
+-            # Get aLIGO PSD
+-            psd_aligo = aLIGOZeroDetHighPower(flen, delta_f, low_freq_cutoff=self.bandpass[0])
+-            
+-            # Convert strain to frequency domain
+-            from pycbc.types import TimeSeries
+-            strain_ts = TimeSeries(strain_data, delta_t=1.0/self.sample_rate)
+-            
+-            # Whiten using PyCBC
+-            strain_whitened = strain_ts.whiten(psd_aligo, low_frequency_cutoff=self.bandpass[0])
+-            
+-            # Convert back to JAX array
+-            return jnp.array(strain_whitened.data)
+-            
+-        except ImportError:
+-            logger.warning("PyCBC not available, using estimated PSD for whitening")
+-            # Fallback to estimated PSD
+-            freqs, psd_values = self.estimate_psd(strain_data)
+-            return self._whiten_data(strain_data, (freqs, psd_values))
+-        except Exception as e:
+-            logger.warning(f"aLIGO PSD whitening failed: {e}")
+-            # Fallback to estimated PSD
+-            freqs, psd_values = self.estimate_psd(strain_data)
+-            return self._whiten_data(strain_data, (freqs, psd_values))
+-    
+-    def assess_quality(self, strain_data, psd=None):
+-        """
+-        Assess data quality using multiple metrics.
+-        
+-        Args:
+-            strain_data: Input strain data
+-            psd: Optional PSD for SNR estimation
+-            
+-        Returns:
+-            QualityMetrics object with quality assessment
+-        """
+-        import jax.numpy as jnp
+-        import numpy as np
+-        from .readligo_data_sources import QualityMetrics
+-        
+-        try:
+-            # Convert to numpy for calculations
+-            strain_np = np.array(strain_data)
+-            
+-            # Basic statistics
+-            mean_val = float(np.mean(strain_np))
+-            std_val = float(np.std(strain_np))
+-            
+-            # Kurtosis (measure of tail heaviness - indicates glitches)
+-            kurtosis = float(_compute_kurtosis(strain_np))
+-            
+-            # SNR estimate (rough)
+-            if psd is not None:
+-                freqs, psd_values = psd
+-                # Simple SNR estimate using signal power vs noise power
+-                signal_power = np.mean(strain_np**2)
+-                noise_power = np.mean(psd_values)
+-                snr_estimate = float(signal_power / noise_power) if noise_power > 0 else 0.0
+-            else:
+-                snr_estimate = 0.0
+-            
+-            # Overall quality score (0-1, higher is better)
+-            quality_score = self._compute_quality_score(std_val, snr_estimate, kurtosis)
+-            
+-            # Glitch detection (simplified)
+-            glitch_detected = abs(kurtosis) > 5.0 or quality_score < self.quality_threshold
+-            
+-            return QualityMetrics(
+-                snr=snr_estimate,
+-                kurtosis=kurtosis,
+-                glitch_score=float(glitch_detected),
+-                quality_score=quality_score,
+-                is_good_quality=quality_score >= self.quality_threshold
+-            )
+-            
+-        except Exception as e:
+-            logger.warning(f"Quality assessment failed: {e}")
+-            return QualityMetrics(
+-                snr=0.0,
+-                kurtosis=0.0,
+-                glitch_score=1.0,  # Assume poor quality on failure
+-                quality_score=0.0,
+-                is_good_quality=False
+-            )
+-    
+-    def _compute_quality_score(self, std_val: float, snr_estimate: float, kurtosis: float) -> float:
+-        """Compute overall quality score from individual metrics."""
+-        # Normalize metrics to [0, 1] range
+-        std_score = max(0, min(1, 1.0 / (1.0 + std_val * 1e21)))  # Lower std is better
+-        snr_score = max(0, min(1, snr_estimate / 10.0))  # SNR > 10 is excellent
+-        kurtosis_score = max(0, min(1, 1.0 / (1.0 + abs(kurtosis))))  # Lower kurtosis is better
+-        
+-        # Weighted combination
+-        quality_score = 0.4 * std_score + 0.3 * snr_score + 0.3 * kurtosis_score
+-        return quality_score
+-    
+-    def process(self, strain_data):
+-        """
+-        Complete preprocessing pipeline for strain data.
+-        
+-        Args:
+-            strain_data: Input strain data
+-            
+-        Returns:
+-            ProcessingResult with processed data and quality metrics
+-        """
+-        import jax.numpy as jnp
+-        from .readligo_data_sources import ProcessingResult
+-        
+-        try:
+-            logger.debug(f"Processing strain data: shape={jnp.array(strain_data).shape}")
+-            
+-            # Step 1: Bandpass filtering
+-            filtered_data = self._bandpass_filter_jax(strain_data)
+-            logger.debug("✅ Bandpass filtering completed")
+-            
+-            # Step 2: PSD estimation
+-            psd = self.estimate_psd(filtered_data)
+-            logger.debug("✅ PSD estimation completed")
+-            
+-            # Step 3: Whitening (if enabled)
+-            if self.apply_whitening:
+-                try:
+-                    # Try aLIGO PSD whitening first
+-                    processed_data = self._whiten_with_aligo_psd(filtered_data)
+-                    logger.debug("✅ aLIGO PSD whitening completed")
+-                except:
+-                    # Fallback to estimated PSD whitening
+-                    processed_data = self._whiten_data(filtered_data, psd)
+-                    logger.debug("✅ Estimated PSD whitening completed")
+-            else:
+-                processed_data = filtered_data
+-                logger.debug("⏭️ Whitening skipped")
+-            
+-            # Step 4: Quality assessment
+-            quality_metrics = self.assess_quality(processed_data, psd)
+-            logger.debug(f"✅ Quality assessment: score={quality_metrics.quality_score:.3f}")
+-            
+-            return ProcessingResult(
+-                processed_data=processed_data,
+-                quality_metrics=quality_metrics,
+-                psd_data=psd,
+-                success=True,
+-                error_message=None
+-            )
+-            
+-        except Exception as e:
+-            logger.error(f"Processing failed: {e}")
+-            return ProcessingResult(
+-                processed_data=strain_data,  # Return original data
+-                quality_metrics=None,
+-                psd_data=None,
+-                success=False,
+-                error_message=str(e)
+-            )
+-    
+-    def process_batch(self, strain_segments):
+-        """
+-        Process batch of strain segments efficiently.
+-        
+-        Args:
+-            strain_segments: List or array of strain data segments
+-            
+-        Returns:
+-            List of ProcessingResult objects
+-        """
+-        import jax
+-        
+-        try:
+-            logger.info(f"Processing batch of {len(strain_segments)} segments")
+-            
+-            # Convert to JAX array if needed
+-            if not hasattr(strain_segments, 'shape'):
+-                strain_segments = jnp.array(strain_segments)
+-            
+-            # Vectorized processing
+-            process_fn = jax.vmap(self.process, in_axes=0)
+-            
+-            try:
+-                results = process_fn(strain_segments)
+-                logger.info("✅ Batch processing completed using vectorization")
+-                return results
+-            except Exception as e:
+-                logger.warning(f"Vectorized processing failed: {e}, using sequential")
+-                # Sequential fallback
+-                results = []
+-                for i, segment in enumerate(strain_segments):
+-                    result = self.process(segment)
+-                    results.append(result)
+-                    if i % 10 == 0:
+-                        logger.debug(f"Processed {i+1}/{len(strain_segments)} segments")
+-                
+-                return results
+-                
+-        except Exception as e:
+-            logger.error(f"Batch processing failed: {e}")
+-            return [ProcessingResult(
+-                processed_data=segment,
+-                quality_metrics=None,
+-                psd_data=None,
+-                success=False,
+-                error_message=str(e)
+-            ) for segment in strain_segments]
+-    
+-    def assess_quality_batch(self, strain_batch):
+-        """Assess quality for batch of strain data."""
+-        import jax
+-        
+-        try:
+-            # Vectorized quality assessment
+-            quality_fn = jax.vmap(self.assess_quality, in_axes=(0, None))
+-            return quality_fn(strain_batch, None)  # No PSD for batch assessment
+-        except Exception as e:
+-            logger.warning(f"Batch quality assessment failed: {e}")
+-            return [self.assess_quality(strain) for strain in strain_batch]
+-
+-
+-def _compute_kurtosis(data):
+-    """Compute kurtosis (fourth central moment) of data."""
+-    import numpy as np
+-    
+-    mean_val = np.mean(data)
+-    std_val = np.std(data)
+-    
+-    if std_val == 0:
+-        return 0.0
+-    
+-    normalized = (data - mean_val) / std_val
+-    kurtosis = np.mean(normalized**4) - 3.0  # Excess kurtosis
+-    
+-    return kurtosis

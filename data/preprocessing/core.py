@@ -10,7 +10,7 @@ Split from gw_preprocessor.py for better maintainability.
 import jax
 import jax.numpy as jnp
 import numpy as np
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass
 import logging
 import time
