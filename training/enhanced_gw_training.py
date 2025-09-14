@@ -23,13 +23,13 @@ from flax.training import train_state
 
 # Import base trainer and utilities
 from .base_trainer import TrainerBase, TrainingConfig
-from .training_utils import ProgressTracker
+from .utils import ProgressTracker
 from .training_metrics import create_training_metrics
 
 # Import models and data components
-from models.cpc_encoder import CPCEncoder
-from models.snn_classifier import SNNClassifier
-from models.spike_bridge import ValidatedSpikeBridge
+from models.cpc.core import CPCEncoder
+from models.snn.core import SNNClassifier
+from models.bridge.core import ValidatedSpikeBridge
 from data.gw_synthetic_generator import ContinuousGWGenerator
 from data.gw_downloader import GWOSCDownloader
 

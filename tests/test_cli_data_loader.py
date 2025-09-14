@@ -95,3 +95,4 @@ def test_data_loader_shapes_consistency():
         pytest.skip(f"Required dependencies not available: {e}")
     except Exception as e:
         pytest.fail(f"Data shape consistency test failed: {e}")
+

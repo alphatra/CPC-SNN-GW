@@ -32,7 +32,7 @@ from .unified_trainer import (
     create_unified_trainer
 )
 
-from .advanced_training import (
+from .advanced import (
     RealAdvancedGWTrainer as AdvancedGWTrainer,  # Use alias for compatibility
     create_real_advanced_trainer as create_advanced_trainer  # Use alias for compatibility
 )
@@ -61,8 +61,8 @@ from .pretrain_cpc import (
     run_cpc_pretraining_experiment
 )
 
-# Training utilities
-from .training_utils import (
+# Training utilities (use modular utils)
+from .utils import (
     setup_professional_logging,
     setup_directories,
     optimize_jax_for_device,
@@ -102,15 +102,9 @@ from .metrics import (
 )
 
 # ✅ NEW: Modular utils components
+# Additional modular utils
 from .utils import (
-    setup_professional_logging,
-    setup_directories,
-    optimize_jax_for_device,
-    ProgressTracker,
-    format_training_time,
     monitor_memory_usage,
-    compute_gradient_norm,
-    check_for_nans
 )
 
 # All available trainers

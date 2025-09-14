@@ -12,7 +12,7 @@ Split from cpc_losses.py for better maintainability.
 """
 
 import logging
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, Any
 
 import jax
 import jax.numpy as jnp

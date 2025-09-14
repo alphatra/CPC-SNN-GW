@@ -62,3 +62,4 @@ def _show_migration_notice():
 # Show notice when module is imported directly
 logger.info("📦 Using modular evaluation components (real_metrics_evaluator.py → modules/)")
 _show_migration_notice()
+

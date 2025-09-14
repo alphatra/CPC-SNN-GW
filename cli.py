@@ -44,7 +44,7 @@ try:
     from .models.cpc_encoder import create_enhanced_cpc_encoder
 except ImportError:
     try:
-        from models.cpc_encoder import create_enhanced_cpc_encoder
+        from models.cpc.factory import create_enhanced_cpc_encoder
     except ImportError:
         create_enhanced_cpc_encoder = None
 

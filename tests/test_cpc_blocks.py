@@ -66,3 +66,4 @@ def test_feature_encoder_regression():
     
     # Regression: output should not be all zeros
     assert jnp.abs(jnp.mean(out)) > 1e-6
+

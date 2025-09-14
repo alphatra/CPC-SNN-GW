@@ -60,7 +60,7 @@ class RealAdvancedGWTrainer:
         )
         
         # Spike bridge
-        from models.spike_bridge import ValidatedSpikeBridge
+        from models.bridge.core import ValidatedSpikeBridge
         self.spike_bridge = ValidatedSpikeBridge(
             spike_encoding="temporal_contrast",  # Fixed from Executive Summary
             time_steps=self.config.get('snn_time_steps', 16),

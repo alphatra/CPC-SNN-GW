@@ -16,10 +16,10 @@ import flax.linen as nn
 from .config import CompleteEnhancedConfig
 
 # Import enhanced models
-from models.cpc_encoder import EnhancedCPCEncoder, TemporalTransformerConfig
-from models.snn_classifier import EnhancedSNNClassifier, SNNConfig
-from models.spike_bridge import ValidatedSpikeBridge
-from models.cpc_losses import MomentumHardNegativeMiner
+from models.cpc import EnhancedCPCEncoder, TemporalTransformerConfig
+from models.snn.core import EnhancedSNNClassifier, SNNConfig
+from models.bridge.core import ValidatedSpikeBridge
+from models.cpc.miners import MomentumHardNegativeMiner
 
 logger = logging.getLogger(__name__)
 

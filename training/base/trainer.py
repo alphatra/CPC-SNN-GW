@@ -21,7 +21,7 @@ import optax
 from flax.training import train_state, checkpoints
 
 from .config import TrainingConfig
-from ..training_utils import (
+from ..utils import (
     setup_professional_logging, setup_directories, optimize_jax_for_device,
     validate_config, save_config_to_file, compute_gradient_norm, 
     check_for_nans, ProgressTracker
@@ -33,9 +33,9 @@ from ..monitoring import (
 )
 
 # Import models
-from models.cpc_encoder import RealCPCEncoder, RealCPCConfig
-from models.snn_classifier import SNNClassifier  
-from models.spike_bridge import ValidatedSpikeBridge
+from models.cpc import RealCPCEncoder, RealCPCConfig
+from models.snn.core import SNNClassifier
+from models.bridge.core import ValidatedSpikeBridge
 
 logger = logging.getLogger(__name__)
 

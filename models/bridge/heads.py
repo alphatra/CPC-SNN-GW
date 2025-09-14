@@ -206,3 +206,4 @@ __all__ = [
 
 # Alias for compatibility with plan
 SpikeProjectionHead = SpikeProjectionHead
+

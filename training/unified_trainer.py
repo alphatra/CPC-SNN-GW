@@ -26,7 +26,7 @@ from flax.training import train_state
 
 # Import base trainer and utilities
 from .base_trainer import TrainerBase, TrainingConfig
-from .training_utils import ProgressTracker, format_training_time
+from .utils import ProgressTracker, format_training_time
 from .training_metrics import create_training_metrics
 
 # Import new modular components
@@ -35,9 +35,10 @@ from .pipeline import train_unified_pipeline, _compute_real_evaluation_metrics
 from .metrics import eval_step, validate_and_log_step, compute_comprehensive_metrics
 
 # Import models
-from models.cpc_encoder import CPCEncoder, enhanced_info_nce_loss  
-from models.snn_classifier import SNNClassifier
-from models.spike_bridge import ValidatedSpikeBridge
+from models.cpc.core import CPCEncoder
+from models.cpc.losses import enhanced_info_nce_loss
+from models.snn.core import SNNClassifier
+from models.bridge.core import ValidatedSpikeBridge
 
 logger = logging.getLogger(__name__)
 

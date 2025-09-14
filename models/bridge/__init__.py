@@ -24,7 +24,6 @@ from .gradients import (
     spike_function_fwd,
     spike_function_bwd
 )
-from .testing import test_gradient_flow
 from .losses import (
     sigmoid_surrogate,
     spike_rate_loss,
@@ -59,7 +58,6 @@ __all__ = [
     "MultiChannelProjection",
     "AdaptiveProjection",
     
-    # Testing utilities
-    "test_gradient_flow"
+    # Testing utilities (kept internal; not exported)
 ]
 

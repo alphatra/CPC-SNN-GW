@@ -8,7 +8,8 @@ Created for finer modularity beyond the initial split.
 """
 
 import logging
-from typing import Callable
+from typing import Callable, Optional
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
@@ -202,3 +203,4 @@ class SpikeProjectionHead(nn.Module):
     @nn.compact
     def __call__(self, x):
         return nn.Dense(self.output_dim)(x)
+

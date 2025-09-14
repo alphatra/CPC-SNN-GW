@@ -8,7 +8,7 @@ Created for finer modularity beyond the initial split.
 """
 
 import logging
-from typing import Optional
+from typing import Optional, Dict
 import jax
 import jax.numpy as jnp
 
@@ -179,3 +179,4 @@ __all__ = [
     "temporal_consistency_loss",
     "snn_combined_loss"
 ]
+

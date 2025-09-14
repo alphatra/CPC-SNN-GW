@@ -20,7 +20,7 @@ from ..base_trainer import TrainerBase
 from ..training_metrics import create_training_metrics
 
 # Import enhanced models
-from models.cpc_losses import (
+from models.cpc.losses import (
     MomentumHardNegativeMiner,
     AdaptiveTemperatureController
 )
@@ -218,7 +218,7 @@ class CompleteEnhancedTrainer(TrainerBase):
         # 🧮 MATHEMATICAL FRAMEWORK: Temporal InfoNCE Loss (Equation 1)
         temporal_infonce_loss = 0.0
         if self.config.use_temporal_infonce and cpc_features is not None:
-            from models.cpc_losses import temporal_info_nce_loss
+            from models.cpc.losses import temporal_info_nce_loss
             
             # Dynamic temperature from adaptive controller
             if self.temp_controller is not None:
@@ -244,7 +244,7 @@ class CompleteEnhancedTrainer(TrainerBase):
             cpc_features is not None):
             
             try:
-                from models.cpc_losses import advanced_info_nce_loss_with_momentum
+                from models.cpc.losses import advanced_info_nce_loss_with_momentum
                 
                 # Use advanced momentum-based InfoNCE
                 momentum_loss, mining_stats = advanced_info_nce_loss_with_momentum(

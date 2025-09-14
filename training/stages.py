@@ -20,9 +20,9 @@ import optax
 from flax.training import train_state
 
 # Import models and utilities
-from models.cpc_encoder import enhanced_info_nce_loss
+from models.cpc.losses import enhanced_info_nce_loss
 from .training_metrics import create_training_metrics
-from .training_utils import ProgressTracker, format_training_time
+from .utils import ProgressTracker, format_training_time
 
 logger = logging.getLogger(__name__)
 

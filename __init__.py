@@ -467,118 +467,107 @@ def __getattr__(name):
     
     # Models module imports
     elif name == "CPCEncoder":
-        from .models.cpc_encoder import CPCEncoder
+        from .models.cpc.core import CPCEncoder
         return CPCEncoder
     elif name == "EnhancedCPCEncoder":
-        from .models.cpc_encoder import EnhancedCPCEncoder
+        from .models.cpc.core import EnhancedCPCEncoder
         return EnhancedCPCEncoder
-    elif name == "EnhancedSNNClassifier":
-        from .models.snn_classifier import EnhancedSNNClassifier
-        return EnhancedSNNClassifier
     elif name == "EquinoxGRUWrapper":
-        from .models.cpc_encoder import EquinoxGRUWrapper
+        from .models.cpc_components import EquinoxGRUWrapper
         return EquinoxGRUWrapper
     elif name == "ExperimentConfig":
-        from .models.cpc_encoder import ExperimentConfig
+        from .models.cpc.config import ExperimentConfig
         return ExperimentConfig
+    elif name == "EnhancedSNNClassifier":
+        from .models.snn.core import EnhancedSNNClassifier
+        return EnhancedSNNClassifier
     elif name == "LIFLayer":
-        from .models.snn_classifier import LIFLayer
+        from .models.snn.layers import LIFLayer
         return LIFLayer
     elif name == "OptimizedSpikeBridge":
-        from .models.spike_bridge import ValidatedSpikeBridge
+        from .models.bridge.core import ValidatedSpikeBridge
         return ValidatedSpikeBridge
     elif name == "RMSNorm":
-        from .models.cpc_encoder import RMSNorm
+        from .models.cpc_components import RMSNorm
         return RMSNorm
     elif name == "SNNClassifier":
-        from .models.snn_classifier import SNNClassifier
+        from .models.snn.core import SNNClassifier
         return SNNClassifier
     elif name == "SNNConfig":
-        from .models.snn_classifier import SNNConfig
+        from .models.snn.config import SNNConfig
         return SNNConfig
     elif name == "SNNTrainer":
-        from .models.snn_classifier import SNNTrainer
+        from .models.snn.trainer import SNNTrainer
         return SNNTrainer
     elif name == "SpikeBridge":
-        from .models.spike_bridge import ValidatedSpikeBridge
+        from .models.bridge.core import ValidatedSpikeBridge
         return ValidatedSpikeBridge
     elif name == "SpikeEncodingStrategy":
-        from .models.spike_bridge import SpikeEncodingStrategy
+        from .models.bridge.encoders import SpikeEncodingStrategy
         return SpikeEncodingStrategy
     elif name == "SurrogateGradientType":
-        from .models.snn_classifier import SurrogateGradientType
+        from .models.snn_utils import SurrogateGradientType
         return SurrogateGradientType
     elif name == "WeightNormDense":
-        from .models.cpc_encoder import WeightNormDense
+        from .models.cpc_components import WeightNormDense
         return WeightNormDense
     elif name == "VectorizedLIFLayer":
-        from .models.snn_classifier import VectorizedLIFLayer
+        from .models.snn.layers import VectorizedLIFLayer
         return VectorizedLIFLayer
     elif name == "create_default_spike_bridge":
-        from .models.spike_bridge import create_default_spike_bridge
+        from .models.bridge.core import create_default_spike_bridge
         return create_default_spike_bridge
     elif name == "create_enhanced_cpc_encoder":
-        from .models.cpc_encoder import create_enhanced_cpc_encoder
+        from .models.cpc.factory import create_enhanced_cpc_encoder
         return create_enhanced_cpc_encoder
     elif name == "create_enhanced_snn_classifier":
-        from .models.snn_classifier import create_enhanced_snn_classifier
+        from .models.snn.factory import create_enhanced_snn_classifier
         return create_enhanced_snn_classifier
     elif name == "create_experiment_config":
-        from .models.cpc_encoder import create_experiment_config
+        from .models.cpc.factory import create_experiment_config
         return create_experiment_config
     elif name == "create_fast_spike_bridge":
-        from .models.spike_bridge import create_fast_spike_bridge
+        from .models.bridge.core import create_fast_spike_bridge
         return create_fast_spike_bridge
     elif name == "create_robust_spike_bridge":
-        from .models.spike_bridge import create_robust_spike_bridge
+        from .models.bridge.core import create_robust_spike_bridge
         return create_robust_spike_bridge
     elif name == "create_snn_classifier":
-        from .models.snn_classifier import create_snn_classifier
+        from .models.snn.factory import create_snn_classifier
         return create_snn_classifier
     elif name == "create_snn_config":
-        from .models.snn_classifier import create_snn_config
+        from .models.snn.factory import create_snn_config
         return create_snn_config
     elif name == "create_spike_bridge_from_string":
-        from .models.spike_bridge import create_spike_bridge_from_string
+        from .models.bridge.core import create_spike_bridge_from_string
         return create_spike_bridge_from_string
     elif name == "create_standard_cpc_encoder":
-        from .models.cpc_encoder import create_standard_cpc_encoder
+        from .models.cpc.factory import create_standard_cpc_encoder
         return create_standard_cpc_encoder
     elif name == "create_surrogate_gradient_fn":
-        from .models.snn_classifier import create_surrogate_gradient_fn
+        from .models.snn_utils import create_surrogate_gradient_fn
         return create_surrogate_gradient_fn
     elif name == "enhanced_info_nce_loss":
-        from .models.cpc_encoder import enhanced_info_nce_loss
+        from .models.cpc.losses import enhanced_info_nce_loss
         return enhanced_info_nce_loss
     elif name == "info_nce_loss":
-        from .models.cpc_encoder import info_nce_loss
+        from .models.cpc.losses import info_nce_loss
         return info_nce_loss
     elif name == "spike_function_with_surrogate":
-        from .models.snn_classifier import spike_function_with_surrogate
+        from .models.snn_utils import spike_function_with_surrogate
         return spike_function_with_surrogate
+    elif name == "BatchedSNNValidator":
+        from .models.snn_utils import BatchedSNNValidator
+        return BatchedSNNValidator
     
     # Training module imports
     elif name == "AdvancedGWTrainer":
-        from .training.advanced_training import AdvancedGWTrainer
+        # Backward-compatibility alias to modular advanced trainer
+        from .training.advanced import RealAdvancedGWTrainer as AdvancedGWTrainer
         return AdvancedGWTrainer
     elif name == "CPCPretrainer":
         from .training.pretrain_cpc import CPCPretrainer
         return CPCPretrainer
-    elif name == "BatchedSNNValidator":
-        from .models.snn_classifier import BatchedSNNValidator
-        return BatchedSNNValidator
-    elif name == "EnhancedGWTrainer":
-        from .training.enhanced_gw_training import EnhancedGWTrainer
-        return EnhancedGWTrainer
-    elif name == "create_enhanced_gw_trainer":
-        from .training.enhanced_gw_training import create_enhanced_gw_trainer
-        return create_enhanced_gw_trainer
-    elif name == "pretrain_cpc_main":
-        from .training.pretrain_cpc import main as pretrain_cpc_main
-        return pretrain_cpc_main
-    elif name == "run_advanced_training_experiment":
-        from .training.advanced_training import run_advanced_training_experiment
-        return run_advanced_training_experiment
     elif name == "CPCSNNTrainer":
         from .training.base_trainer import CPCSNNTrainer
         return CPCSNNTrainer
@@ -600,12 +589,31 @@ def __getattr__(name):
     elif name == "create_cpc_snn_trainer":
         from .training.base_trainer import create_cpc_snn_trainer
         return create_cpc_snn_trainer
+    elif name == "create_enhanced_gw_trainer":
+        from .training.enhanced_gw_training import create_enhanced_gw_trainer
+        return create_enhanced_gw_trainer
     elif name == "create_hydra_cli_app":
         from .training.base_trainer import create_hydra_cli_app
         return create_hydra_cli_app
     elif name == "create_training_config":
         from .training.base_trainer import create_training_config
         return create_training_config
+    elif name == "pretrain_cpc_main":
+        from .training.pretrain_cpc import main as pretrain_cpc_main
+        return pretrain_cpc_main
+    elif name == "run_advanced_training_experiment":
+        # Deprecated: no direct experiment runner in modular API
+        import warnings
+        warnings.warn(
+            "run_advanced_training_experiment is deprecated. "
+            "Use training.advanced.create_real_advanced_trainer and invoke your run loop.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        raise AttributeError(
+            "run_advanced_training_experiment has been removed; "
+            "construct a trainer via training.advanced.create_real_advanced_trainer(config)"
+        )
     
     # Utils module imports
     elif name == "ML4GW_PROJECT_STRUCTURE":

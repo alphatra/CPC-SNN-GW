@@ -15,7 +15,7 @@ import jax
 
 # Import stage functions
 from .stages import train_stage
-from .training_utils import format_training_time
+from .utils import format_training_time
 
 logger = logging.getLogger(__name__)
 

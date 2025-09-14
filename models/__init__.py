@@ -85,8 +85,6 @@ _FACTORY_FUNCTIONS = {
     
     # Spike Bridge factories (MODULAR)
     "create_validated_spike_bridge": ("bridge.core", "create_validated_spike_bridge"),
-    "test_gradient_flow": ("bridge.testing", "test_gradient_flow"),
-    "test_spike_bridge_comprehensive": ("bridge.testing", "test_spike_bridge_comprehensive"),
 }
 
 # Combine all imports

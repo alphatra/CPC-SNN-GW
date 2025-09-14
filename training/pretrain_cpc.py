@@ -24,7 +24,8 @@ from .base_trainer import TrainerBase, TrainingConfig
 from .training_metrics import create_training_metrics
 
 # Import models and data
-from models.cpc_encoder import CPCEncoder, enhanced_info_nce_loss
+from models.cpc.core import CPCEncoder
+from models.cpc.losses import enhanced_info_nce_loss
 from data.gw_synthetic_generator import ContinuousGWGenerator
 
 logger = logging.getLogger(__name__)

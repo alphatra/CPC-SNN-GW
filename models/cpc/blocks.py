@@ -8,6 +8,7 @@ Created for finer modularity beyond the initial split.
 """
 
 import logging
+import jax
 import jax.numpy as jnp
 import flax.linen as nn
 from typing import Tuple, Optional
@@ -159,8 +160,7 @@ class FeatureEncoder(nn.Module):
     
     def setup(self):
         """Initialize encoder blocks."""
-        self.conv_blocks = []
-        
+        blocks = []
         for i, (dim, kernel, stride) in enumerate(zip(self.layer_dims, self.kernel_sizes, self.strides)):
             block = ConvBlock(
                 features=dim,
@@ -168,7 +168,9 @@ class FeatureEncoder(nn.Module):
                 strides=(stride,),
                 name=f'conv_block_{i+1}'
             )
-            self.conv_blocks.append(block)
+            blocks.append(block)
+        # Store as an immutable tuple to align with Flax module semantics
+        self.conv_blocks = tuple(blocks)
     
     def __call__(self, x: jnp.ndarray, training: bool = True) -> jnp.ndarray:
         """Apply feature encoder stack."""
@@ -185,3 +187,4 @@ __all__ = [
     "ProjectionHead",
     "FeatureEncoder"
 ]
+

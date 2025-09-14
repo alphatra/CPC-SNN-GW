@@ -7,6 +7,9 @@ for gradient flow validation and bridge component testing.
 Split from spike_bridge.py for better maintainability.
 """
 
+# Prevent pytest from collecting functions in this helper module
+__test__ = False
+
 import jax
 import jax.numpy as jnp
 from typing import Dict, Any, Tuple
