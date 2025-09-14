@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 def train_cmd():
     """Main training command entry point."""
     parser = get_base_parser()
+    parser.prog = "cli.py train"
     parser.description = "Train CPC+SNN neuromorphic gravitational wave detector"
     
     # Training specific arguments

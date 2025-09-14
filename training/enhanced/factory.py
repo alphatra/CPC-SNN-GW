@@ -121,7 +121,9 @@ def run_complete_enhanced_experiment(
         
         # Use real LIGO data integration
         try:
-            from data.real_ligo_integration import create_real_ligo_dataset
+            # Use synthetic generator instead of deprecated real_ligo_integration
+            from data.gw_synthetic_generator import ContinuousGWGenerator
+            from data.gw_signal_params import SignalConfiguration, GeneratorSettings
             
             (train_signals, train_labels), (test_signals, test_labels) = create_real_ligo_dataset(
                 num_samples=num_samples,

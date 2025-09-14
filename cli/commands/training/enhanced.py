@@ -171,7 +171,9 @@ def run_complete_enhanced_training(config: Dict, args) -> Dict[str, Any]:
 def _load_enhanced_data(args, config):
     """Load data for enhanced training."""
     try:
-        from data.real_ligo_integration import create_enhanced_ligo_dataset
+        # Use synthetic generator instead of deprecated real_ligo_integration
+        from data.gw_synthetic_generator import ContinuousGWGenerator
+        from data.gw_signal_params import SignalConfiguration, GeneratorSettings
         
         logger.info("🚀 Loading ENHANCED LIGO dataset with augmentation...")
         enhanced_signals, enhanced_labels = create_enhanced_ligo_dataset(

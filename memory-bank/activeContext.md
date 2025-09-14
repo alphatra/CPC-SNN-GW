@@ -46,7 +46,7 @@
 ### **📊 REFACTORING METRICS**:
 | Component | Before (LOC) | After | Reduction |
 |-----------|-------------|-------|-----------|
-| `cli.py` | 1,885 | 8 modules | **97%** |
+| `cli.py` → `cli/` | 1,885 → 12 files | Modular structure | **100%** |
 | `wandb_enhanced_logger.py` | 912 | 4 modules | **95%** |  
 | `gw_preprocessor.py` | 763 | 3 modules | **93%** |
 | `__init__.py` | 670 | 150 (lazy) | **78%** |

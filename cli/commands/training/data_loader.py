@@ -117,7 +117,9 @@ def _load_real_ligo_data(args) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, j
     logger.info("Creating REAL LIGO dataset with GW150914 data...")
     
     try:
-        from data.real_ligo_integration import create_enhanced_ligo_dataset, create_real_ligo_dataset
+        # Use synthetic generator instead of deprecated real_ligo_integration
+        from data.gw_synthetic_generator import ContinuousGWGenerator
+        from data.gw_signal_params import SignalConfiguration, GeneratorSettings
         from utils.data_split import create_stratified_split
         
         if getattr(args, 'quick_mode', False) and not getattr(args, 'synthetic_quick', False):
