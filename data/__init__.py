@@ -27,6 +27,10 @@ _LAZY_IMPORTS = {
     "ProcessingResult": ("gw_download", "ProcessingResult"),
     "SegmentSampler": ("gw_download", "SegmentSampler"),
     
+    # ✅ MLGWSC-1 data loader (NEW)
+    "MLGWSCDataLoader": ("mlgwsc_data_loader", "MLGWSCDataLoader"),
+    "create_mlgwsc_loader": ("mlgwsc_data_loader", "create_mlgwsc_loader"),
+    
     # ✅ ReadLIGO data sources
     "LIGOEventData": ("gw_download", "LIGOEventData"),
     "LIGODataQuality": ("gw_download", "LIGODataQuality"),

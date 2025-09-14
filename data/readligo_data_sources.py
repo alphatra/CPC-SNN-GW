@@ -1,7 +1,14 @@
 """
 ReadLIGO Data Sources - Production LIGO Data Integration
+
+⚠️ DEPRECATED: Use MLGWSCDataLoader instead for MLGWSC-1 dataset.
+
 Replaces problematic GWOSC API with reliable ReadLIGO library.
 Based on working solution from real_ligo_test.py
+
+NOTE: This module downloads individual events from GWOSC. 
+For production training, use data.mlgwsc_data_loader.MLGWSCDataLoader
+with the comprehensive MLGWSC-1 dataset.
 """
 
 import jax

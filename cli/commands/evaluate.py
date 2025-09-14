@@ -99,10 +99,27 @@ def eval_cmd():
         trainer = create_unified_trainer(trainer_config)
         
         # Run evaluation
+        # Load MLGWSC-1 test data
+        from ...data.mlgwsc_data_loader import MLGWSCDataLoader
+        from ...utils.config_loader import load_config
+        
+        config = load_config()
+        data_loader = MLGWSCDataLoader(
+            mode="validation",
+            config=config
+        )
+        logger.info("✅ MLGWSC-1 data loader initialized")
+        
+        # Create labeled test dataset
+        test_segments, test_labels = data_loader.create_labeled_dataset()
+        logger.info(f"📊 Loaded {len(test_segments)} test segments")
+        logger.info(f"   - Background: {test_labels.count(0)} segments")  
+        logger.info(f"   - Signal: {test_labels.count(1)} segments")
+        
         test_results = evaluate_on_test_set(
             trainer=trainer,
-            test_signals=None,  # TODO: Load actual test data
-            test_labels=None,   # TODO: Load actual test labels
+            test_signals=test_segments,
+            test_labels=test_labels,
             verbose=True,
             batch_size=args.batch_size
         )
