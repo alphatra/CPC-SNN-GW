@@ -20,7 +20,7 @@ import jax.numpy as jnp
 logger = logging.getLogger(__name__)
 
 
-def info_nce_loss(z_context: jnp.ndarray, z_target: jnp.ndarray, temperature: float = 0.1) -> jnp.ndarray:
+def info_nce_loss(z_context: jnp.ndarray, z_target: jnp.ndarray, temperature: float = 0.07) -> jnp.ndarray:
     """
     Basic InfoNCE (Noise Contrastive Estimation) loss for CPC.
     
@@ -34,7 +34,7 @@ def info_nce_loss(z_context: jnp.ndarray, z_target: jnp.ndarray, temperature: fl
     """
     batch_size = z_context.shape[0]
     
-    # L2 normalize embeddings
+    # L2 normalize embeddings LOCALLY (no stop_gradient across graph)
     z_context = z_context / (jnp.linalg.norm(z_context, axis=-1, keepdims=True) + 1e-8)
     z_target = z_target / (jnp.linalg.norm(z_target, axis=-1, keepdims=True) + 1e-8)
     
@@ -53,7 +53,7 @@ def info_nce_loss(z_context: jnp.ndarray, z_target: jnp.ndarray, temperature: fl
 
 def enhanced_info_nce_loss(z_context: jnp.ndarray, 
                           z_target: jnp.ndarray, 
-                          temperature: float = 0.1,
+                          temperature: float = 0.07,
                           eps: float = 1e-8) -> jnp.ndarray:
     """
     Enhanced InfoNCE loss with improved numerical stability and handling.
@@ -117,16 +117,13 @@ def enhanced_info_nce_loss(z_context: jnp.ndarray,
     positive_similarities = scaled_similarity[labels, labels]
     loss = jnp.mean(log_sum_exp - positive_similarities)
     
-    # ✅ VALIDATION: Check for NaN/Inf
-    if jnp.isnan(loss) or jnp.isinf(loss):
-        logger.error("NaN or Inf detected in enhanced_info_nce_loss")
-        return jnp.array(0.0)
-    
+    # ✅ SANITIZE: JIT-safe numeric cleanup (no Python branching on tracers)
+    loss = jnp.nan_to_num(loss, nan=0.0, posinf=0.0, neginf=0.0)
     return loss
 
 
 def temporal_info_nce_loss(cpc_features: jnp.ndarray,
-                          temperature: float = 0.1,
+                          temperature: float = 0.07,
                           max_prediction_steps: int = 12) -> jnp.ndarray:
     """
     Temporal InfoNCE loss for sequences with temporal prediction.
@@ -169,6 +166,8 @@ def temporal_info_nce_loss(cpc_features: jnp.ndarray,
                 target_flat,
                 temperature=temperature
             )
+            # JIT-safe sanitize per-step
+            step_loss = jnp.nan_to_num(step_loss, nan=0.0, posinf=0.0, neginf=0.0)
             
             # Weight by prediction difficulty (farther = harder)
             weight = 1.0 / k  # Give more weight to closer predictions

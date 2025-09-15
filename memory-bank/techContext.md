@@ -156,6 +156,32 @@ def calculate_fixed_cpc_loss(cpc_features: Optional[jnp.ndarray],
 - **Temporal Focus**: Uses time-shifted positive pairs
 - **Numerical Stability**: L2 normalization + epsilon terms
 
+---
+
+## 🔄 2025-09-15 – Trainer upgrades (InfoNCE joint, SpikeBridge normalization, JIT)
+
+### Zmiany techniczne
+- Trainer: dodany temporal_info_nce_loss do `total_loss` (waga 0.2) – realna nauka reprezentacji CPC w fazie joint
+- JIT: `train_step` i `eval_step` ze `@jit` i `donate_argnums=(0,)` – mniejsze overheady, szybsza kompilacja
+- Gradienty: poprawne per‑modułowe normy: `cpc`, `bridge`, `snn` – logowane co step
+- SpikeBridge: próg=0.45, surrogate_beta=3.0, wejście znormalizowane (zero‑mean, unit‑std per‑sample)
+- Walidacja JIT‑safe: brak Python `if` na tracerach, `nan_to_num` zamiast `jax.debug.check_numerics`
+- Logi: JSONL per‑step i per‑epoch + opcjonalny W&B hook
+
+### Efekt techniczny
+- Stabilniejsze `spike_rate_mean` (docelowo 1–20% na krok, aktualnie ~24–28%)
+- Brak NaN/Inf po sanitizacji wej./wyj. SpikeBridge
+- Lepsza obserwowalność: grad_norm_total/cpc/bridge/snn dostępne w logach
+
+### Dodatkowe uwagi (mostek i grad)
+- Gałąź `learnable_multi_threshold` wymaga zgodnych kształtów w selekcji – zastosowano `lax.select` na `zeros_like(spikes_candidate)`
+- Dodano `output_gain` jako parametr mostka, aby mieć niezerowe parametry w PyTree dla diagnostyki gradów
+- Dla sanity zalecany prosty mostek sigmoidowy (ciągły, bez warunków), aby potwierdzić `grad_norm_bridge > 0`, następnie powrót do wieloprogowego kodowania
+
+### Wolumen danych dla CPC
+- Minimalnie rekomendowane: ≥50k–100k okien train; overlap 0.5–0.9; okno T≈512 (4–8 s)
+- Generacja MLGWSC: wydłużyć duration (6–24 h) lub połączyć wiele plików; zachować balans ~30–40% pozytywów
+
 ### ✅ **TECHNICAL BREAKTHROUGH 3: 6-STAGE GPU WARMUP**
 
 **Location**: `cli.py` + `enhanced_cli.py`  

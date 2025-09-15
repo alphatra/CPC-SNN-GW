@@ -62,6 +62,27 @@ trainer = create_trainer(
 - **Experiment Management**: Multiple configurations for different runs
 - **Professional Standards**: Industry-grade configuration system
 
+---
+
+## 🔄 2025-09-15 – New patterns: JIT-safe validation, joint InfoNCE, JSONL telemetry
+
+### ✅ PATTERN: JIT‑SAFE VALIDATION FOR NEUROMORPHIC MODULES
+- Replace Python branching on JAX tracers with `jax.lax.cond`
+- Sanitize numerics via `jnp.nan_to_num` pre/post
+- Avoid tracer→Python conversions in logs (no `float(tensor)` in JIT)
+
+### ✅ PATTERN: JOINT LOSS WITH TEMPORAL INFO NCE
+- `total_loss = cls_loss + α · temporal_info_nce_loss(features)`
+- α w configu (domyślnie 0.2); nadzoruje wpływ CPC na joint training
+
+### ✅ PATTERN: SPIKE STABILITY VIA INPUT NORMALIZATION
+- Per‑sample zero‑mean/unit‑std normalizacja przed SpikeBridge
+- Kontrola aktywności przez `threshold` i `surrogate_beta`
+
+### ✅ PATTERN: JSONL TELEMETRY + PER‑MODULE GRAD NORMS
+- Zapis per‑step: `training_results.jsonl`, per‑epoch: `epoch_metrics.jsonl`
+- Loguj: total_loss, accuracy, cpc_loss, grad_norm_total/cpc/bridge/snn, spike_rate_mean/std
+
 ## 🏆 REVOLUTIONARY MODULAR ARCHITECTURE PATTERNS
 
 ### ✅ **PATTERN 1: PROFESSIONAL MODULAR SUBSYSTEM ORGANIZATION**

@@ -20,16 +20,25 @@ def _load_mlgwsc_data(args) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.
     logger.info("📦 Using MLGWSC-1 professional dataset via MLGWSCDataLoader")
     
     try:
-        from ...data.mlgwsc_data_loader import MLGWSCDataLoader
+        # Absolute imports from repo root package
+        from data.mlgwsc_data_loader import MLGWSCDataLoader
         from utils.data_split import create_stratified_split
-        from utils.config_loader import load_config
+        # Use the same config loader as CLI (respects -c path)
+        from utils.config import load_config
     except ImportError as e:
         logger.error(f"❌ Cannot import MLGWSC loader: {e}")
         raise
     
     # Load config-driven data directory (no hardcoded paths)
-    cfg = load_config()
-    data_dir = str(getattr(args, 'mlgwsc_data_dir', None) or cfg['system']['data_dir'])
+    try:
+        cfg = load_config(getattr(args, 'config', None))
+    except Exception as e:
+        logger.warning(f"⚠️ Falling back to default config loader due to: {e}")
+        cfg = load_config()
+    # Allow env override for data dir
+    import os
+    env_data_dir = os.environ.get('CPC_SNN_DATA_DIR')
+    data_dir = str(env_data_dir or cfg['system']['data_dir'])
     if not Path(data_dir).exists():
         raise FileNotFoundError(f"Configured data_dir not found: {data_dir}")
     

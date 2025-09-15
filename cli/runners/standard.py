@@ -29,7 +29,8 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
         # Import training modules
         from training.base.trainer import CPCSNNTrainer
         from training.base.config import TrainingConfig
-        from data.gw_dataset_builder import create_evaluation_dataset
+        # Use unified data router to respect --use-mlgwsc and config data_dir
+        from cli.commands.training.data_loader import load_training_data
         
         # Create training config
         training_config = TrainingConfig(
@@ -52,25 +53,29 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
         # Create trainer
         trainer = CPCSNNTrainer(training_config)
         
-        # Create or load dataset
+        # Load dataset via router (MLGWSC / synthetic / real)
         logger.info("📊 Loading training dataset...")
-        pairs = create_evaluation_dataset(
-            num_samples=1000,  # Default for standard training
-            sequence_length=512,
-            sample_rate=2048,
-            random_seed=42
-        )
-        all_signals = jnp.stack([p[0] for p in pairs])
-        # Ensure 3D shape for CPC: [batch, sequence, features]
-        if all_signals.ndim == 2:
-            all_signals = all_signals[..., None]
-        all_labels = jnp.array([p[1] for p in pairs])
-        
-        train_signals = all_signals[:800]  # 80% for training
-        train_labels = all_labels[:800]
-        test_signals = all_signals[800:]   # 20% for testing
-        test_labels = all_labels[800:]
-        
+        train_signals, train_labels, test_signals, test_labels = load_training_data(args)
+        # Ensure CPC input shape [B, T, F]
+        if train_signals.ndim == 2:
+            train_signals = train_signals[..., None]
+        if test_signals.ndim == 2:
+            test_signals = test_signals[..., None]
+        # Reduce channels → single feature for CPC if multi-channel
+        if train_signals.shape[-1] > 1:
+            train_signals = jnp.mean(train_signals, axis=-1, keepdims=True)
+        if test_signals.shape[-1] > 1:
+            test_signals = jnp.mean(test_signals, axis=-1, keepdims=True)
+        # Downsample long sequences to stabilize attention memory (target T≈512)
+        def _downsample(x, target_t: int = 512):
+            t = x.shape[1]
+            if t <= target_t:
+                return x
+            factor = max(1, t // target_t)
+            return x[:, ::factor, :]
+        train_signals = _downsample(train_signals, 512)
+        test_signals = _downsample(test_signals, 512)
+        logger.info(f"   ⏬ Downsampled T: train={train_signals.shape[1]}, test={test_signals.shape[1]}, F={train_signals.shape[-1]}")
         logger.info(f"   📊 Train: {len(train_signals)} samples")
         logger.info(f"   📊 Test: {len(test_signals)} samples")
         

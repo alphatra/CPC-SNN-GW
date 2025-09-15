@@ -6,7 +6,7 @@
 # =============================================================================
 system:
   # Data paths - PARAMETERIZED (no hardcoded paths)
-  data_dir: "/teamspace/studios/this_studio/data/dataset-4/v2/"
+  data_dir: "/teamspace/studios/this_studio/data/dataset-4/v2"
   output_dir: "./outputs"
   cache_dir: "./cache"
   checkpoint_dir: "./checkpoints"
@@ -66,15 +66,15 @@ model:
   # SNN Classifier - PARAMETERIZED  
   snn:
     num_classes: 2  # binary: noise vs signal
-    hidden_sizes: [256, 128, 64]
-    time_steps: 16
-    threshold: 1.0
+    hidden_sizes: [128, 128, 64]
+    time_steps: 32
+    threshold: 0.5
     tau_mem: 20.0  # membrane time constant
     tau_syn: 10.0  # synaptic time constant
     
   # Spike Bridge - PARAMETERIZED
   bridge:
-    encoding_type: "temporal_difference"  # temporal_difference, rate, latency
+    encoding_type: "learnable_multi_threshold"  # temporal_contrast, phase_preserving, learnable_multi_threshold, simple_sigmoid
     num_threshold_levels: 4
     spike_regularization: 0.01
 

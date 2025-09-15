@@ -93,6 +93,29 @@
 
 ---
 
+## 🔄 2025-09-15 – Training pipeline hardening (GPU/JIT/InfoNCE/SpikeBridge)
+
+- ✅ JIT-compiled train/eval steps w/ donate buffers → mniejsze narzuty hosta, stabilny %GPU
+- ✅ Standard runner przełączony na router danych (MLGWSC-1) zamiast synthetic eval
+- ✅ SpikeBridge: JIT‑friendly walidacja (bez Python if na tensorach), sanitizacja NaN/Inf, usunięte TracerBoolConversionError/ConcretizationTypeError
+- ✅ Spike aktywność urealniona: threshold↑ 0.45, surrogate_beta↓ 3.0, normalizacja wejścia → spike_rate_mean ≈ 0.24–0.28
+- ✅ Zaawansowane metryki per‑step: total_loss, accuracy, cpc_loss, grad_norm_total/cpc/bridge/snn, spike_rate_mean/std (JSONL + log)
+- ✅ Temporal InfoNCE włączony w trenerze (joint loss: cls + α·InfoNCE), α domyślnie 0.2
+- ✅ Zapisy JSONL: `outputs/logs/training_results.jsonl` (step), `epoch_metrics.jsonl` (epoch)
+- ⚠️ XLA BFC warnings (~32–34 GiB) to informacje o presji/rekonstrukcji buforów, nie OOM; MEM_FRACTION=0.85 + batch=16 podnosi %GPU (~30%+)
+
+Snapshot (1 epoka, batch=8–16, steps=16–32):
+- acc_test ≈ 0.27–0.46 (niestabilne, oczekujemy wzrostu po pełnym joint training)
+- cpc_loss logowany (temporal InfoNCE), trend do weryfikacji w dłuższym biegu (3 epoki uruchomione)
+
+### Dalsze modyfikacje (wieczór)
+- SpikeBridge: przełączony na `learnable_multi_threshold` + hard‑sigmoid (β≈4), `lax.select` zamiast `cond` dla zgodnych kształtów
+- Dodany `output_gain` (param) w moście – wymusza obecność parametrów w ścieżce gradów
+- Trener: AdamW + clipping; poprawione logowanie `grad_norm_*` (flatten po nazwach); per‑sample norm przed mostem
+- Status: `grad_norm_bridge` nadal ≈0.0 na mini‑zestawie → zalecany sanity mostek sigmoidowy, a następnie powrót do learnable przy większym wolumenie danych
+
+---
+
 ## 🎯 BREAKTHROUGH DIAGNOSIS: DATA VOLUME CRISIS SOLVED!
 
 **Status**: **DATA VOLUME CRISIS DIAGNOSED & SOLVED** - Root cause identified through MLGWSC-1 analysis  

@@ -465,3 +465,45 @@
 3) Dodatkowo (opcjonalnie dla CPU):
    - Obniżyć eval batch (np. 16) i limit kroków quick (np. 40) – dodać flagi w CLI
 4) Po sanity: przejść na GPU, przywrócić Orbax, zwiększyć batch i długość sekwencji
+
+---
+
+## 🔄 2025-09-15 – Training pipeline hardening (logi/JSONL/InfoNCE/SpikeBridge)
+
+### Co wdrożono dziś
+- JIT dla train_step/eval_step + donate_argnums (mniej kopiowań, stabilny %GPU)
+- Standard runner: routing do MLGWSC-1 (synthetic eval usunięty)
+- SpikeBridge: JIT‑friendly walidacja, sanitizacja NaN/Inf; threshold=0.45, surrogate_beta=3.0, normalizacja wejścia
+- Metryki per‑step: total_loss, accuracy, cpc_loss, grad_norm_total/cpc/bridge/snn, spike_rate_mean/std
+- Zapisy: `outputs/logs/training_results.jsonl` (step) i `outputs/logs/epoch_metrics.jsonl` (epoch)
+- Temporal InfoNCE włączony w trenerze (joint loss z wagą 0.2)
+
+### Wyniki skrótowe
+- spike_rate_mean spadło z ~0.36–0.39 → ~0.24–0.28 po normalizacji + progu 0.45
+- acc_test po 1 ep: 0.27–0.46 (niestabilne; oczekiwany wzrost po 3 epokach)
+- XLA BFC ostrzeżenia (~32–34 GiB) – informacyjne, brak OOM; MEM_FRACTION=0.85 + batch=16 poprawia przepływ
+
+### Następne kroki
+1) Dłuższy bieg (≥3 epoki) z batch=16, spike_steps=32; monitorować trend `total_loss` i `cpc_loss`
+2) Włączyć W&B w configu (`enable_wandb: true`) do porównań seedów i re-runów
+3) Dalsza regulacja spike (threshold 0.5 jeśli aktywność > 20%)
+
+---
+
+## 🔄 2025-09-15 (wieczór) – SpikeBridge gradient & data volume plan
+
+### Zmiany w implementacji
+- SpikeBridge: hard‑sigmoid surrogate (β≈4), usunięte gałęzie Pythona; bezpieczne `lax.select` z równym kształtem
+- Learnable ścieżka: `learnable_multi_threshold` + per‑sample normalizacja; dodany `output_gain` (param) w moście dla wymuszenia przepływu gradientu
+- Trener: AdamW + `clip_by_global_norm(5.0)`; per‑sample normalizacja wejścia do mostu; poprawione liczenie `grad_norm_*` (flatten_dict po nazwach modułów)
+
+### Obserwacje z biegów (MLGWSC mini)
+- Rozmiar: train=86, test=22 (31.8% pos) – za mało dla CPC (cel ≥50k–100k okien)
+- `grad_norm_bridge` pozostaje ≈0.0 przy złożonych encoderach; prosty sanity mostek sigmoid zalecany na potwierdzenie przepływu gradów
+- `spike_rate_mean` ~0.14–0.24, `spike_rate_std` >0 po normalizacji (aktywność niezerowa)
+- Accuracy waha się (0.0–0.82) – efekt małej próbki i niestabilnego mostka
+
+### Plan zwiększenia danych (CPC‑ready)
+- Zwiększyć czas trwania generacji (np. 6–24h) lub liczbę plików i scalić – cel: ≥50k okien train
+- Ustawić okno: T≈512 (lub 4–8s), overlap 0.5–0.9; zapewnić balansem ~30–40% pozytywów
+- Po zwiększeniu wolumenu wrócić do `learnable_multi_threshold` i potwierdzić, że `grad_norm_bridge > 0` oraz `cpc_loss` spada
