@@ -87,9 +87,9 @@ def format_training_time(current_time: float, total_time: Optional[float] = None
         return f"{current_formatted}/{total_formatted} ({percent:.1f}%)"
 
 
-def fixed_gradient_accumulation(loss_fn: Callable, 
-                               params: Dict, 
-                               batch: jnp.ndarray, 
+def fixed_gradient_accumulation(loss_fn: Callable,
+                               params: Dict,
+                               batch: Any,
                                accumulation_steps: int = 4) -> Tuple[jnp.ndarray, Dict]:
     """
     ✅ CRITICAL FIX: Fixed gradient accumulation with proper loss scaling.
@@ -106,8 +106,16 @@ def fixed_gradient_accumulation(loss_fn: Callable,
     Returns:
         Tuple of (scaled_loss, accumulated_gradients)
     """
-    # Split batch into micro-batches
-    batch_size = batch.shape[0]
+    # Split batch into micro-batches (supports (x,y) tuple or single array)
+    if hasattr(batch, 'shape'):
+        batch_size = batch.shape[0]
+        get_slice = lambda b, s, e: b[s:e]
+    elif isinstance(batch, (tuple, list)) and hasattr(batch[0], 'shape'):
+        batch_size = batch[0].shape[0]
+        def get_slice(b, s, e):
+            return (b[0][s:e], b[1][s:e])
+    else:
+        raise ValueError("Unsupported batch format for gradient accumulation")
     micro_batch_size = max(1, batch_size // accumulation_steps)
     
     accumulated_loss = 0.0
@@ -117,7 +125,7 @@ def fixed_gradient_accumulation(loss_fn: Callable,
         # Get micro-batch
         start_idx = i * micro_batch_size
         end_idx = min(start_idx + micro_batch_size, batch_size)
-        micro_batch = batch[start_idx:end_idx]
+        micro_batch = get_slice(batch, start_idx, end_idx)
         
         if len(micro_batch) == 0:
             continue

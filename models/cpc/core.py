@@ -40,6 +40,7 @@ class CPCEncoder(nn.Module):
     prediction_steps: int = 8
     
     @nn.compact
+    @nn.compact
     def __call__(self, x: jnp.ndarray, training: bool = True) -> jnp.ndarray:
         """
         Encode input sequences into latent representations.
@@ -131,7 +132,7 @@ class RealCPCEncoder(nn.Module):
     def setup(self):
         """Initialize CPC encoder components."""
         # ✅ ENCODER: Multi-layer temporal encoder
-        self.encoder_layers = []
+        layers = []  # build locally, assign once (Flax Module attrs are immutable)
         
         layer_dims = [64, 128, 256, self.config.latent_dim]
         kernel_sizes = [7, 5, 3, 3]
@@ -145,7 +146,24 @@ class RealCPCEncoder(nn.Module):
                 padding='SAME',
                 name=f'encoder_conv_{i+1}'
             )
-            self.encoder_layers.append(layer)
+            layers.append(layer)
+        # Assign as an immutable tuple/list to avoid mutation after setup
+        self.encoder_layers = tuple(layers)
+        
+        # Normalization and dropout modules per layer (created in setup)
+        norms = []
+        drops = []
+        for i in range(self.config.num_layers):
+            norms.append(
+                nn.LayerNorm(use_scale=True, use_bias=True, name=f'encoder_norm_{i+1}')
+                if self.config.use_layer_normalization else None
+            )
+            drops.append(
+                nn.Dropout(rate=self.config.dropout_rate, name=f'encoder_dropout_{i+1}')
+                if self.config.dropout_rate > 0 else None
+            )
+        self.encoder_norms = tuple(norms)
+        self.encoder_dropouts = tuple(drops)
         
         # ✅ CONTEXT: Advanced context network
         if self.config.use_attention:
@@ -200,30 +218,28 @@ class RealCPCEncoder(nn.Module):
         current_features = x
         
         # ✅ ENCODER: Progressive feature extraction
+        prev_features = None
         for i, encoder_layer in enumerate(self.encoder_layers):
-            current_features = encoder_layer(current_features)
+            out = encoder_layer(current_features)
             
             # Apply normalization if enabled
-            if self.config.use_layer_normalization:
-                current_features = nn.LayerNorm(name=f'encoder_norm_{i+1}')(current_features)
+            if self.config.use_layer_normalization and self.encoder_norms[i] is not None:
+                out = self.encoder_norms[i](out)
             
             # Apply activation
-            current_features = nn.relu(current_features)
+            out = nn.relu(out)
             
             # Apply dropout if in training
-            if training and self.config.dropout_rate > 0:
-                current_features = nn.Dropout(
-                    rate=self.config.dropout_rate,
-                    name=f'encoder_dropout_{i+1}'
-                )(current_features, deterministic=not training)
+            if self.config.dropout_rate > 0 and self.encoder_dropouts[i] is not None:
+                out = self.encoder_dropouts[i](out, deterministic=not training)
             
             # Residual connections (if enabled and dimensions match)
-            if (self.config.use_residual_connections and i > 0 and 
-                current_features.shape[-1] == getattr(self, f'_prev_features_{i}', current_features).shape[-1]):
-                current_features = current_features + getattr(self, f'_prev_features_{i}')
+            if self.config.use_residual_connections and prev_features is not None:
+                if out.shape[-1] == prev_features.shape[-1]:
+                    out = out + prev_features
             
-            # Store for potential residual connection
-            setattr(self, f'_prev_features_{i+1}', current_features)
+            prev_features = out
+            current_features = out
         
         # ✅ CONTEXT: Process through context network
         if self.config.use_attention:

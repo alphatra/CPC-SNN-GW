@@ -29,10 +29,11 @@ def run_enhanced_training(config: Dict, args) -> Dict[str, Any]:
         if not validate_training_setup(setup_results):
             raise RuntimeError("Enhanced training environment setup failed")
         
-        # Create enhanced training config
+        # Create enhanced training config - FIXED: Default to MLGWSC-1 dataset
         enhanced_config = EnhancedGWConfig(
-            num_continuous_signals=200,
-            num_binary_signals=200,
+            use_mlgwsc_dataset=True,  # Use MLGWSC-1 by default
+            num_continuous_signals=200,  # Only for fallback
+            num_binary_signals=200,  # Only for fallback
             signal_duration=4.0,
             batch_size=config['training']['batch_size'],
             learning_rate=config['training']['cpc_lr'],

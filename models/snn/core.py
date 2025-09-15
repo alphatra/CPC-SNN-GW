@@ -234,17 +234,10 @@ class EnhancedSNNClassifier(nn.Module):
         
         # ✅ CLASSIFICATION: Final classification
         logits = self.classification_layers(readout_features)
-        
-        # ✅ SPIKE RATE REGULARIZATION: Add regularization if enabled
-        if training and self.config.spike_rate_regularization > 0:
-            current_spike_rate = jnp.mean(current_spikes)
-            rate_penalty = self.config.spike_rate_regularization * (
-                current_spike_rate - self.config.target_spike_rate
-            ) ** 2
-            
-            # Add penalty to logits (will be included in loss)
-            logits = logits + rate_penalty
-        
+
+        # ✅ FIX: Spike rate regularization should be handled in the loss, not logits
+        # Any regularization based on spike statistics must be added to the training
+        # objective externally (e.g., snn_combined_loss), not mixed into logits.
         return logits
 
 

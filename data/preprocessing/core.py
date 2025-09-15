@@ -16,7 +16,11 @@ import logging
 import time
 
 from ..readligo_data_sources import QualityMetrics, ProcessingResult
-from ..cache_manager import create_professional_cache
+try:
+    from ..cache_manager import create_professional_cache
+except Exception:
+    def create_professional_cache(*args, **kwargs):
+        return None
 
 logger = logging.getLogger(__name__)
 
@@ -207,32 +211,47 @@ class AdvancedDataPreprocessor:
         return filtered
     
     def _apply_whitening(self, strain_data: jnp.ndarray, detector: str) -> jnp.ndarray:
-        """Apply whitening using estimated or cached PSD."""
-        # ✅ PSD ESTIMATION: Estimate PSD for whitening
-        # Use Welch's method approximation with JAX
+        """Apply whitening using PSD estimated via Welch's method (JAX)."""
+        # Welch parameters
+        segment_seconds = max(1, int(self.config.psd_length))
+        nperseg = int(self.config.sample_rate * segment_seconds)
+        noverlap = int(0.5 * nperseg)
+        step = max(1, nperseg - noverlap)
+        n = len(strain_data)
         
-        # Simple PSD estimation using FFT
-        fft_data = jnp.fft.rfft(strain_data)
-        power_spectrum = jnp.abs(fft_data) ** 2
+        # Guard: if signal shorter than one segment, fallback to simple PSD
+        if n < nperseg:
+            fft_data = jnp.fft.rfft(strain_data)
+            psd = jnp.abs(fft_data) ** 2
+        else:
+            # Frame the signal into overlapping segments
+            starts = jnp.arange(0, n - nperseg + 1, step)
+            def segment_fft(start_idx):
+                seg = strain_data[start_idx:start_idx + nperseg]
+                # Hann window for variance reduction
+                window = jnp.hanning(nperseg)
+                seg_win = seg * window
+                fft = jnp.fft.rfft(seg_win)
+                # Scale by window power
+                scale = jnp.sum(window**2)
+                return (jnp.abs(fft) ** 2) / (scale + 1e-12)
+            psd_stack = jax.vmap(segment_fft)(starts)
+            psd = jnp.mean(psd_stack, axis=0)
         
-        # Smooth PSD estimate
-        kernel = jnp.ones(16) / 16  # Simple smoothing kernel
-        smooth_psd = jnp.convolve(power_spectrum, kernel, mode='same')
-        smooth_psd = jnp.maximum(smooth_psd, jnp.max(smooth_psd) * 1e-6)  # Floor
+        # Floor to avoid division issues
+        psd = jnp.maximum(psd, jnp.max(psd) * 1e-8)
         
-        # ✅ WHITENING: Apply inverse PSD weighting
-        # Inverse PSD in frequency domain
-        inverse_psd = 1.0 / jnp.sqrt(smooth_psd + 1e-10)
+        # Whiten in frequency domain
+        fft_full = jnp.fft.rfft(strain_data)
+        inverse_psd_sqrt = 1.0 / jnp.sqrt(psd + 1e-12)
+        whitened_fft = fft_full * inverse_psd_sqrt
+        whitened = jnp.fft.irfft(whitened_fft, n=n)
         
-        # Apply whitening
-        whitened_fft = fft_data * inverse_psd
-        whitened_strain = jnp.fft.irfft(whitened_fft, n=len(strain_data))
+        # Cache PSD
+        cache_key = f"{detector}_psd_{n}"
+        self.psd_storage[cache_key] = psd
         
-        # ✅ CACHE: Cache PSD for future use
-        cache_key = f"{detector}_psd_{len(strain_data)}"
-        self.psd_storage[cache_key] = smooth_psd
-        
-        return whitened_strain
+        return whitened
     
     def _assess_quality(self, strain_data: jnp.ndarray, detector: str) -> QualityMetrics:
         """Assess quality of preprocessed strain data."""

@@ -55,7 +55,7 @@ def infer_cmd():
     args = parser.parse_args()
     
     # Setup logging
-    from ...utils.setup_logging import setup_logging
+    from utils import setup_logging
     setup_logging(
         level=logging.INFO if args.verbose == 0 else logging.DEBUG,
         log_file=args.log_file

@@ -37,22 +37,29 @@ from .advanced import (
     create_real_advanced_trainer as create_advanced_trainer  # Use alias for compatibility
 )
 
-from .enhanced_gw_training import (
-    EnhancedGWTrainer,
-    EnhancedGWConfig,
-    create_enhanced_trainer,
-    run_enhanced_training_experiment
-)
+# Optional: Enhanced trainer (guarded to avoid hard deps during standard runs)
+try:
+    from .enhanced_gw_training import (
+        EnhancedGWTrainer,
+        EnhancedGWConfig,
+        create_enhanced_trainer,
+        run_enhanced_training_experiment
+    )
+except Exception as _e:
+    logger.warning(f"Enhanced training modules unavailable: {_e}")
 
 # ✅ NEW: Complete Enhanced Training (MODULAR)
-from .enhanced import (
-    CompleteEnhancedTrainer,
-    CompleteEnhancedConfig,
-    CompleteEnhancedModel,
-    TrainStateWithBatchStats,
-    create_complete_enhanced_trainer,
-    run_complete_enhanced_experiment
-)
+try:
+    from .enhanced import (
+        CompleteEnhancedTrainer,
+        CompleteEnhancedConfig,
+        CompleteEnhancedModel,
+        TrainStateWithBatchStats,
+        create_complete_enhanced_trainer,
+        run_complete_enhanced_experiment
+    )
+except Exception as _e:
+    logger.warning(f"Complete enhanced modules unavailable: {_e}")
 
 from .pretrain_cpc import (
     CPCPretrainer,
@@ -107,23 +114,30 @@ from .utils import (
     monitor_memory_usage,
 )
 
-# All available trainers
+# All available trainers (conditionally include enhanced)
 AVAILABLE_TRAINERS = {
     'base': CPCSNNTrainer,
     'unified': UnifiedTrainer,
     'advanced': AdvancedGWTrainer,
-    'enhanced': EnhancedGWTrainer,
     'cpc_pretrain': CPCPretrainer
 }
+try:
+    # Add only if import succeeded above
+    AVAILABLE_TRAINERS['enhanced'] = EnhancedGWTrainer  # type: ignore[name-defined]
+except Exception:
+    pass
 
-# All available configs
+# All available configs (conditionally include enhanced)
 AVAILABLE_CONFIGS = {
     'base': TrainingConfig,
     'unified': UnifiedTrainingConfig,
     'advanced': TrainingConfig,  # Use base config as fallback
-    'enhanced': EnhancedGWConfig,
     'cpc_pretrain': CPCPretrainConfig
 }
+try:
+    AVAILABLE_CONFIGS['enhanced'] = EnhancedGWConfig  # type: ignore[name-defined]
+except Exception:
+    pass
 
 
 def create_trainer(trainer_type: str, config: Optional[Any] = None):

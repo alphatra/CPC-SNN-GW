@@ -7,6 +7,7 @@ Extracted from cli.py for better modularity.
 import logging
 import time
 from typing import Dict, Any
+import jax.numpy as jnp
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +27,9 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
     
     try:
         # Import training modules
-        from ...training.base.trainer import CPCSNNTrainer
-        from ...training.base.config import TrainingConfig
-        from ...data.gw_dataset_builder import create_evaluation_dataset
+        from training.base.trainer import CPCSNNTrainer
+        from training.base.config import TrainingConfig
+        from data.gw_dataset_builder import create_evaluation_dataset
         
         # Create training config
         training_config = TrainingConfig(
@@ -41,8 +42,7 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
             spike_learnable=args.spike_learnable,
             spike_threshold_levels=args.spike_threshold_levels,
             spike_surrogate_type=args.spike_surrogate_type,
-            spike_surrogate_beta=args.spike_surrogate_beta,
-            random_seed=args.random_seed
+            spike_surrogate_beta=args.spike_surrogate_beta
         )
         
         logger.info(f"   📊 Config: {args.epochs} epochs, batch={args.batch_size}")
@@ -54,17 +54,22 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
         
         # Create or load dataset
         logger.info("📊 Loading training dataset...")
-        dataset = create_evaluation_dataset(
+        pairs = create_evaluation_dataset(
             num_samples=1000,  # Default for standard training
             sequence_length=512,
             sample_rate=2048,
-            random_key=42
+            random_seed=42
         )
+        all_signals = jnp.stack([p[0] for p in pairs])
+        # Ensure 3D shape for CPC: [batch, sequence, features]
+        if all_signals.ndim == 2:
+            all_signals = all_signals[..., None]
+        all_labels = jnp.array([p[1] for p in pairs])
         
-        train_signals = dataset['data'][:800]  # 80% for training
-        train_labels = dataset['labels'][:800]
-        test_signals = dataset['data'][800:]   # 20% for testing
-        test_labels = dataset['labels'][800:]
+        train_signals = all_signals[:800]  # 80% for training
+        train_labels = all_labels[:800]
+        test_signals = all_signals[800:]   # 20% for testing
+        test_labels = all_labels[800:]
         
         logger.info(f"   📊 Train: {len(train_signals)} samples")
         logger.info(f"   📊 Test: {len(test_signals)} samples")

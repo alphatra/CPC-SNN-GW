@@ -24,7 +24,28 @@ import hashlib
 from pathlib import Path
 import numpy as np
 
-from .cache_manager import ProfessionalCacheManager
+try:
+    from .cache_manager import ProfessionalCacheManager
+except Exception as _e:
+    logger.warning(f"ProfessionalCacheManager unavailable: {_e}. Using simple in-memory fallback.")
+    class ProfessionalCacheManager:  # type: ignore
+        def __init__(self):
+            self._cache = {}
+            self._hits = 0
+            self._misses = 0
+        def get(self, key):
+            if key in self._cache:
+                self._hits += 1
+                return self._cache[key]
+            self._misses += 1
+            return None
+        def put(self, key, value, meta=None):
+            self._cache[key] = value
+        def clear(self):
+            self._cache.clear()
+        def get_memory_usage(self):
+            return 0
+
 from .readligo_data_sources import ProcessingResult, QualityMetrics
 
 logger = logging.getLogger(__name__)

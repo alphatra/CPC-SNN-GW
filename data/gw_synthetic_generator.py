@@ -183,20 +183,13 @@ class ContinuousGWGenerator:
         # Time array
         t = jnp.arange(0, duration, 1/sampling_rate)
         
-        # Enhanced physics: Doppler modulation
+        # Enhanced physics: Doppler modulation (rotation + orbital)
         if params.include_doppler:
-            # Note: compute_doppler_factor is not imported, so this will cause an error
-            # if params.detector_latitude or params.detector_longitude are not defined
-            # or if the function itself is not available.
-            # For now, we'll assume a placeholder or that it will be added back.
-            # For the purpose of this edit, we'll comment out the import to make it importable.
-            # doppler_factor = compute_doppler_factor(
-            #     t, params.alpha, params.delta,
-            #     params.detector_latitude, params.detector_longitude
-            # )
-            # ✅ REALISTIC IMPLEMENTATION: Simple Doppler factor with Earth rotation
-            earth_rot_freq = 2 * jnp.pi / 86400.0  # Earth rotation frequency (1 day)
-            doppler_factor = 1.0 + 1e-4 * jnp.sin(earth_rot_freq * t)  # Small Doppler modulation
+            omega_rot = 2 * jnp.pi / 86164.1  # sidereal day
+            omega_orb = 2 * jnp.pi / (365.25 * 86400.0)  # year
+            doppler_rot = 1.0 + 1.0e-6 * jnp.sin(omega_rot * t)
+            doppler_orb = 1.0 + 1.0e-4 * jnp.sin(omega_orb * t)
+            doppler_factor = doppler_rot * doppler_orb
         else:
             doppler_factor = jnp.ones_like(t)
             

@@ -432,33 +432,45 @@ def check_performance_config() -> dict:
 
 def load_config(config_path: Optional[Path] = None) -> Dict[str, Any]:
     """
-    ✅ FIXED: Load configuration with performance optimizations and enhanced W&B logging.
+    Load configuration and MERGE user YAML with defaults (no overwrite).
     """
-    if config_path and Path(config_path).exists():
-        # Load from file
-        import yaml
-        with open(config_path, 'r') as f:
-            config_dict = yaml.safe_load(f)
-            
-        # ✅ NEW: Ensure wandb config exists
-        if 'wandb' not in config_dict:
-            logger.info("Adding default enhanced W&B configuration")
-            config_dict['wandb'] = asdict(WandbConfig())
-            
-        logger.info(f"Loaded configuration from {config_path}")
-    else:
-        # Use defaults with fixes applied
-        config_dict = {
-            'data': asdict(DataConfig()),
-            'model': asdict(ModelConfig()), 
-            'training': asdict(TrainingConfig()),
-            'logging': asdict(LoggingConfig()),  # ✅ NEW: Include logging config
-            'platform': asdict(PlatformConfig()),  # ✅ NEW: Include platform config
-            'wandb': asdict(WandbConfig())  # ✅ NEW: Include enhanced W&B config
-        }
-        logger.info("Using default FIXED configuration with enhanced W&B logging")
+    import yaml
     
-    return config_dict
+    # 1) Defaults
+    default_dict = {
+        'data': asdict(DataConfig()),
+        'model': asdict(ModelConfig()), 
+        'training': asdict(TrainingConfig()),
+        'logging': asdict(LoggingConfig()),
+        'platform': asdict(PlatformConfig()),
+        'wandb': asdict(WandbConfig())
+    }
+    
+    # 2) Load user YAML if provided
+    user_dict = {}
+    if config_path and Path(config_path).exists():
+        with open(config_path, 'r') as f:
+            loaded = yaml.safe_load(f) or {}
+            user_dict = loaded
+        logger.info(f"Loaded configuration from {config_path}")
+    
+    # 3) Deep merge (user overrides defaults)
+    def deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
+        result = dict(base)
+        for k, v in (override or {}).items():
+            if isinstance(v, dict) and isinstance(result.get(k), dict):
+                result[k] = deep_merge(result[k], v)
+            else:
+                result[k] = v
+        return result
+    
+    merged = deep_merge(default_dict, user_dict)
+    
+    # 4) Ensure W&B exists
+    if 'wandb' not in merged:
+        merged['wandb'] = asdict(WandbConfig())
+    
+    return merged
 
 
 def save_config(config: Dict[str, Any], save_path: str):

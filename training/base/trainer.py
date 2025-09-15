@@ -209,7 +209,9 @@ class CPCSNNTrainer(TrainerBase):
             
             def __call__(self, x, training=True):
                 cpc_features = self.cpc(x, training=training)
-                spikes = self.bridge(cpc_features, training=training)
+                # Reduce feature dimension for SpikeBridge (expects [batch, time])
+                spike_in = jnp.mean(cpc_features, axis=-1)
+                spikes = self.bridge(spike_in, training=training)
                 logits = self.snn(spikes, training=training)
                 return logits
         
@@ -228,7 +230,10 @@ class CPCSNNTrainer(TrainerBase):
         signals, labels = batch
         
         def loss_fn(params):
-            logits = train_state.apply_fn(params, signals, training=True)
+            logits = train_state.apply_fn(
+                params, signals, training=True,
+                rngs={'dropout': jax.random.PRNGKey(2)}
+            )
             
             # Classification loss
             if self.config.use_focal_loss:
@@ -280,6 +285,52 @@ class CPCSNNTrainer(TrainerBase):
             accuracy=float(accuracy)
         )
 
+    def train(self, train_signals: jnp.ndarray, train_labels: jnp.ndarray,
+              test_signals: jnp.ndarray, test_labels: jnp.ndarray) -> Dict[str, Any]:
+        """Simple training loop using provided arrays (data-only dependency)."""
+        model = self.create_model()
+        # Initialize train state with RNGs (for dropout)
+        sample_input = train_signals[:1]
+        init_rngs = {'params': jax.random.PRNGKey(0), 'dropout': jax.random.PRNGKey(1)}
+        params = model.init(init_rngs, sample_input, training=True)
+        tx = optax.adam(self.config.learning_rate)
+        state = train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
+        
+        batch_size = self.config.batch_size
+        num_epochs = self.config.num_epochs
+        num_samples = len(train_signals)
+        steps_per_epoch = max(1, (num_samples + batch_size - 1) // batch_size)
+        
+        for epoch in range(num_epochs):
+            self.current_epoch = epoch
+            # Naive epoch loop
+            for step in range(steps_per_epoch):
+                s = step * batch_size
+                e = min(s + batch_size, num_samples)
+                batch = (train_signals[s:e], train_labels[s:e])
+                state, metrics = self.train_step(state, batch)
+            
+            # Eval at end of epoch
+            eval_batch = (test_signals[:batch_size], test_labels[:batch_size])
+            _ = self.eval_step(state, eval_batch)
+        
+        # Final simple evaluation over entire test set in batches
+        correct = 0
+        total = 0
+        for s in range(0, len(test_signals), batch_size):
+            e = min(s + batch_size, len(test_signals))
+            batch = (test_signals[s:e], test_labels[s:e])
+            logits = state.apply_fn(state.params, batch[0], training=False)
+            preds = jnp.argmax(logits, axis=-1)
+            correct += int(jnp.sum(preds == batch[1]))
+            total += (e - s)
+        test_accuracy = correct / max(1, total)
+        
+        return {
+            'success': True,
+            'test_accuracy': float(test_accuracy),
+            'epochs_completed': num_epochs
+        }
 
 # Export trainer classes
 __all__ = [

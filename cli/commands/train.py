@@ -86,6 +86,34 @@ def train_cmd():
         default=1e-3,
         help="Learning rate"
     )
+
+    # Data routing flags (quick/synthetic/MLGWSC/whitening)
+    parser.add_argument(
+        "--quick-mode",
+        action="store_true",
+        help="Enable quick-mode: light eval/checkpointing"
+    )
+    parser.add_argument(
+        "--synthetic-quick",
+        action="store_true",
+        help="Force synthetic quick dataset for fast sanity runs"
+    )
+    parser.add_argument(
+        "--synthetic-samples",
+        type=int,
+        default=60,
+        help="Number of synthetic samples for quick-mode"
+    )
+    parser.add_argument(
+        "--use-mlgwsc",
+        action="store_true",
+        help="Use MLGWSC-1 dataset via MLGWSCDataLoader"
+    )
+    parser.add_argument(
+        "--whiten-psd",
+        action="store_true",
+        help="Apply PSD whitening to train/test signals"
+    )
     
     args = parser.parse_args()
     
@@ -94,7 +122,7 @@ def train_cmd():
     from ..runners.enhanced import run_enhanced_training
     
     # Setup logging
-    from ...utils.setup_logging import setup_logging
+    from utils import setup_logging
     setup_logging(
         level=logging.INFO if args.verbose == 0 else logging.DEBUG,
         log_file=args.log_file
@@ -103,7 +131,7 @@ def train_cmd():
     logger.info("🚀 Starting CPC+SNN training")
     
     # Load configuration
-    from ...utils.config import load_config
+    from utils.config import load_config
     config = load_config(args.config)
     
     try:

@@ -20,54 +20,48 @@ def _load_mlgwsc_data(args) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.
     logger.info("📦 Using MLGWSC-1 professional dataset via MLGWSCDataLoader")
     
     try:
-        from implement_mlgwsc_loader import MLGWSCDataLoader
+        from ...data.mlgwsc_data_loader import MLGWSCDataLoader
         from utils.data_split import create_stratified_split
+        from utils.config_loader import load_config
     except ImportError as e:
         logger.error(f"❌ Cannot import MLGWSC loader: {e}")
         raise
     
-    # Setup paths with defaults
-    default_bg = "/teamspace/studios/this_studio/data/dataset-4/v2/val_background_s24w6d1_1.hdf"
-    background_hdf = str(getattr(args, 'mlgwsc_background_hdf', None) or default_bg)
-    injections_npy = str(getattr(args, 'mlgwsc_injections_npy', "")) or None
+    # Load config-driven data directory (no hardcoded paths)
+    cfg = load_config()
+    data_dir = str(getattr(args, 'mlgwsc_data_dir', None) or cfg['system']['data_dir'])
+    if not Path(data_dir).exists():
+        raise FileNotFoundError(f"Configured data_dir not found: {data_dir}")
     
-    if not Path(background_hdf).exists():
-        raise FileNotFoundError(f"MLGWSC background HDF not found: {background_hdf}")
-    
-    # Create loader configuration
-    slice_len = int(float(getattr(args, 'mlgwsc_slice_seconds', 1.25)) * 2048)
-    
+    # Create loader (auto-discovers files in data_dir)
     loader = MLGWSCDataLoader(
-        background_hdf_path=background_hdf,
-        injections_npy_path=injections_npy,
-        slice_len=slice_len,
-        batch_size=int(args.batch_size)
+        data_dir=data_dir,
+        mode="training",
+        config=cfg
     )
     
     # Collect samples efficiently
-    max_samples = int(getattr(args, 'mlgwsc_samples', 1024))
+    max_samples = int(getattr(args, 'mlgwsc_samples', -1))
     collected_x = []
     collected_y = []
     total_collected = 0
     
-    for batch_x, batch_y in loader.create_training_batches(batch_size=int(args.batch_size)):
-        remain = max_samples - total_collected
-        if remain <= 0:
-            break
-        take = min(remain, int(batch_x.shape[0]))
-        collected_x.append(batch_x[:take])
-        collected_y.append(batch_y[:take])
-        total_collected += take
-        
-        if total_collected >= max_samples:
-            break
+    # Create labeled segments from available files
+    data_segments, labels = loader.create_labeled_dataset()
+    all_signals = jnp.stack([seg for seg in data_segments])
+    all_labels = jnp.array(labels)
+    
+    if max_samples > 0 and total_collected == 0:
+        # Respect max_samples if provided
+        take = min(max_samples, int(all_signals.shape[0]))
+        all_signals = all_signals[:take]
+        all_labels = all_labels[:take]
+        total_collected = take
+    else:
+        total_collected = int(all_signals.shape[0])
     
     if total_collected == 0:
         raise RuntimeError("MLGWSC loader yielded no samples. Check dataset paths.")
-    
-    # Combine and split
-    all_signals = jnp.concatenate(collected_x, axis=0)
-    all_labels = jnp.concatenate(collected_y, axis=0)
     
     (signals, labels), (test_signals, test_labels) = create_stratified_split(
         all_signals, all_labels, train_ratio=0.8, random_seed=42
