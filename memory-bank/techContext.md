@@ -610,3 +610,14 @@ if test_results['model_collapse']:
 
 *Last Updated: 2025-07-24 - COMPLETE TECHNICAL MIGRATION ACHIEVED*  
 *Technical Status: REVOLUTIONARY NEUROMORPHIC GW SYSTEM WITH REAL DATA - READY FOR SCIENTIFIC PUBLICATION* 
+
+## 🔄 2025-09-21 – Najnowsze zmiany techniczne (gen6h, eval, W&B)
+
+- Wymuszenie binarności: `num_classes=2` w standard runnerze oraz konstrukcji SNN (bez rozjazdów klas vs etykiety).
+- Harmonogram CPC: `cpc_joint_weight` – ep<2:0.05, 2–4:0.10, ≥5:0.20; `prediction_steps=12`, `temperature=0.07` (lokalna L2‑norm bez stop_gradient).
+- Stabilizacja startu: `adaptive_grad_clip=0.5`, `clip_by_global_norm=1.0` do ustania skoków gnorm.
+- Ewaluacja: final accuracy liczona na całym teście (batching), dodatkowo ROC‑AUC, confusion matrix i rozkład klas (zapisy i logi).
+- W&B: tryb offline z artefaktem całego `outputs/` + skrypt `upload_to_wandb.sh` do późniejszej synchronizacji.
+- Parametry SNN/Bridge: threshold=0.55, time_steps=32, surrogate hard‑sigmoid β≈4; brak `jnp.where` twardych, `lax.select` na ciągłych wyjściach; per‑sample normalizacja wejścia do mostka.
+
+Obserwacje: cpc_loss ~7.61 (okresowe minima ~6.23), spike_mean train≈0.14 / eval≈0.27–0.29, final test_accuracy≈0.502 – potrzeba większego wolumenu (MLGWSC‑1) i dłuższego treningu (≥30 epok), by przekroczyć 0.5 stabilnie oraz podnieść ROC‑AUC.

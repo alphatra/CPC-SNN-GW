@@ -18,6 +18,8 @@ import jax
 import jax.numpy as jnp
 import flax.linen as nn
 import optax
+import numpy as np
+import matplotlib.pyplot as plt
 from flax.training import train_state, checkpoints
 from flax.traverse_util import flatten_dict
 
@@ -62,15 +64,23 @@ class TrainerBase(ABC):
         self.device_info = optimize_jax_for_device()
         
         # Enhanced experiment tracking
-        if hasattr(config, 'wandb_config') and getattr(config, 'wandb_config', None):
-            # Use enhanced metrics logger with comprehensive tracking
-            self.enhanced_logger = create_enhanced_metrics_logger(
-                config=config.__dict__ if hasattr(config, '__dict__') else vars(config),
-                experiment_name=getattr(config, 'experiment_name', f"base-trainer-{getattr(config, 'seed', 42)}"),
-                output_dir=config.output_dir
-            )
-            self.tracker = self.enhanced_logger  # Use enhanced logger as tracker
-            logger.info("🚀 Using enhanced W&B metrics logger")
+        if getattr(config, 'use_wandb', False):
+            try:
+                # Use enhanced metrics logger with comprehensive tracking
+                self.enhanced_logger = create_enhanced_metrics_logger(
+                    config=config.__dict__ if hasattr(config, '__dict__') else vars(config),
+                    experiment_name=getattr(config, 'experiment_name', f"base-trainer-{getattr(config, 'seed', 42)}"),
+                    output_dir=config.output_dir
+                )
+                self.tracker = self.enhanced_logger  # Use enhanced logger as tracker
+                logger.info("🚀 Using enhanced W&B metrics logger")
+            except Exception as e:
+                logger.warning(f"W&B logger unavailable, falling back to basic tracker: {e}")
+                self.tracker = ExperimentTracker(
+                    experiment_name=config.project_name,
+                    output_dir=config.output_dir
+                )
+                self.enhanced_logger = None
         else:
             # Fallback to basic tracker
             self.tracker = ExperimentTracker(
@@ -200,9 +210,13 @@ class CPCSNNTrainer(TrainerBase):
         except Exception:
             pass
         
+        # ✅ Enforce binary classification (pull from config or default to 2)
+        enforced_num_classes = int(getattr(self.config, 'num_classes', 2))
+        if enforced_num_classes not in (2, 3):
+            enforced_num_classes = 2
         self.snn_classifier = SNNClassifier(
             hidden_size=self.config.snn_hidden_sizes[0],
-            num_classes=self.config.num_classes,
+            num_classes=enforced_num_classes,
             num_layers=self.config.snn_num_layers
         )
         
@@ -277,14 +291,16 @@ class CPCSNNTrainer(TrainerBase):
                         loss = jnp.mean(focal_weight * ce_loss)
                     else:
                         loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-                    # Joint objective: classification + alpha * cpc_loss (placeholder 0.0 if not computed)
-                    total_loss = loss + getattr(self.config, 'cpc_joint_weight', 0.2) * cpc_loss
+                    # Joint objective with epoch-based soft schedule for CPC weight
+                    epoch = jax.lax.convert_element_type(getattr(self, 'current_epoch', 0), jnp.int32)
+                    cpc_w = jnp.where(epoch < 2, 0.05, jnp.where(epoch < 5, 0.10, 0.20))
+                    total_loss = loss + cpc_w * cpc_loss
                     acc = jnp.mean(jnp.argmax(logits, axis=-1) == y)
                     spike_mean = out['spike_rate_mean']
                     spike_std = out['spike_rate_std']
-                    return total_loss, (acc, spike_mean, spike_std, cpc_loss)
+                    return total_loss, (acc, spike_mean, spike_std, cpc_loss, loss)
 
-                (loss, (acc, spike_mean, spike_std, cpc_loss)), grads = jax.value_and_grad(loss_fn, has_aux=True)(state.params)
+                (loss, (acc, spike_mean, spike_std, cpc_loss, cls_loss)), grads = jax.value_and_grad(loss_fn, has_aux=True)(state.params)
 
                 # Gradient norms
                 def l2_norm(tree):
@@ -310,17 +326,18 @@ class CPCSNNTrainer(TrainerBase):
                 gn_snn = l2_norm_by_module(gparams, 'snn')
 
                 new_state = state.apply_gradients(grads=grads)
-                return new_state, loss, acc, spike_mean, spike_std, cpc_loss, total_norm, gn_cpc, gn_bridge, gn_snn
+                return new_state, loss, acc, spike_mean, spike_std, cpc_loss, cls_loss, total_norm, gn_cpc, gn_bridge, gn_snn
 
             # Donate state to reduce copies on GPU
             self._jit_update = jax.jit(update_fn, donate_argnums=(0,))
 
-        new_state, loss, acc, spike_mean, spike_std, cpc_loss, total_norm, gn_cpc, gn_bridge, gn_snn = self._jit_update(train_state, signals, labels)
+        new_state, loss, acc, spike_mean, spike_std, cpc_loss, cls_loss, total_norm, gn_cpc, gn_bridge, gn_snn = self._jit_update(train_state, signals, labels)
 
         metrics = {
             'step': int(new_state.step),
             'epoch': int(getattr(self, 'current_epoch', 0)),
             'total_loss': float(loss),
+            'cls_loss': float(cls_loss),
             'accuracy': float(acc),
             'cpc_loss': float(cpc_loss),
             'spike_rate_mean': float(spike_mean),
@@ -369,9 +386,9 @@ class CPCSNNTrainer(TrainerBase):
         init_rngs = {'params': jax.random.PRNGKey(0), 'dropout': jax.random.PRNGKey(1)}
         params = model.init(init_rngs, sample_input, training=True)
         tx = optax.chain(
-            # ✅ Stabilizacja: adaptacyjne ograniczenie gradientu zapobiega gnorm=inf
-            optax.adaptive_grad_clip(1.0),
-            optax.clip_by_global_norm(5.0),
+            # ✅ Stabilizacja startu: mocniejsze ograniczenie na pierwsze kroki
+            optax.adaptive_grad_clip(0.5),
+            optax.clip_by_global_norm(1.0),
             optax.adamw(self.config.learning_rate, weight_decay=1e-4),
         )
         state = train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
@@ -474,21 +491,123 @@ class CPCSNNTrainer(TrainerBase):
             except Exception:
                 pass
         
-        # Final simple evaluation over entire test set in batches
-        correct = 0
-        total = 0
+        # Final evaluation over entire test set in batches (average loss and accuracy)
+        total_correct = 0
+        total_count = 0
+        total_eval_loss = 0.0
+        all_probs = []
+        all_preds = []
+        all_trues = []
         for s in range(0, len(test_signals), batch_size):
             e = min(s + batch_size, len(test_signals))
             batch = (test_signals[s:e], test_labels[s:e])
+            eval_dict = self.eval_step(state, batch)
+            loss_b = float(eval_dict.get('total_loss', 0.0))
+            acc_b = float(eval_dict.get('accuracy', 0.0))
+            total_eval_loss += loss_b * (e - s)
+            total_correct += int(acc_b * (e - s))
+            total_count += (e - s)
+            # Collect logits → probabilities for metrics
             logits = state.apply_fn(state.params, batch[0], training=False)
-            preds = jnp.argmax(logits, axis=-1)
-            correct += int(jnp.sum(preds == batch[1]))
-            total += (e - s)
-        test_accuracy = correct / max(1, total)
+            probs = jax.nn.softmax(logits, axis=-1)
+            prob1 = np.asarray(probs[..., 1]) if probs.shape[-1] > 1 else np.asarray(probs[..., 0])
+            preds = np.asarray(jnp.argmax(probs, axis=-1))
+            trues = np.asarray(batch[1])
+            all_probs.append(prob1)
+            all_preds.append(preds)
+            all_trues.append(trues)
+        test_accuracy = total_correct / max(1, total_count)
+        test_loss = total_eval_loss / max(1, total_count)
+        # Concatenate collected arrays
+        try:
+            y_prob = np.concatenate(all_probs, axis=0)
+            y_pred = np.concatenate(all_preds, axis=0)
+            y_true = np.concatenate(all_trues, axis=0)
+        except Exception:
+            y_prob = np.array([])
+            y_pred = np.array([])
+            y_true = np.array([])
+
+        # Compute confusion matrix and ROC-AUC (binary)
+        def compute_confusion_matrix(y_t: np.ndarray, y_p: np.ndarray) -> Dict[str, int]:
+            cm = {'tn': 0, 'fp': 0, 'fn': 0, 'tp': 0}
+            for t, p in zip(y_t.tolist(), y_p.tolist()):
+                if t == 1 and p == 1:
+                    cm['tp'] += 1
+                elif t == 0 and p == 1:
+                    cm['fp'] += 1
+                elif t == 1 and p == 0:
+                    cm['fn'] += 1
+                else:
+                    cm['tn'] += 1
+            return cm
+
+        def compute_auc(y_t: np.ndarray, y_s: np.ndarray) -> float:
+            y_t = y_t.astype(int)
+            n_pos = int(np.sum(y_t == 1))
+            n_neg = int(np.sum(y_t == 0))
+            if n_pos == 0 or n_neg == 0 or y_s.size == 0:
+                return 0.5
+            order = np.argsort(y_s)
+            ranks = np.empty_like(order)
+            ranks[order] = np.arange(1, len(y_s) + 1)
+            sum_ranks_pos = np.sum(ranks[y_t == 1])
+            u = sum_ranks_pos - n_pos * (n_pos + 1) / 2
+            return float(u / (n_pos * n_neg))
+
+        cm = compute_confusion_matrix(y_true, y_pred) if y_pred.size else {'tn':0,'fp':0,'fn':0,'tp':0}
+        auc = compute_auc(y_true, y_prob)
+
+        # Save plots
+        plots_dir = self.directories.get('log', Path(self.config.output_dir) / 'logs')
+        try:
+            plots_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            pass
+        try:
+            # ROC curve
+            if y_prob.size and np.unique(y_true).size == 2:
+                # Compute ROC via sorted scores
+                n_pos = max(1, int(np.sum(y_true == 1)))
+                n_neg = max(1, int(np.sum(y_true == 0)))
+                desc = np.argsort(-y_prob)
+                t_sorted = y_true[desc]
+                tps = np.cumsum(t_sorted == 1)
+                fps = np.cumsum(t_sorted == 0)
+                tpr = tps / n_pos
+                fpr = fps / n_neg
+                plt.figure(figsize=(5,5))
+                plt.plot(fpr, tpr, label=f"ROC AUC={auc:.3f}")
+                plt.plot([0,1],[0,1],'k--',alpha=0.5)
+                plt.xlabel('FPR')
+                plt.ylabel('TPR')
+                plt.title('ROC Curve')
+                plt.legend(loc='lower right')
+                roc_path = plots_dir / 'roc_curve.png'
+                plt.savefig(roc_path, dpi=150, bbox_inches='tight')
+                plt.close()
+            # Confusion matrix plot
+            cm_mat = np.array([[cm['tn'], cm['fp']],[cm['fn'], cm['tp']]], dtype=int)
+            plt.figure(figsize=(4,4))
+            plt.imshow(cm_mat, cmap='Blues')
+            plt.title('Confusion Matrix')
+            plt.xticks([0,1],["Pred 0","Pred 1"]) ; plt.yticks([0,1],["True 0","True 1"]) 
+            for i in range(2):
+                for j in range(2):
+                    plt.text(j, i, int(cm_mat[i, j]), ha='center', va='center', color='black')
+            cm_path = plots_dir / 'confusion_matrix.png'
+            plt.savefig(cm_path, dpi=150, bbox_inches='tight')
+            plt.close()
+        except Exception as e:
+            try:
+                logger.warning(f"Plot generation failed: {e}")
+            except Exception:
+                pass
         
         return {
             'success': True,
             'test_accuracy': float(test_accuracy),
+            'test_loss': float(test_loss),
             'epochs_completed': num_epochs
         }
 

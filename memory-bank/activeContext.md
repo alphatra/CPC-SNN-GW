@@ -37,7 +37,19 @@
 - **Professional Data Loader**: Config-integrated MLGWSC-1 loader
 - **Inference Pipeline**: Full MLGWSC-1 compatible system
 - **Evaluation Pipeline**: Real data evaluation capability
-- **Production Data**: 5 minutes H1/L1 strain, 74 segments ready
+ - **Production Data**: 5 minutes H1/L1 strain, 74 segments ready
+
+## 🔄 2025-09-21 – 6h MLGWSC (gen6h) trening + stabilizacja metryk
+
+- Dane: wygenerowano 6h dataset (Dataset‑4) `gen6h_20250915_034534` (background/foreground/injections); loader włączony dla `foreground` jako pozytywów; PSD whitening aktywne.
+- Architektura: wymuszone `num_classes=2` (runner + trainer); SNN threshold=0.55; surrogate hard‑sigmoid β≈4; time_steps=32; [B,T,F] zapewnione; brak twardych where/stop_gradient.
+- CPC: temperature=0.07, prediction_steps=12; lokalna L2‑normalizacja; harmonogram wagi joint: ep<2→0.05, 2–4→0.10, ≥5→0.20.
+- Optymalizacja: AdamW + adaptive_grad_clip=0.5 + clip_by_global_norm=1.0 na starcie (eliminacja gnorm=inf w 1–2 krokach), potem stabilnie.
+- Logika ewaluacji: naprawiona – final accuracy liczona na CAŁYM teście (batching), dodatkowo ROC‑AUC, confusion matrix, rozkład klas.
+- W&B: dodane pełne logowanie metryk i obrazów; przygotowany tryb offline + `upload_to_wandb.sh` do późniejszej synchronizacji.
+- Wyniki (20 ep): cpc_loss ~7.61 (okresowe spadki ~6.23 na batchach sygnałowych), spike_mean train≈0.14 (10–20%), eval≈0.27–0.29 (≤0.30), final test_accuracy≈0.502 (zbliżone do 50/50 splitu; sieć nie wyuczona – potrzebny większy wolumen i dłuższy bieg).
+
+Następne kroki: utrzymać `cpc_joint_weight=0.2` po 5. epoce, trenować ≥30 epok na większym wolumenie (docelowo MLGWSC‑1 50k–100k okien), monitorować ROC‑AUC i TPR.
 
 ## 🏗️ MODULAR REFACTORING BREAKTHROUGH (COMPLETED - 2025-09-14)
 

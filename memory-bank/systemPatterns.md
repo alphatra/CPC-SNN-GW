@@ -71,6 +71,14 @@ trainer = create_trainer(
 - Sanitize numerics via `jnp.nan_to_num` pre/post
 - Avoid tracer→Python conversions in logs (no `float(tensor)` in JIT)
 
+### ✅ PATTERN: POPRAWNA EWALUACJA – ŚREDNIA PO CAŁYM ZBIORZE TESTOWYM (NOWE – 2025-09-21)
+- Ewaluację licz w pętli batchowej po całym teście; log per‑epoch = średnia ważona strat i accuracy.
+- Dodatkowo loguj ROC‑AUC, confusion matrix i rozkład klas dla binarnego problemu.
+
+### ✅ PATTERN: W&B OFFLINE → SYNC (NOWE – 2025-09-21)
+- Uruchamiaj run w `WANDB_MODE=offline`, loguj obrazy (ROC/CM) i dodawaj artefakt z całym `outputs/`.
+- Synchronizuj do chmury skryptem `upload_to_wandb.sh` po ustawieniu `WANDB_API_KEY`.
+
 ### ✅ PATTERN: JOINT LOSS WITH TEMPORAL INFO NCE
 - `total_loss = cls_loss + α · temporal_info_nce_loss(features)`
 - α w configu (domyślnie 0.2); nadzoruje wpływ CPC na joint training

@@ -288,6 +288,20 @@ class MLGWSCDataLoader:
                 processed = self.preprocess_for_neuromorphic(segment)
                 data_segments.append(processed[0])  # Remove batch dim
                 labels.append(1)  # Signal
+        
+        # ✅ NEW: Load and process foreground data (label = 1)
+        if self.available_files.get('train_foreground'):
+            for fg_file in self.available_files['train_foreground']:
+                try:
+                    fg_data = self.load_hdf5_file(fg_file)
+                    fg_segments = self.create_segments(fg_data)
+                    for segment in fg_segments:
+                        processed = self.preprocess_for_neuromorphic(segment)
+                        data_segments.append(processed[0])
+                        labels.append(1)
+                    logger.info(f"✅ Foreground file processed: {fg_file.name} → {len(fg_segments)} segments")
+                except Exception as e:
+                    logger.warning(f"⚠️ Skipping foreground file {fg_file}: {e}")
                 
         logger.info(f"✅ Created labeled dataset")
         logger.info(f"   - Total segments: {len(data_segments)}")

@@ -51,8 +51,8 @@ class SNNClassifier(nn.Module):
         """
         batch_size, time_steps, input_features = spikes.shape
         
-        # ✅ ARCHITECTURE: 3-layer SNN (256-128-64)
-        layer_sizes = [256, 128, 64]
+        # ✅ ARCHITECTURE: 3-layer SNN (128-128-64) to keep 64–128 hidden sizes
+        layer_sizes = [128, 128, 64]
         current_spikes = spikes
         
         # ✅ INPUT PROJECTION: Project to first layer size
@@ -69,24 +69,19 @@ class SNNClassifier(nn.Module):
                 features=layer_size,
                 tau_mem=20e-3,
                 tau_syn=5e-3,
-                threshold=1.0,
-                surrogate_beta=10.0 + i * 5.0,  # ✅ Adaptive: increases with depth
+                threshold=0.5,
+                surrogate_beta=4.0 + i * 1.0,
                 name=f'lif_layer_{i+1}'
             )
             
             # Process spikes
             current_spikes = lif_layer(current_spikes, training=training)
             
-            # ✅ NORMALIZATION: LayerNorm after each layer for stability
-            # Apply LayerNorm to temporal mean (reduce time dimension)
-            temporal_mean = jnp.mean(current_spikes, axis=1)  # [batch, features]
-            normalized_mean = nn.LayerNorm(name=f'layer_norm_{i+1}')(temporal_mean)
-            
-            # Broadcast back to temporal dimension
-            current_spikes = current_spikes * (normalized_mean[:, None, :] / (jnp.mean(current_spikes, axis=1, keepdims=True) + 1e-8))
+            # ✅ NORMALIZATION: LayerNorm on spikes [B,T,F]
+            current_spikes = nn.LayerNorm(name=f'layer_norm_{i+1}')(current_spikes)
             
             # ✅ DROPOUT: Adaptive dropout (decreases with depth)
-            dropout_rate = max(0.0, 0.2 - i * 0.1)  # ✅ Decreases: 0.2 → 0.1 → 0.0
+            dropout_rate = max(0.0, 0.2 - i * 0.1)
             if training and dropout_rate > 0:
                 current_spikes = nn.Dropout(
                     rate=dropout_rate,

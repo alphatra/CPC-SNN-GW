@@ -68,7 +68,7 @@ class TrainingConfig:
     
     # ✅ SpikeBridge hyperparameters (exposed)
     spike_time_steps: int = 24
-    spike_threshold: float = 0.1
+    spike_threshold: float = 0.55
     spike_learnable: bool = True
     spike_threshold_levels: int = 4
     spike_surrogate_type: str = "adaptive_multi_scale"

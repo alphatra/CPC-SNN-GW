@@ -507,3 +507,13 @@
 - Zwiększyć czas trwania generacji (np. 6–24h) lub liczbę plików i scalić – cel: ≥50k okien train
 - Ustawić okno: T≈512 (lub 4–8s), overlap 0.5–0.9; zapewnić balansem ~30–40% pozytywów
 - Po zwiększeniu wolumenu wrócić do `learnable_multi_threshold` i potwierdzić, że `grad_norm_bridge > 0` oraz `cpc_loss` spada
+
+## 🔄 2025-09-21 – 6h MLGWSC (gen6h) trening + stabilizacja metryk
+
+- Przygotowanie danych: `results/gen6h_20250915_034534` (background/foreground/injections); dodane symlinki train_*_gen6h.hdf; loader zlicza [N,T,F] poprawnie, foreground jako pozytywy.
+- Trener: harmonogram `cpc_joint_weight` (0.05→0.10→0.20), adaptacyjne clipy (0.5 / 1.0), poprawiona ewaluacja na pełnym teście.
+- Modele: wymuszenie `num_classes=2` (runner+trainer), threshold=0.55, prediction_steps=12, InfoNCE temp=0.07.
+- Metryki: brak gnorm=inf po starcie; spike_mean train≈0.14, eval≈0.27–0.29; final test_accuracy≈0.502.
+- W&B: dodane logi + artefakty (ROC, CM) i tryb offline z `upload_to_wandb.sh`.
+
+Wniosek: sieć jeszcze się nie wyuczyła (mały wolumen, krótki bieg). Rekomendacja: ≥30 epok, większy dataset (MLGWSC‑1 50k–100k okien), utrzymać `cpc_joint_weight=0.2` po 5. epoce.

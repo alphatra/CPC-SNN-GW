@@ -36,9 +36,9 @@ class LIFLayer(nn.Module):
     features: int
     tau_mem: float = 20e-3
     tau_syn: float = 5e-3  
-    threshold: float = 1.0
+    threshold: float = 0.5
     reset_potential: float = 0.0
-    surrogate_beta: float = 10.0
+    surrogate_beta: float = 4.0
     
     @nn.compact
     def __call__(self, spikes: jnp.ndarray, training: bool = True) -> jnp.ndarray:
@@ -61,9 +61,9 @@ class LIFLayer(nn.Module):
             name='lif_dense'
         )
         
-        # ✅ SURROGATE: Create surrogate gradient function
+        # ✅ SURROGATE: Create surrogate gradient function (continuous output)
         surrogate_fn = create_surrogate_gradient_fn(
-            SurrogateGradientType.FAST_SIGMOID, 
+            SurrogateGradientType.FAST_SIGMOID,
             self.surrogate_beta
         )
         
@@ -83,18 +83,16 @@ class LIFLayer(nn.Module):
             # Update membrane potential
             v_mem = alpha_mem * v_mem + (1 - alpha_mem) * input_current
             
-            # ✅ SPIKE GENERATION: Generate spikes with surrogate gradients
-            # Hard threshold for forward pass
-            spike_output = (v_mem >= self.threshold).astype(jnp.float32)
+            # ✅ SPIKE GENERATION: Continuous surrogate output (no hard threshold)
+            spike_continuous = surrogate_fn(v_mem - self.threshold)
             
-            # Apply surrogate gradient for backward pass
-            surrogate_grad = surrogate_fn(v_mem - self.threshold)
-            spike_output_surrogate = spike_output + jax.lax.stop_gradient(spike_output - surrogate_grad)
+            # ✅ SOFT RESET: Mix towards reset potential using continuous spike
+            v_mem = v_mem * (1.0 - spike_continuous) + self.reset_potential * spike_continuous
             
-            # ✅ RESET: Reset membrane potential after spike
-            v_mem = jnp.where(spike_output > 0, self.reset_potential, v_mem)
+            # ✅ LAYERNORM: Stabilize per-time-step activations
+            spike_continuous = nn.LayerNorm(name=f'lif_norm_t{t+1}')(spike_continuous)
             
-            output_spikes.append(spike_output_surrogate)
+            output_spikes.append(spike_continuous)
         
         # Stack temporal outputs
         output_spike_trains = jnp.stack(output_spikes, axis=1)
@@ -113,9 +111,9 @@ class VectorizedLIFLayer(nn.Module):
     features: int
     tau_mem: float = 20e-3
     tau_syn: float = 5e-3
-    threshold: float = 1.0
+    threshold: float = 0.5
     reset_potential: float = 0.0
-    surrogate_beta: float = 10.0
+    surrogate_beta: float = 4.0
     
     @nn.compact
     def __call__(self, spikes: jnp.ndarray, training: bool = True) -> jnp.ndarray:
@@ -143,13 +141,17 @@ class VectorizedLIFLayer(nn.Module):
             alpha = jnp.exp(-1.0 / self.tau_mem)
             v_mem = alpha * v_mem + (1 - alpha) * current_input
             
-            # Spike generation
-            spike_output = (v_mem >= self.threshold).astype(jnp.float32)
+            # Continuous surrogate spike
+            surrogate_fn = create_surrogate_gradient_fn(
+                SurrogateGradientType.FAST_SIGMOID,
+                self.surrogate_beta
+            )
+            spike_cont = surrogate_fn(v_mem - self.threshold)
             
-            # Reset
-            v_mem = jnp.where(spike_output > 0, self.reset_potential, v_mem)
+            # Soft reset using continuous spike
+            v_mem = v_mem * (1.0 - spike_cont) + self.reset_potential * spike_cont
             
-            return v_mem, spike_output
+            return v_mem, spike_cont
         
         # Initialize membrane state
         initial_v_mem = jnp.zeros((batch_size, self.features))
@@ -164,20 +166,10 @@ class VectorizedLIFLayer(nn.Module):
         # Transpose back to [batch, time, features]
         spike_outputs = jnp.transpose(spike_outputs, (1, 0, 2))
         
-        # ✅ SURROGATE: Apply surrogate gradients
-        surrogate_fn = create_surrogate_gradient_fn(
-            SurrogateGradientType.FAST_SIGMOID,
-            self.surrogate_beta
-        )
+        # ✅ LAYERNORM across features per time step
+        spike_outputs = nn.LayerNorm(name='vectorized_lif_norm')(spike_outputs)
         
-        # Apply surrogate to membrane potential at threshold
-        v_mem_at_threshold = final_v_mem - self.threshold
-        surrogate_grads = surrogate_fn(v_mem_at_threshold)
-        
-        # Apply straight-through estimator with surrogate
-        spike_outputs_final = spike_outputs + jax.lax.stop_gradient(spike_outputs - surrogate_grads[None, :, :])
-        
-        return spike_outputs_final
+        return spike_outputs
 
 
 class EnhancedLIFWithMemory(nn.Module):
@@ -195,7 +187,7 @@ class EnhancedLIFWithMemory(nn.Module):
     tau_mem: float = 20e-3
     tau_syn: float = 5e-3
     tau_adapt: float = 100e-3  # Adaptation time constant
-    threshold: float = 1.0
+    threshold: float = 0.5
     reset_potential: float = 0.0
     
     # Memory parameters
@@ -278,17 +270,21 @@ class EnhancedLIFWithMemory(nn.Module):
             else:
                 current_threshold = self.threshold
             
-            # ✅ SPIKES: Generate spikes
-            spike_output = (v_mem >= current_threshold).astype(jnp.float32)
+            # ✅ SPIKES: Continuous surrogate spikes
+            surrogate_fn = create_surrogate_gradient_fn(
+                SurrogateGradientType.FAST_SIGMOID,
+                self.surrogate_beta
+            )
+            spike_output = surrogate_fn(v_mem - current_threshold)
             
-            # ✅ RESET: Reset with adaptation
+            # ✅ RESET: Soft reset with adaptation
             if self.use_adaptive_threshold:
                 # Update adaptation based on spike activity
                 alpha_adapt = jnp.exp(-1.0 / self.tau_adapt)
                 adaptation = alpha_adapt * adaptation + (1 - alpha_adapt) * spike_output * self.threshold_adaptation_rate
-                v_mem_reset = jnp.where(spike_output > 0, self.reset_potential - adaptation, v_mem)
+                v_mem_reset = (v_mem * (1.0 - spike_output)) + (self.reset_potential - adaptation) * spike_output
             else:
-                v_mem_reset = jnp.where(spike_output > 0, self.reset_potential, v_mem)
+                v_mem_reset = (v_mem * (1.0 - spike_output)) + self.reset_potential * spike_output
                 adaptation = jnp.zeros_like(v_mem)
             
             # ✅ MEMORY: Update long-term memory
@@ -316,22 +312,10 @@ class EnhancedLIFWithMemory(nn.Module):
         # Transpose back to [batch, time, features]
         spike_outputs = jnp.transpose(spike_outputs, (1, 0, 2))
         
-        # ✅ SURROGATE: Apply enhanced surrogate gradients
-        surrogate_fn = create_surrogate_gradient_fn(
-            SurrogateGradientType.FAST_SIGMOID,
-            self.surrogate_beta
-        )
+        # ✅ LAYERNORM
+        spike_outputs = nn.LayerNorm(name='enhanced_lif_norm')(spike_outputs)
         
-        # Get final membrane potential for gradient computation
-        final_v_mem, _, _ = final_carry
-        surrogate_grads = surrogate_fn(final_v_mem - self.threshold)
-        
-        # Apply surrogate gradients (simplified for demonstration)
-        spike_outputs_final = spike_outputs + jax.lax.stop_gradient(
-            spike_outputs - surrogate_grads[None, :, :] * 0.1  # Scale down surrogate contribution
-        )
-        
-        return spike_outputs_final
+        return spike_outputs
 
 
 # Export layer classes

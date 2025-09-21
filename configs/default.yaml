@@ -83,10 +83,12 @@ model:
 # =============================================================================
 training:
   # Basic parameters - PARAMETERIZED (no hardcoded values)
-  num_epochs: 100
+  num_epochs: 30
   batch_size: 1  # memory-safe default
   learning_rate: 0.00005  # conservative default
   weight_decay: 0.0001
+  # Joint loss weight for CPC auxiliary objective (soft start)
+  cpc_joint_weight: 0.2
   
   # Optimization
   optimizer: "adamw"  # adamw, adam, sgd

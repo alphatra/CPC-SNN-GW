@@ -37,7 +37,12 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
             num_epochs=args.epochs,
             batch_size=args.batch_size,
             learning_rate=args.learning_rate,
-            num_classes=config.get('model', {}).get('num_classes', 2),
+            # ✅ Ensure we pull SNN num_classes from nested model.snn
+            num_classes=(
+                config.get('model', {}).get('snn', {}).get('num_classes',
+                    config.get('model', {}).get('num_classes', 2)
+                )
+            ),
             spike_time_steps=args.spike_time_steps,
             spike_threshold=args.spike_threshold,
             spike_learnable=args.spike_learnable,

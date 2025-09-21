@@ -76,7 +76,13 @@ def _load_mlgwsc_data(args) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.
         all_signals, all_labels, train_ratio=0.8, random_seed=42
     )
     
-    logger.info(f"MLGWSC samples: train={len(signals)}, test={len(test_signals)}, T={signals.shape[-1]}")
+    # Log true temporal and feature dims assuming [N, T, F]
+    try:
+        t_dim = int(signals.shape[1]) if signals.ndim >= 2 else int(signals.shape[0])
+        f_dim = int(signals.shape[-1]) if signals.ndim >= 2 else 1
+        logger.info(f"MLGWSC samples: train={len(signals)}, test={len(test_signals)}, T={t_dim}, F={f_dim}")
+    except Exception:
+        logger.info(f"MLGWSC samples: train={len(signals)}, test={len(test_signals)}")
     
     # Optional PSD whitening
     if getattr(args, 'whiten_psd', False):

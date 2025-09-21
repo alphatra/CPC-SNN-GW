@@ -97,22 +97,10 @@ def spike_function_with_surrogate(v_mem: jnp.ndarray,
     """
     Spike function with surrogate gradients for backpropagation.
     
-    Args:
-        v_mem: Membrane potential
-        threshold: Spike threshold
-        surrogate_fn: Surrogate gradient function
-        
-    Returns:
-        Binary spike output with surrogate gradients
+    This wrapper delegates to a custom-VJP implementation to avoid explicit
+    stop_gradient usage while preserving correct surrogate gradients.
     """
-    # Forward pass: hard threshold
-    spikes = (v_mem >= threshold).astype(jnp.float32)
-    
-    # Backward pass: use surrogate gradient
-    surrogate_grad = surrogate_fn(v_mem - threshold)
-    
-    # Straight-through estimator with surrogate
-    return spikes + jax.lax.stop_gradient(spikes - surrogate_grad)
+    return spike_function_fwd(v_mem, threshold, surrogate_fn)
 
 
 @partial(jax.custom_vjp, nondiff_argnums=(1, 2))
