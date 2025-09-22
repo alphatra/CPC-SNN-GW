@@ -9,6 +9,7 @@ Split from cli/commands/train.py for better maintainability.
 
 import logging
 import time
+import json
 from typing import Dict, Any
 from pathlib import Path
 
@@ -212,15 +213,63 @@ def _save_checkpoint(checkpoint_managers, trainer, epoch, loss, accuracy, traini
                 metrics={'epoch': epoch+1, 'loss': loss, 'accuracy': accuracy}
             )
         
-        # Save best checkpoint logic here (would compare with previous best)
-        # For now, save every 5 epochs as "best"
-        if (epoch + 1) % 5 == 0 and checkpoint_managers['best'] is not None:
-            checkpoint_managers['best'].save(
-                epoch + 1,
-                {'train_state': trainer.train_state},
-                metrics={'epoch': epoch+1, 'loss': loss, 'accuracy': accuracy}
-            )
-            logger.info(f"      💾 Saved checkpoint at epoch {epoch+1}")
+        # ✅ PROFESSIONAL: Save best checkpoint based on actual metrics comparison
+        if checkpoint_managers['best'] is not None:
+            # Calculate current metric for comparison (use balanced accuracy)
+            current_metric = accuracy  # Could be enhanced with balanced accuracy
+            
+            # Check if this is the best model so far
+            is_best = False
+            best_metrics_file = Path(checkpoint_managers['best'].directory) / "best_metrics.json"
+            
+            if not best_metrics_file.exists():
+                # First checkpoint is automatically best
+                is_best = True
+                logger.info(f"      🥇 First checkpoint - automatically best (accuracy: {current_metric:.4f})")
+            else:
+                try:
+                    import json
+                    with open(best_metrics_file, 'r') as f:
+                        best_metrics = json.load(f)
+                    previous_best = best_metrics.get('accuracy', 0.0)
+                    
+                    if current_metric > previous_best:
+                        is_best = True
+                        improvement = current_metric - previous_best
+                        logger.info(f"      🎊 NEW BEST MODEL! Accuracy: {current_metric:.4f} "
+                                  f"(+{improvement:.4f} improvement)")
+                    else:
+                        logger.debug(f"      📊 Current: {current_metric:.4f}, "
+                                   f"Best: {previous_best:.4f} (no improvement)")
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to read best metrics: {e}, treating as best")
+                    is_best = True
+            
+            # Save checkpoint only if it's actually better
+            if is_best:
+                checkpoint_managers['best'].save(
+                    epoch + 1,
+                    {'train_state': trainer.train_state},
+                    metrics={'epoch': epoch+1, 'loss': loss, 'accuracy': accuracy}
+                )
+                
+                # Save best metrics for future comparison
+                best_metrics = {
+                    'epoch': epoch + 1,
+                    'accuracy': float(current_metric),
+                    'loss': float(loss),
+                    'timestamp': time.time()
+                }
+                
+                try:
+                    with open(best_metrics_file, 'w') as f:
+                        json.dump(best_metrics, f, indent=2)
+                    logger.info(f"      💾 Saved BEST checkpoint at epoch {epoch+1}")
+                except Exception as e:
+                    logger.warning(f"Failed to save best metrics: {e}")
+            else:
+                logger.debug(f"      ⏭️ Skipped checkpoint (not better than best)")
         
     except Exception as e:
         logger.warning(f"Checkpoint save failed: {e}")

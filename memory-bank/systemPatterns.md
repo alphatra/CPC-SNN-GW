@@ -96,6 +96,183 @@ trainer = create_trainer(
 - Zapis per‑step: `training_results.jsonl`, per‑epoch: `epoch_metrics.jsonl`
 - Loguj: total_loss, accuracy, cpc_loss, grad_norm_total/cpc/bridge/snn, spike_rate_mean/std
 
+## 🚨 ANTI-PATTERNS: Zidentyfikowane problemy wymagające naprawy (2025-09-22)
+
+### ❌ **ANTI-PATTERN 1: REDUNDANT FILTERING IMPLEMENTATIONS**
+
+**Problem**: Dwie różne implementacje filtrowania w systemie
+```python
+# ❌ PROBLEM: Niespójne implementacje filtrowania
+@dataclass
+class RedundantFilteringAntiPattern:
+    """Problematyczna redundancja w implementacjach filtrowania"""
+    
+    # ❌ PROBLEM 1: Filtr Butterwortha w data/preprocessing/core.py
+    butterworth_filter: str = '_design_jax_butterworth_filter'
+    filter_length: int = 65  # Zbyt krótki dla dobrej charakterystyki
+    filter_type: str = 'FIR'  # Nie jest prawdziwym filtrem Butterwortha (IIR)
+    
+    # ❌ PROBLEM 2: Anti-alias downsampling w cli/runners/standard.py  
+    antialias_filter: str = '_antialias_downsample'
+    dynamic_length: bool = True  # Lepsze podejście
+    window_type: str = 'Hann'
+    
+    # ❌ RYZYKO: Różne wyniki w zależności od ścieżki danych
+    consistency_risk: str = 'High - może prowadzić do błędów'
+    
+# ✅ ROZWIĄZANIE: Ujednolicenie na jedną metodę
+@dataclass  
+class UnifiedFilteringPattern:
+    """Ujednolicone filtrowanie w całym systemie"""
+    
+    # ✅ SINGLE SOURCE OF TRUTH: Jedna implementacja dla wszystkich
+    unified_filter: str = 'professional_antialias_filter'
+    adaptive_length: bool = True
+    filter_design: str = 'windowed_sinc_fir'
+    window_function: str = 'hann'
+    
+    # ✅ CONFIGURATION: Centralne zarządzanie parametrami
+    config_path: str = 'configs/filtering.yaml'
+    
+    def apply_unified_filtering(self, signal, target_rate):
+        """✅ Jednolita metoda dla całego systemu"""
+        return self.professional_antialias_filter(
+            signal, target_rate, 
+            adaptive_taps=True,
+            window='hann'
+        )
+```
+
+### ❌ **ANTI-PATTERN 2: OVERSIMPLIFIED SNR ESTIMATION**
+
+**Problem**: Zbyt uproszczona estymacja SNR dla sygnałów GW
+```python
+# ❌ PROBLEM: Nieadekwatna estymacja SNR
+@dataclass
+class OversimplifiedSNRAntiPattern:
+    """Problematyczna estymacja SNR"""
+    
+    # ❌ CURRENT METHOD: Zbyt uproszczona
+    current_method: str = 'variance_ratio'
+    signal_power: str = 'jnp.var(signal)'
+    noise_power: str = 'high_frequency_power'
+    
+    # ❌ PROBLEM: Nieadekwatne dla słabych sygnałów GW
+    gw_signal_strength: str = 'often_buried_in_noise'
+    accuracy: str = 'poor_for_weak_signals'
+    
+# ✅ ROZWIĄZANIE: Professional GW SNR estimation
+@dataclass
+class ProfessionalSNRPattern:
+    """Zaawansowana estymacja SNR dla sygnałów GW"""
+    
+    # ✅ MATCHED FILTERING: Standard w analizie GW
+    method: str = 'matched_filtering'
+    template_bank: str = 'pycbc_templates'
+    
+    # ✅ IMPLEMENTATION: Integracja z PyCBC
+    def estimate_snr_matched_filter(self, strain_data, template):
+        """✅ Profesjonalna estymacja SNR"""
+        # Matched filtering implementation
+        snr_timeseries = matched_filter(template, strain_data)
+        optimal_snr = max(abs(snr_timeseries))
+        return optimal_snr
+        
+    # ✅ FALLBACK: Ulepszona metoda spektralna
+    def estimate_snr_spectral(self, signal, psd):
+        """✅ Backup method using PSD weighting"""
+        return calculate_network_snr(signal, psd)
+```
+
+### ❌ **ANTI-PATTERN 3: UNUSED CACHING INFRASTRUCTURE**
+
+**Problem**: Zdefiniowany ale nieaktywny system cache'owania
+```python
+# ❌ PROBLEM: Nieużywany cache
+@dataclass
+class UnusedCacheAntiPattern:
+    """Cache zdefiniowany ale nieaktywny"""
+    
+    # ❌ DEFINED BUT UNUSED
+    cache_function: str = 'create_professional_cache'
+    cache_status: str = 'defined_but_not_called'
+    
+    # ❌ IMPACT: Powtórne obliczenia, spadek wydajności
+    performance_impact: str = 'significant_for_large_datasets'
+    recomputation_overhead: str = 'high'
+
+# ✅ ROZWIĄZANIE: Active caching pattern
+@dataclass
+class ActiveCachingPattern:
+    """Aktywny system cache'owania"""
+    
+    # ✅ INTEGRATION POINTS
+    data_loader_cache: bool = True
+    preprocessing_cache: bool = True
+    model_cache: bool = True
+    
+    def implement_active_caching(self):
+        """✅ Aktywne wykorzystanie cache'u"""
+        # W MLGWSCDataLoader
+        cached_data = self.create_professional_cache(
+            data_path, processing_params
+        )
+        
+        # W AdvancedDataPreprocessor  
+        cached_features = self.cache_processed_features(
+            raw_signals, preprocessing_config
+        )
+        
+        return cached_data, cached_features
+```
+
+### ✅ **PATTERN: INTEGRATION OPPORTUNITIES FROM RESEARCH**
+
+**Implementacja**: Możliwości ulepszenia na podstawie analizy PDF
+```python
+# ✅ RESEARCH-DRIVEN IMPROVEMENTS
+@dataclass
+class ResearchIntegrationPattern:
+    """Wzorce integracji z najnowszymi badaniami"""
+    
+    # ✅ SBI INTEGRATION (PDF 2507.11192v1)
+    sbi_methods: List[str] = ['NPE', 'NRE', 'NLE', 'FMPE', 'CMPE']
+    normalizing_flows: bool = True
+    neural_posterior_estimation: bool = True
+    
+    # ✅ CONTRASTIVE LEARNING (PDF 2302.00295v2)  
+    gw_twins_method: bool = True
+    self_supervised_enhancement: bool = True
+    contrastive_augmentation: bool = True
+    
+    # ✅ VAE ANOMALY DETECTION (PDF 2411.19450v2)
+    vae_alternative: bool = True
+    reconstruction_error_metric: bool = True
+    lstm_temporal_processing: bool = True
+    
+    # ✅ SNN OPTIMIZATION (PDF 2508.00063v1)
+    optimized_snn_params: Dict[str, float] = {
+        'time_steps': 'optimized_T',
+        'threshold': 'adaptive_threshold', 
+        'tau_mem': 'membrane_time_constant',
+        'tau_syn': 'synaptic_time_constant'
+    }
+    
+    def integrate_research_advances(self):
+        """✅ Systematyczna integracja postępów badawczych"""
+        # Phase 1: SBI for parameter estimation
+        self.implement_sbi_pipeline()
+        
+        # Phase 2: Enhanced contrastive learning
+        self.extend_gw_twins_method()
+        
+        # Phase 3: VAE complementary detection
+        self.add_vae_anomaly_detector()
+        
+        # Phase 4: SNN parameter optimization
+        self.optimize_snn_hyperparameters()
+```
+
 ## 🏆 REVOLUTIONARY MODULAR ARCHITECTURE PATTERNS
 
 ### ✅ **PATTERN 1: PROFESSIONAL MODULAR SUBSYSTEM ORGANIZATION**

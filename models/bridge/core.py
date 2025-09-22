@@ -38,10 +38,11 @@ class ValidatedSpikeBridge(nn.Module):
     """
     
     spike_encoding: str = "phase_preserving"  # ✅ UPGRADED: Framework compliant
-    threshold: float = 0.1
-    time_steps: int = 32
-    surrogate_type: str = "adaptive_multi_scale"  # 🚀 Use enhanced surrogate
-    surrogate_beta: float = 4.0
+    # ✅ OPTIMIZED PARAMETERS: Based on PDF 2508.00063v1 analysis
+    threshold: float = 0.55  # Optimized threshold from research
+    time_steps: int = 64     # Increased for better temporal resolution
+    surrogate_type: str = "hard_sigmoid"  # More stable surrogate gradient
+    surrogate_beta: float = 4.0  # Optimal gradient steepness
     enable_gradient_monitoring: bool = True
     
     # 🌊 MATHEMATICAL FRAMEWORK: Phase-preserving parameters
@@ -255,7 +256,7 @@ def create_validated_spike_bridge(spike_encoding: str = "temporal_contrast",
             threshold=threshold,
             use_phase_preserving_encoding=True,
             use_learnable_encoding=False,
-            surrogate_type="adaptive_multi_scale",
+            surrogate_type="hard_sigmoid",  # Optimized surrogate
             surrogate_beta=3.0
         )
     
@@ -267,7 +268,7 @@ def create_validated_spike_bridge(spike_encoding: str = "temporal_contrast",
             use_phase_preserving_encoding=False,
             use_learnable_encoding=True,
             num_threshold_levels=4,
-            surrogate_type="adaptive_multi_scale",
+            surrogate_type="hard_sigmoid",  # Optimized surrogate
             surrogate_beta=4.0
         )
     

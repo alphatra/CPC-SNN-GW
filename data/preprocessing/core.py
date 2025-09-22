@@ -15,12 +15,20 @@ from dataclasses import dataclass
 import logging
 import time
 
-from ..readligo_data_sources import QualityMetrics, ProcessingResult
-try:
-    from ..cache_manager import create_professional_cache
-except Exception:
-    def create_professional_cache(*args, **kwargs):
-        return None
+from data.readligo_data_sources import QualityMetrics, ProcessingResult
+from data.filtering.unified import (
+    design_windowed_sinc_bandpass, 
+    apply_bandpass_filter,
+    create_butterworth_filter
+)
+from data.cache.manager import create_professional_cache, get_cache_manager
+from data.cache.operations import cache_decorator
+from data.signal_analysis.snr_estimation import (
+    ProfessionalSNREstimator, 
+    estimate_snr_matched_filter,
+    estimate_snr_spectral
+)
+from data.signal_analysis.templates import create_default_template_bank
 
 logger = logging.getLogger(__name__)
 
@@ -74,11 +82,38 @@ class AdvancedDataPreprocessor:
         
         self.config = config
         
+        # ✅ PROFESSIONAL CACHE: Initialize cache manager for expensive operations
+        self.cache_manager = create_professional_cache(
+            cache_dir=None,  # Use default location
+            max_size_mb=500,  # 500MB for preprocessing cache
+            max_entries=1000,
+            default_ttl_hours=6  # 6 hours for preprocessing results
+        )
+        
+        # ✅ PROFESSIONAL SNR: Initialize advanced SNR estimator
+        self.snr_estimator = ProfessionalSNREstimator(
+            sample_rate=config.sample_rate,
+            low_freq=config.bandpass[0],
+            high_freq=config.bandpass[1]
+        )
+        
+        # ✅ TEMPLATE BANK: Create default templates for matched filtering
+        try:
+            self.template_bank = create_default_template_bank(
+                sample_rate=config.sample_rate,
+                duration=4.0  # 4 second templates
+            )
+            logger.info(f"✅ Loaded {len(self.template_bank)} templates for matched filtering")
+        except Exception as e:
+            logger.warning(f"Failed to create template bank: {e}, using spectral SNR only")
+            self.template_bank = []
+        
         # Pre-compute filter coefficients for efficiency
         self._setup_filters()
         
         logger.info(f"AdvancedDataPreprocessor initialized: "
                    f"fs={config.sample_rate}, bandpass={config.bandpass}")
+        logger.info(f"✅ Professional caching enabled: {self.cache_manager.get_info()['cache_dir']}")
     
     def _setup_filters(self):
         """Pre-compute filter coefficients for band-pass filtering."""
@@ -93,42 +128,17 @@ class AdvancedDataPreprocessor:
         low_norm = jnp.clip(low_norm, 0.001, 0.999)
         high_norm = jnp.clip(high_norm, 0.001, 0.999)
         
-        # ✅ SOLUTION: JAX-native Butterworth filter design (maintains compilation)
-        # Use simple but effective Butterworth instead of Chebyshev for JAX compatibility
-        self.filter_sos = self._design_jax_butterworth_filter(
-            order=self.config.filter_order,
-            low_freq=low_norm,
-            high_freq=high_norm
+        # ✅ UNIFIED: Use professional unified filtering system
+        # Replaces local implementation with system-wide unified method
+        self.filter_sos = create_butterworth_filter(
+            sample_rate=self.config.sample_rate,
+            low_freq=self.config.bandpass[0],
+            high_freq=self.config.bandpass[1],
+            order=self.config.filter_order
         )
     
-    def _design_jax_butterworth_filter(self, order: int, low_freq: float, high_freq: float) -> jnp.ndarray:
-        """
-        ✅ SOLUTION: Pure JAX Butterworth filter design
-        
-        Replaces SciPy cheby2 to maintain JAX compilation chain.
-        Uses bilinear transform for stable IIR filter implementation.
-        """
-        # Windowed-sinc FIR band-pass design (JAX-friendly)
-        # Compute symmetric taps length based on order for better selectivity
-        taps = int(max(129, 16 * order + 1))
-        n = jnp.arange(taps)
-        m = (taps - 1) / 2.0
-        # Ideal lowpass at high_freq and highpass at low_freq
-        h_lp = 2.0 * high_freq * jnp.sinc(2.0 * high_freq * (n - m))
-        h_hp = jnp.sinc(n - m) - 2.0 * low_freq * jnp.sinc(2.0 * low_freq * (n - m))
-        # Band-pass via spectral subtraction: hp then lp in time domain ~ convolution; use multiplication in freq approx by windowing both
-        # Here approximate bandpass as difference of two lowpasses
-        h_bp = h_lp - 2.0 * low_freq * jnp.sinc(2.0 * low_freq * (n - m))
-        # Apply Hann window to reduce ripple
-        w = 0.5 - 0.5 * jnp.cos(2.0 * jnp.pi * n / (taps - 1))
-        h = (h_hp * h_lp) * w
-        # Normalize DC/energy
-        h = h / (jnp.sum(h) + 1e-8)
-        filter_coeffs = h.astype(jnp.float32)
-        
-        logger.debug(f"JAX filter designed: order={order}, coeffs_shape={filter_coeffs.shape}")
-        
-        return filter_coeffs
+    # ✅ REMOVED: _design_jax_butterworth_filter replaced by unified filtering system
+    # Old implementation moved to data/filtering/unified.py for system-wide consistency
     
     def _complete_filter_setup(self):
         """Complete filter setup including PSD estimation."""
@@ -210,10 +220,9 @@ class AdvancedDataPreprocessor:
             return whitened_strain
     
     def _apply_bandpass_filter(self, strain_data: jnp.ndarray) -> jnp.ndarray:
-        """Apply band-pass filter using JAX-native implementation."""
-        # ✅ JAX-NATIVE: Convolution-based filtering
-        # Use pre-computed filter coefficients
-        filtered = jnp.convolve(strain_data, self.filter_sos, mode='same')
+        """✅ UNIFIED: Apply band-pass filter using unified filtering system."""
+        # ✅ USE UNIFIED IMPLEMENTATION: Consistent across entire system
+        filtered = apply_bandpass_filter(strain_data, self.filter_sos, mode='same')
         
         # ✅ STABILITY: Prevent numerical issues
         filtered = jnp.where(jnp.isfinite(filtered), filtered, 0.0)
@@ -221,7 +230,7 @@ class AdvancedDataPreprocessor:
         return filtered
     
     def _apply_whitening(self, strain_data: jnp.ndarray, detector: str) -> jnp.ndarray:
-        """Apply whitening using PSD estimated via Welch's method (JAX)."""
+        """✅ CACHED: Apply whitening using PSD estimated via Welch's method (JAX)."""
         # Welch parameters
         segment_seconds = max(1, int(self.config.psd_length))
         nperseg = int(self.config.sample_rate * segment_seconds)
@@ -229,27 +238,41 @@ class AdvancedDataPreprocessor:
         step = max(1, nperseg - noverlap)
         n = len(strain_data)
         
-        # Guard: if signal shorter than one segment, fallback to simple PSD
-        if n < nperseg:
-            fft_data = jnp.fft.rfft(strain_data)
-            psd = jnp.abs(fft_data) ** 2
-        else:
-            # Frame the signal into overlapping segments
-            starts = jnp.arange(0, n - nperseg + 1, step)
-            def segment_fft(start_idx):
-                seg = strain_data[start_idx:start_idx + nperseg]
-                # Hann window for variance reduction
-                n_vec = jnp.arange(nperseg)
-                window = 0.5 * (1.0 - jnp.cos(2.0 * jnp.pi * n_vec / (nperseg - 1)))
-                seg_win = seg * window
-                fft = jnp.fft.rfft(seg_win)
-                # Scale by window power
-                scale = jnp.sum(window**2)
-                return (jnp.abs(fft) ** 2) / (scale + 1e-12)
-            psd_stack = jax.vmap(segment_fft)(starts)
-            psd = jnp.mean(psd_stack, axis=0)
+        # ✅ PROFESSIONAL CACHE: Check for cached PSD
+        cache_key = f"psd_{detector}_fs{self.config.sample_rate}_len{n}_seg{nperseg}"
+        cached_psd = self.cache_manager.get(cache_key)
         
-        # Floor to avoid division issues
+        if cached_psd is not None:
+            logger.debug(f"✅ Using cached PSD for {detector}")
+            psd = cached_psd
+        else:
+            # Guard: if signal shorter than one segment, fallback to simple PSD
+            if n < nperseg:
+                fft_data = jnp.fft.rfft(strain_data)
+                psd = jnp.abs(fft_data) ** 2
+            else:
+                # Frame the signal into overlapping segments
+                starts = jnp.arange(0, n - nperseg + 1, step)
+                
+                def segment_fft(start_idx):
+                    seg = strain_data[start_idx:start_idx + nperseg]
+                    # Hann window for variance reduction
+                    n_vec = jnp.arange(nperseg)
+                    window = 0.5 * (1.0 - jnp.cos(2.0 * jnp.pi * n_vec / (nperseg - 1)))
+                    seg_win = seg * window
+                    fft = jnp.fft.rfft(seg_win)
+                    # Scale by window power
+                    scale = jnp.sum(window**2)
+                    return (jnp.abs(fft) ** 2) / (scale + 1e-12)
+                
+                psd_stack = jax.vmap(segment_fft)(starts)
+                psd = jnp.mean(psd_stack, axis=0)
+            
+            # ✅ PROFESSIONAL CACHE: Store computed PSD for reuse
+            self.cache_manager.set(cache_key, psd, ttl_seconds=3600)  # Cache for 1 hour
+            logger.debug(f"✅ Cached PSD for {detector}")
+        
+        # Floor to avoid division issues (for cached PSD too)
         psd = jnp.maximum(psd, jnp.max(psd) * 1e-8)
         
         # Whiten in frequency domain
@@ -285,20 +308,47 @@ class AdvancedDataPreprocessor:
         )
     
     def _estimate_snr(self, strain_data: jnp.ndarray) -> jnp.ndarray:
-        """Estimate signal-to-noise ratio."""
-        # Simple SNR estimation: signal variance / noise variance estimate
-        signal_power = jnp.var(strain_data)
-        
-        # Estimate noise from high-frequency content
-        fft_data = jnp.fft.rfft(strain_data)
-        freqs = jnp.fft.rfftfreq(len(strain_data), 1.0 / self.config.sample_rate)
-        
-        # High-frequency region (assumed to be noise-dominated)
-        high_freq_mask = freqs > 500.0  # Hz
-        noise_power = jnp.mean(jnp.abs(fft_data[high_freq_mask]) ** 2)
-        
-        snr = signal_power / (noise_power + 1e-10)
-        return jnp.clip(snr, 0.0, 100.0)  # Reasonable SNR range
+        """✅ PROFESSIONAL: Estimate SNR using matched filtering and spectral analysis."""
+        try:
+            # ✅ MATCHED FILTERING: Try template bank first (gold standard)
+            if self.template_bank:
+                # Use template bank for optimal SNR estimation
+                result = self.snr_estimator.estimate_snr_template_bank(
+                    strain_data, 
+                    self.template_bank
+                )
+                matched_filter_snr = result.optimal_snr
+                
+                # ✅ SPECTRAL SNR: As comparison/backup
+                spectral_result = self.snr_estimator.estimate_snr_spectral(strain_data)
+                spectral_snr = spectral_result.optimal_snr
+                
+                # ✅ COMBINE ESTIMATES: Use maximum for conservative estimate
+                snr_estimate = jnp.maximum(matched_filter_snr, spectral_snr)
+                
+                logger.debug(f"✅ SNR estimates - Matched: {matched_filter_snr:.2f}, "
+                           f"Spectral: {spectral_snr:.2f}, Final: {snr_estimate:.2f}")
+                
+            else:
+                # ✅ SPECTRAL FALLBACK: Use improved spectral method
+                result = self.snr_estimator.estimate_snr_spectral(strain_data)
+                snr_estimate = result.optimal_snr
+                
+                logger.debug(f"✅ SNR estimate (spectral): {snr_estimate:.2f}")
+            
+            return jnp.clip(snr_estimate, 0.0, 100.0)
+            
+        except Exception as e:
+            logger.warning(f"Professional SNR estimation failed: {e}, using simple fallback")
+            
+            # ✅ SIMPLE FALLBACK: Original method as last resort
+            signal_power = jnp.var(strain_data)
+            fft_data = jnp.fft.rfft(strain_data)
+            freqs = jnp.fft.rfftfreq(len(strain_data), 1.0 / self.config.sample_rate)
+            high_freq_mask = freqs > 500.0
+            noise_power = jnp.mean(jnp.abs(fft_data[high_freq_mask]) ** 2)
+            snr = signal_power / (noise_power + 1e-10)
+            return jnp.clip(snr, 0.0, 100.0)
     
     def _calculate_spectral_coherence(self, strain_data: jnp.ndarray) -> jnp.ndarray:
         """Calculate spectral coherence as quality metric."""

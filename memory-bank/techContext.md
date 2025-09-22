@@ -632,3 +632,150 @@ Obserwacje: cpc_loss ~7.61 (okresowe minima ~6.23), spike_mean train≈0.14 / ev
 - Loader: whitening na mono (mean over features), po przetwarzaniu przywrócenie `[N,T,1]`; sample_rate z configu.
 
 Efekt techniczny: whitening działa stabilnie (brak NaN/Concretization), spike_rate stabilny. Ograniczeniem pozostaje wolumen danych oraz długość treningu – zalecono generację 48h TRAIN/VAL.
+
+## 🚨 KRYTYCZNE PROBLEMY TECHNICZNE ZIDENTYFIKOWANE (2025-09-22)
+
+**ZEWNĘTRZNA ANALIZA KODU**: Przeprowadzona kompleksowa analiza ujawniła kilka krytycznych problemów technicznych wymagających natychmiastowej uwagi:
+
+### **❌ PROBLEM 1: NIEPRAWIDŁOWY FILTR BUTTERWORTHA**
+
+**Lokalizacja**: `data/preprocessing/core.py` - `_design_jax_butterworth_filter`
+```python
+# ❌ PROBLEM: Nieprawidłowa implementacja
+def _design_jax_butterworth_filter(self, low_freq, high_freq, sample_rate):
+    """PROBLEM: To nie jest prawdziwy filtr Butterwortha"""
+    # Tworzy filtr FIR o stałej długości n=65
+    # Prawdziwe filtry Butterwortha to filtry IIR
+    filter_coeffs = jnp.fft.irfft(bandpass_response, n=65)  # Zbyt krótki!
+    
+# ❌ RYZYKO: 
+# - Słaba charakterystyka częstotliwościowa
+# - Niewystarczające tłumienie poza pasmem
+# - Artefakty filtrowania dla krytycznych sygnałów GW
+```
+
+**Rozwiązanie**: Zastąpić prawdziwym filtrem IIR Butterwortha lub znacznie wydłużyć FIR
+
+### **❌ PROBLEM 2: REDUNDANCJA IMPLEMENTACJI FILTROWANIA**
+
+**Konflikt**: Dwie różne implementacje w systemie
+```python
+# ❌ LOKALIZACJA 1: data/preprocessing/core.py
+_design_jax_butterworth_filter(n=65)  # Zbyt krótki FIR
+
+# ✅ LOKALIZACJA 2: cli/runners/standard.py  
+_antialias_downsample()  # Lepsze podejście z dynamiczną długością
+```
+
+**Ryzyko**: Niespójne wyniki w zależności od ścieżki przetwarzania danych
+
+### **❌ PROBLEM 3: NIEADEKWATNA ESTYMACJA SNR**
+
+**Lokalizacja**: `data/preprocessing/core.py` - `_estimate_snr`
+```python
+# ❌ CURRENT: Zbyt uproszczona metoda
+def _estimate_snr(self, signal):
+    signal_power = jnp.var(signal)
+    noise_power = jnp.mean(high_freq_power)  # Nieadekwatne dla GW!
+    return signal_power / noise_power
+
+# ✅ REQUIRED: Matched filtering (standard w analizie GW)
+def estimate_snr_matched_filter(self, strain, template):
+    snr_timeseries = matched_filter(template, strain)
+    return max(abs(snr_timeseries))
+```
+
+**Problem**: Sygnały GW są często ukryte w szumie - prosta metoda wariancji jest niewystarczająca
+
+### **❌ PROBLEM 4: NIEAKTYWNY SYSTEM CACHE'OWANIA**
+
+**Status**: `create_professional_cache` zdefiniowany ale nieużywany
+```python
+# ❌ DEFINED BUT UNUSED
+def create_professional_cache(self, ...):
+    """Zdefiniowana funkcja nigdzie nie wywoływana"""
+    pass
+
+# ❌ IMPACT: 
+# - Powtórne obliczenia dla tych samych danych
+# - Znaczny spadek wydajności dla dużych zbiorów
+# - Marnotrawstwo zasobów obliczeniowych
+```
+
+### **📈 MOŻLIWOŚCI ULEPSZENIA Z BADAŃ PDF**
+
+**Analiza dokumentów PDF ujawniła zaawansowane techniki gotowe do implementacji**:
+
+#### **1. Simulation-based Inference (SBI) - PDF 2507.11192v1**
+```python
+# ✅ OPPORTUNITY: Integracja zaawansowanych metod SBI
+sbi_methods = {
+    'NPE': 'Neural Posterior Estimation',
+    'NRE': 'Neural Ratio Estimation', 
+    'NLE': 'Neural Likelihood Estimation',
+    'FMPE': 'Flow Matching Posterior Estimation',
+    'CMPE': 'Continuous Normalizing Flow Posterior Estimation'
+}
+
+# Potencjał: Znacznie lepsza estymacja parametrów GW
+# vs tradycyjne metody MCMC
+```
+
+#### **2. GW Twins Contrastive Learning - PDF 2302.00295v2**
+```python
+# ✅ OPPORTUNITY: Rozszerzenie SSL o GW twins
+current_cpc = "Contrastive Predictive Coding"
+enhancement = "GW twins contrastive learning"
+
+# Potencjał: Lepsza identyfikacja sygnałów GW 
+# przy ograniczonych etykietowanych danych
+```
+
+#### **3. VAE Anomaly Detection - PDF 2411.19450v2**
+```python
+# ✅ OPPORTUNITY: VAE jako alternatywny/uzupełniający model
+vae_approach = {
+    'training': 'noise_only_data',
+    'detection': 'reconstruction_error_peaks',
+    'performance': 'AUC_0.89_on_LIGO_data',
+    'architecture': 'VAE_with_LSTM_layers'
+}
+
+# Potencjał: Komplementarne podejście do CPC+SNN
+```
+
+#### **4. Optymalizacja SNN - PDF 2508.00063v1**
+```python
+# ✅ OPPORTUNITY: Zaawansowane parametry SNN
+snn_optimizations = {
+    'time_steps_T': 'optimized_for_GW_detection',
+    'threshold_adaptive': 'dynamic_threshold_adjustment',
+    'tau_mem': 'membrane_time_constant_tuning',
+    'tau_syn': 'synaptic_time_constant_optimization',
+    'surrogate_gradients': 'enhanced_backpropagation'
+}
+
+# Potencjał: Znacznie lepsza wydajność neuromorphic processing
+```
+
+## 🎯 PLAN NAPRAWY KRYTYCZNYCH PROBLEMÓW
+
+### **PRIORYTET 1: Naprawa filtrowania (KRYTYCZNE)**
+1. Zastąpić `_design_jax_butterworth_filter` prawdziwym filtrem IIR
+2. Ujednolicić na `_antialias_downsample` w całym systemie
+3. Przetestować spójność wyników
+
+### **PRIORYTET 2: Ulepszenie estymacji SNR (WYSOKIE)**
+1. Implementować matched filtering z PyCBC
+2. Zachować prostą metodę jako fallback
+3. Walidować na rzeczywistych sygnałach GW
+
+### **PRIORYTET 3: Aktywacja cache'owania (ŚREDNIE)**
+1. Zintegrować `create_professional_cache` w data loaderach
+2. Dodać cache'owanie w preprocessing pipeline
+3. Monitorować poprawę wydajności
+
+### **PRIORYTET 4: Integracja badań (DŁUGOTERMINOWE)**
+1. Prototyp SBI dla estymacji parametrów
+2. Rozszerzenie contrastive learning o GW twins
+3. Eksperyment z VAE jako dodatkowym detektorem

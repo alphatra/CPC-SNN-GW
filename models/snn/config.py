@@ -23,15 +23,31 @@ class SNNConfig:
     num_classes: int = 2  # ✅ FIXED: Binary classification (noise vs signal)
     num_layers: int = 3   # ✅ Increased from 2 to 3
     
-    # LIF neuron parameters
-    tau_mem: float = 20e-3      # Membrane time constant (20ms)
-    tau_syn: float = 5e-3       # Synaptic time constant (5ms)  
-    threshold: float = 1.0      # Spike threshold
+    # ✅ OPTIMIZED LIF neuron parameters (based on PDF 2508.00063v1)
+    tau_mem: float = 15e-3      # Optimized membrane time constant (15ms)
+    tau_syn: float = 8e-3       # Optimized synaptic time constant (8ms)  
+    threshold: float = 0.55     # Optimized spike threshold
+    adaptive_threshold: bool = True  # Enable adaptive threshold
     reset_potential: float = 0.0   # Reset potential after spike
+    membrane_reset: str = "subtract"  # Better than hard reset
     
-    # Training parameters
-    surrogate_gradient_type: str = "fast_sigmoid"
-    surrogate_beta: float = 10.0    # ✅ Adaptive: starts at 10, grows with depth
+    # ✅ OPTIMIZED Training parameters (based on PDF research)
+    surrogate_gradient_type: str = "hard_sigmoid"  # More stable than fast_sigmoid
+    surrogate_beta: float = 4.0    # Optimized for GW detection (was 10.0)
+    
+    # ✅ ADVANCED SNN FEATURES: From PDF 2508.00063v1
+    spike_regularization_target: float = 0.15  # Target 15% spike rate
+    use_recurrent_connections: bool = False  # Keep simple for GW detection
+    use_lateral_inhibition: bool = False  # Not needed for binary classification
+    
+    # ✅ TEMPORAL PROCESSING: Optimized for GW signals
+    temporal_integration_window: int = 16  # Window for temporal integration
+    spike_history_length: int = 8  # Track recent spike history
+    
+    # ✅ PERFORMANCE OPTIMIZATIONS: For real-time processing
+    enable_jit_compilation: bool = True
+    use_sparse_operations: bool = False  # Dense is faster for small networks
+    memory_efficient_mode: bool = False  # Prioritize speed over memory
     
     # Regularization
     dropout_rate: float = 0.0       # ✅ Adaptive: decreases with depth

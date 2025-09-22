@@ -10,6 +10,9 @@ from typing import Dict, Any
 import jax.numpy as jnp
 import jax
 
+# ✅ UNIFIED FILTERING: Import professional unified filtering system
+from data.filtering.unified import antialias_downsample
+
 logger = logging.getLogger(__name__)
 
 
@@ -127,10 +130,11 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
                 y = jnp.pad(y, ((0, 0), (0, pad_back), (0, 0)), mode='edge')
             return y
 
+        # ✅ UNIFIED: Use professional unified filtering system
         # Get target length from config (fallback to 512)
         target_t = int(config.get('data', {}).get('downsample_target_t', 512))
-        train_signals = _antialias_downsample(train_signals, target_t=target_t)
-        test_signals = _antialias_downsample(test_signals, target_t=target_t)
+        train_signals = antialias_downsample(train_signals, target_length=target_t)
+        test_signals = antialias_downsample(test_signals, target_length=target_t)
         logger.info(f"   ⏬ Downsampled T: train={train_signals.shape[1]}, test={test_signals.shape[1]}, F={train_signals.shape[-1]}")
         logger.info(f"   📊 Train: {len(train_signals)} samples")
         logger.info(f"   📊 Test: {len(test_signals)} samples")

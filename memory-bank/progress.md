@@ -539,3 +539,93 @@ Wniosek: sieć jeszcze się nie wyuczyła (mały wolumen, krótki bieg). Rekomen
 1) Dokończyć generację 48h (TRAIN/VAL), sprawdzić rozmiar/ETA.
 2) Trening: `--epochs 30 --batch-size 8 --learning-rate 2e-5 --whiten-psd` (CPC łagodnie: 1 warstwa/1 head, α z warmupem).
 3) Ocena: raport ROC‑AUC/TPR; jeśli acc ~0.5, zwiększyć wolumen (do 72–96h) i rozważyć class‑weights.
+
+## 🚨 MILESTONE 13: KRYTYCZNA ANALIZA KODU I IDENTYFIKACJA PROBLEMÓW (2025-09-22)
+
+**PRZEŁOMOWA ANALIZA**: Przeprowadzona zewnętrzna analiza kodu ujawniła kluczowe problemy techniczne wymagające natychmiastowej uwagi
+
+### **🔍 ZIDENTYFIKOWANE PROBLEMY KRYTYCZNE**:
+
+#### **❌ Problem 1: Nieprawidłowy filtr Butterwortha**
+- **Lokalizacja**: `data/preprocessing/core.py` - `_design_jax_butterworth_filter` 
+- **Problem**: FIR o stałej długości n=65 zamiast prawdziwego filtru IIR Butterwortha
+- **Ryzyko**: Słaba charakterystyka częstotliwościowa, artefakty dla sygnałów GW
+- **Status**: ❌ **KRYTYCZNE** - wymaga natychmiastowej naprawy
+
+#### **❌ Problem 2: Redundancja implementacji filtrowania**
+- **Konflikt**: `_design_jax_butterworth_filter` vs `_antialias_downsample`
+- **Ryzyko**: Niespójne wyniki w zależności od ścieżki przetwarzania
+- **Status**: ❌ **WYSOKIE** - ujednolicić na lepszą implementację
+
+#### **❌ Problem 3: Nieadekwatna estymacja SNR**  
+- **Problem**: Zbyt uproszczona metoda wariancji dla sygnałów GW
+- **Wymagane**: Matched filtering (standard w analizie GW)
+- **Status**: ❌ **WYSOKIE** - implementować PyCBC integration
+
+#### **❌ Problem 4: Nieaktywny system cache'owania**
+- **Problem**: `create_professional_cache` zdefiniowany ale nieużywany
+- **Impact**: Powtórne obliczenia, spadek wydajności
+- **Status**: ❌ **ŚREDNIE** - zintegrować w potoku danych
+
+### **📈 MOŻLIWOŚCI ULEPSZENIA Z BADAŃ PDF**:
+
+#### **✅ Opportunity 1: Simulation-based Inference (SBI)**
+- **Źródło**: PDF 2507.11192v1 - Recent Advances in SBI for GW
+- **Metody**: NPE, NRE, NLE, FMPE, CMPE + Normalizing Flows
+- **Potencjał**: Znacznie lepsza estymacja parametrów vs MCMC
+- **Status**: 🎯 **DŁUGOTERMINOWE** - prototyp do implementacji
+
+#### **✅ Opportunity 2: GW Twins Contrastive Learning**
+- **Źródło**: PDF 2302.00295v2 - Self-supervised learning for GW
+- **Metoda**: Rozszerzenie SSL o GW twins contrastive learning
+- **Potencjał**: Lepsza identyfikacja przy ograniczonych etykietach
+- **Status**: 🎯 **ŚREDNIE** - rozszerzyć obecny CPC
+
+#### **✅ Opportunity 3: VAE Anomaly Detection**
+- **Źródło**: PDF 2411.19450v2 - Unsupervised anomaly detection
+- **Architektura**: VAE + LSTM, AUC 0.89 na danych LIGO
+- **Potencjał**: Komplementarne podejście do CPC+SNN
+- **Status**: 🎯 **ŚREDNIE** - eksperyment jako dodatkowy detektor
+
+#### **✅ Opportunity 4: Optymalizacja SNN**
+- **Źródło**: PDF 2508.00063v1 - Anomaly detection with SNNs
+- **Parametry**: time_steps, threshold, tau_mem, tau_syn, surrogate gradients
+- **Potencjał**: Znacznie lepsza wydajność neuromorphic processing
+- **Status**: 🎯 **WYSOKIE** - optymalizować obecne parametry
+
+### **🎯 PLAN DZIAŁANIA NAPRAWCZEGO**:
+
+#### **FAZA 1: Naprawa krytycznych problemów (PRIORYTET 1)**
+1. **Filtrowanie**: Zastąpić `_design_jax_butterworth_filter` prawdziwym IIR
+2. **Ujednolicenie**: Użyć `_antialias_downsample` w całym systemie
+3. **SNR**: Implementować matched filtering z PyCBC
+4. **Cache**: Aktywować `create_professional_cache` w data loaderach
+
+#### **FAZA 2: Integracja ulepszeń badawczych (PRIORYTET 2)**
+1. **SNN Optimization**: Zastosować parametry z PDF 2508.00063v1
+2. **GW Twins**: Rozszerzyć contrastive learning
+3. **VAE Prototype**: Eksperyment z VAE jako dodatkowym detektorem
+
+#### **FAZA 3: Zaawansowane metody (DŁUGOTERMINOWE)**
+1. **SBI Integration**: Prototyp NPE/NRE dla estymacji parametrów
+2. **Advanced SSL**: Pełna implementacja GW twins method
+3. **Hybrid Approach**: Integracja VAE+CPC+SNN
+
+### **📊 WPŁYW NA SYSTEM**:
+
+| **Problem** | **Priorytet** | **Effort** | **Impact** |
+|-------------|---------------|------------|------------|
+| Filtr Butterwortha | 🔴 KRYTYCZNE | Średni | Wysoki |
+| Redundancja filtrowania | 🟡 WYSOKIE | Niski | Średni |
+| Estymacja SNR | 🟡 WYSOKIE | Średni | Wysoki |
+| Cache nieaktywny | 🟢 ŚREDNIE | Niski | Średni |
+| SBI Integration | 🔵 DŁUGOTERMINOWE | Wysoki | Bardzo wysoki |
+
+### **🏆 OCZEKIWANE REZULTATY**:
+
+Po implementacji napraw:
+- **Lepsza jakość filtrowania**: Prawdziwe filtry Butterwortha/IIR
+- **Spójność systemu**: Jedna implementacja filtrowania
+- **Dokładniejsza estymacja SNR**: Matched filtering dla sygnałów GW  
+- **Wyższa wydajność**: Aktywny system cache'owania
+- **Zaawansowane możliwości**: SBI, GW twins, VAE integration

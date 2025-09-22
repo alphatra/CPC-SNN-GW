@@ -157,4 +157,36 @@ Ten Memory Bank stanowi centralną bazę wiedzy dla projektu detekcji fal grawit
 ### 4. Document Data Sources
 - Always log: dataset size, source (real/synthetic), augmentation methods
 - Track: class balance, window sizes, preprocessing steps
-- Verify: MLGWSC-1 (100k+ samples) vs toy datasets (dozens of samples) 
+- Verify: MLGWSC-1 (100k+ samples) vs toy datasets (dozens of samples)
+
+## 🚨 CRITICAL LESSONS FROM EXTERNAL CODE ANALYSIS (2025-09-22)
+
+### 5. Technical Implementation Quality Control
+- **Filter Design**: Always verify filter implementations - FIR filters need adequate length for good frequency characteristics
+- **Redundancy Check**: Avoid multiple implementations of the same functionality (e.g., filtering methods)
+- **SNR Estimation**: For GW signals, use matched filtering, not simple variance methods
+- **Cache Utilization**: Ensure defined caching functions are actually used in the data pipeline
+
+### 6. Research Integration Opportunities  
+- **Stay Current**: Regularly review latest research papers for applicable techniques
+- **PDF Analysis**: Extract concrete implementation ideas from research (SBI, GW twins, VAE approaches)
+- **Progressive Enhancement**: Implement research advances systematically, not ad-hoc
+- **Validation**: Always validate research claims against your specific use case
+
+### 7. Code Quality Anti-Patterns to Avoid
+- **Pseudo-Implementations**: Don't implement "Butterworth" filters using FIR with inadequate length
+- **Unused Infrastructure**: If you define professional caching, actually use it
+- **Inconsistent Methods**: Unify similar functionality instead of maintaining parallel implementations
+- **Oversimplified Algorithms**: Use domain-appropriate methods (matched filtering for GW, not simple variance)
+
+### 8. External Analysis Integration Protocol
+- **Welcome External Reviews**: External code analysis can reveal critical blind spots
+- **Systematic Response**: Create actionable TODO items from analysis findings
+- **Prioritize Fixes**: Address critical technical issues before adding new features  
+- **Document Lessons**: Update Memory Bank with lessons learned from external feedback
+
+### 9. Research-Driven Development
+- **PDF Mining**: Extract concrete technical improvements from research papers
+- **Implementation Roadmap**: Create phased approach to research integration
+- **Validation Strategy**: Test research claims in your specific domain context
+- **Hybrid Approaches**: Consider combining multiple research techniques (SBI+VAE+CPC+SNN) 

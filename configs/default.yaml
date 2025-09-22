@@ -65,20 +65,40 @@ model:
     dropout_rate: 0.1
     use_layer_norm: true
     
-  # SNN Classifier - PARAMETERIZED  
+  # SNN Classifier - OPTIMIZED based on PDF 2508.00063v1 analysis
   snn:
     num_classes: 2  # binary: noise vs signal
     hidden_sizes: [128, 128, 64]
-    time_steps: 32
-    threshold: 0.5
-    tau_mem: 20.0  # membrane time constant
-    tau_syn: 10.0  # synaptic time constant
     
-  # Spike Bridge - PARAMETERIZED
+    # ✅ OPTIMIZED TIME STEPS: Based on GW signal characteristics
+    time_steps: 64  # Increased from 32 for better temporal resolution
+    
+    # ✅ OPTIMIZED THRESHOLD: Adaptive threshold for better spike encoding
+    threshold: 0.55  # Slightly higher for more selective spiking
+    adaptive_threshold: true  # Enable adaptive threshold adjustment
+    
+    # ✅ OPTIMIZED TIME CONSTANTS: Based on neuromorphic research
+    tau_mem: 15.0  # Reduced membrane time constant for faster response
+    tau_syn: 8.0   # Reduced synaptic time constant for better temporal precision
+    
+    # ✅ ADVANCED SNN FEATURES: From research analysis
+    surrogate_gradient: "hard_sigmoid"  # More stable than sigmoid
+    surrogate_beta: 4.0  # Steeper gradient approximation
+    spike_regularization_target: 0.15  # Target 15% spike rate
+    membrane_reset: "subtract"  # Better than hard reset
+    
+  # Spike Bridge - OPTIMIZED based on research analysis
   bridge:
-    encoding_type: "learnable_multi_threshold"  # temporal_contrast, phase_preserving, learnable_multi_threshold, simple_sigmoid
-    num_threshold_levels: 4
-    spike_regularization: 0.01
+    encoding_type: "learnable_multi_threshold"  # Best performance in research
+    num_threshold_levels: 8  # Increased from 4 for finer encoding
+    spike_regularization: 0.005  # Reduced for less aggressive regularization
+    
+    # ✅ ADVANCED BRIDGE FEATURES: From PDF analysis
+    temporal_encoding: true  # Enable temporal spike patterns
+    rate_coding_window: 16  # Window for rate coding
+    latency_coding: false  # Focus on rate coding for GW signals
+    normalization_method: "layer_norm"  # Stable normalization
+    gradient_scaling: 1.0  # Gradient flow optimization
 
 # =============================================================================
 # TRAINING CONFIGURATION
