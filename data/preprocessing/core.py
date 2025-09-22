@@ -184,17 +184,27 @@ class AdvancedDataPreprocessor:
             cache = create_professional_cache("preprocessing_filters")
         except Exception:
             cache = None
+        # ✅ KRYTYCZNA NAPRAWA: Użyj ujednoliconego filtrowania zamiast nieistniejącej funkcji
+        from data.filtering.unified import design_windowed_sinc_bandpass
+        
         cache_key = f"bp_fs{self.config.sample_rate}_b{self.config.bandpass[0]}-{self.config.bandpass[1]}_order{self.config.filter_order}"
         if cache is not None:
             coeffs = cache.get(cache_key)
             if coeffs is None:
-                coeffs = self._design_jax_butterworth_filter(
-                    order=self.config.filter_order,
+                coeffs = design_windowed_sinc_bandpass(
                     low_freq=self.config.bandpass[0] / (self.config.sample_rate / 2),
-                    high_freq=self.config.bandpass[1] / (self.config.sample_rate / 2)
+                    high_freq=self.config.bandpass[1] / (self.config.sample_rate / 2),
+                    order=self.config.filter_order
                 )
                 cache.set(cache_key, coeffs)
             self.filter_sos = coeffs
+        else:
+            # Fallback gdy cache nie działa
+            self.filter_sos = design_windowed_sinc_bandpass(
+                low_freq=self.config.bandpass[0] / (self.config.sample_rate / 2),
+                high_freq=self.config.bandpass[1] / (self.config.sample_rate / 2),
+                order=self.config.filter_order
+            )
         filtered_strain = self._apply_bandpass_filter(strain_data)
         
         # Step 2: Whitening (if enabled)

@@ -257,6 +257,27 @@ python /teamspace/studios/this_studio/CPC-SNN-GW/cli.py train \
   --spike-threshold 0.35 --opt-threshold -v
 ```
 
+## 🔄 2025-09-22 – Eval per‑epokę (FULL TEST) + czytelne logi + stabilizacja CPC
+
+- Per‑epokę EVAL liczone na CAŁYM teście i logowane w formacie: `EVAL (full test) epoch=X | avg_loss=..., acc=...` – koniec fluktuacji od pojedynczego batcha.
+- Upiększone logi TRAIN: jedna, czytelna linia z kluczowymi metrykami:
+  - `TRAIN step=... epoch=... | total=... cls=... cpc=... acc=... spikes=μ±σ gnorm=... (cpc=... br=... snn=...)`.
+- Zmniejszona `focal_gamma` do 1.2 (mniej wariancji na małych/zbalansowanych setach). Rekomendacja: na syntetykach lub małych setach tymczasowo używać zwykłego CE.
+- Testy:
+  - `test_loss_function.py`: poprawiona asercja – weryfikacja, że strata dla idealnych par < przetasowanych (bez fałszywego oczekiwania „0.0”).
+  - `pretrain_cpc.py`: naprawione wejście 3D [B,T,F], RNG `dropout` przekazywany w `apply_fn`, `k_prediction` jako argument statyczny JIT.
+  - `test_cpc_fix.py`: sygnały wejściowe ujednolicone do [N,T,1].
+- Obserwacje z logów:
+  - `cpc_loss` ~7.65 (stabilna), sporadyczne spadki do ~5.6 korelują z pikami `grad_norm` (gn_cpc ≫ inne) – ostry krajobraz InfoNCE przy aktualnych hiperparametrach.
+  - `spike_rate` stabilny (~0.14), brak NaN/Inf – preprocessing działa.
+  - Accuracy per‑epokę (full test) nadal waha się z powodu małego wolumenu testu.
+- Rekomendacje (do wdrożenia w kolejnych biegach lub w MLGWSC‑1):
+  1) Wolumen: przejść na MLGWSC‑1 (50k–100k okien) – największa dźwignia stabilności.
+  2) CPC: `temperature=0.2–0.3`, `prediction_steps=4–6`, wydłużyć warmup CPC: przez pierwsze 2 epoki `cpc_weight=0.0`, potem ep.3–4: 0.05, ep.5–6: 0.10, ≥7: 0.20.
+  3) Klasyfikacja: CE (bez focal) na małych/zbalansowanych setach; focal wróci przy realnym imbalance.
+  4) Eval/Batch: zwiększyć `eval_batch_size` (np. 64) – mniejsza wariancja miary.
+  5) Monitoring: dopisać do logów wartości `cpc_weight` i `temperature` (kontekst zmian). Opcjonalnie delikatnie obniżyć LR tylko dla CPC lub podnieść nieznacznie global clip.
+
 ## 🏗️ MODULAR REFACTORING BREAKTHROUGH (COMPLETED - 2025-09-14)
 
 **HISTORIC ACHIEVEMENT**: Complete transformation from monolithic to world-class modular architecture

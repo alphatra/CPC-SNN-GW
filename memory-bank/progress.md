@@ -629,3 +629,12 @@ Po implementacji napraw:
 - **Dokładniejsza estymacja SNR**: Matched filtering dla sygnałów GW  
 - **Wyższa wydajność**: Aktywny system cache'owania
 - **Zaawansowane możliwości**: SBI, GW twins, VAE integration
+
+## 🔄 2025-09-22 – Milestone: Per‑epoch full‑test eval + Pretty Logs + CPC Stabilization Pass
+
+- Per‑epokę EVAL liczone na CAŁYM teście i logowane (`EVAL (full test) ...`).
+- Czytelniejsze logi TRAIN (total/cls/cpc/acc/spikes μ±σ/gnorm + rozbicie na cpc/bridge/snn).
+- `focal_gamma` zmniejszona do 1.2; rekomendacja: CE na małych/zbalansowanych setach.
+- Testy: InfoNCE (idealne vs przetasowane), pretrain CPC (3D input, dropout RNG, JIT static), standaryzacja [N,T,1] w testach.
+- Obserwacje: `cpc_loss` ~7.65 stabilna, sporadyczne piki `gn_cpc`; accuracy per‑epokę (full test) zmienne z powodu małego testu.
+- Następne kroki: MLGWSC‑1 (50k–100k okien), `temperature=0.2–0.3`, `k=4–6`, wydłużony warmup CPC, CE bez focal, większy eval batch, logowanie `cpc_weight`/`temperature`.

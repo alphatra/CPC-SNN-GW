@@ -234,7 +234,15 @@ class CPCSNNTrainer(TrainerBase):
                 # Sanitize inputs to avoid NaNs/Infs propagation
                 x = jnp.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
                 x = jnp.clip(x, -20.0, 20.0)
-                cpc_features = self.cpc(x, training=training)
+                
+                # ✅ KRYTYCZNA NAPRAWA: Normalizacja Z-score per-sample przed CPC
+                # Zgodnie z rekomendacją z analizy stagnacji cpc_loss
+                mean = jnp.mean(x, axis=1, keepdims=True)
+                std = jnp.std(x, axis=1, keepdims=True) + 1e-8
+                x_normalized = (x - mean) / std
+                
+                # Użyj znormalizowanych danych dla CPC
+                cpc_features = self.cpc(x_normalized, training=training)
                 # Sanitize CPC features
                 cpc_features = jnp.nan_to_num(cpc_features, nan=0.0, posinf=0.0, neginf=0.0)
                 cpc_features = jnp.clip(cpc_features, -50.0, 50.0)
@@ -434,6 +442,7 @@ class CPCSNNTrainer(TrainerBase):
             agg = {
                 'total_loss': 0.0,
                 'accuracy': 0.0,
+                'cpc_loss': 0.0,
                 'grad_norm_total': 0.0,
                 'spike_rate_mean': 0.0,
                 'spike_rate_std': 0.0,
@@ -463,30 +472,39 @@ class CPCSNNTrainer(TrainerBase):
                         pass
                 try:
                     self.logger.info(
-                        "step=%s epoch=%s loss=%.4f acc=%.3f cpc=%.4f spike_mean=%.3f spike_std=%.3f gnorm=%.3f g_cpc=%.3f g_br=%.3f g_snn=%.3f",
-                        metrics['step'], metrics['epoch'], metrics['total_loss'], metrics['accuracy'], metrics.get('cpc_loss', 0.0),
-                        metrics['spike_rate_mean'], metrics['spike_rate_std'], metrics['grad_norm_total'],
+                        "TRAIN step=%s epoch=%s | total=%.4f cls=%.4f cpc=%.4f acc=%.3f spikes=%.3f±%.3f gnorm=%.3f (cpc=%.3f br=%.3f snn=%.3f)",
+                        metrics['step'], metrics['epoch'], metrics['total_loss'], metrics.get('cls_loss', 0.0), metrics.get('cpc_loss', 0.0),
+                        metrics['accuracy'], metrics['spike_rate_mean'], metrics['spike_rate_std'], metrics['grad_norm_total'],
                         metrics['grad_norm_cpc'], metrics['grad_norm_bridge'], metrics['grad_norm_snn']
                     )
                 except Exception:
                     pass
             
-            # Eval at end of epoch
-            eval_batch = (test_signals[:batch_size], test_labels[:batch_size])
-            eval_metrics = self.eval_step(state, eval_batch)
+            # Eval at end of epoch (FULL TEST AGGREGATION)
+            total_eval_loss_epoch = 0.0
+            total_eval_acc_epoch = 0.0
+            total_eval_count_epoch = 0
+            for s in range(0, len(test_signals), batch_size):
+                e = min(s + batch_size, len(test_signals))
+                eval_dict = self.eval_step(state, (test_signals[s:e], test_labels[s:e]))
+                bsz = (e - s)
+                total_eval_loss_epoch += float(eval_dict.get('total_loss', 0.0)) * bsz
+                total_eval_acc_epoch += float(eval_dict.get('accuracy', 0.0)) * bsz
+                total_eval_count_epoch += bsz
+            avg_eval_loss_epoch = total_eval_loss_epoch / max(1, total_eval_count_epoch)
+            avg_eval_acc_epoch = total_eval_acc_epoch / max(1, total_eval_count_epoch)
             # Epoch aggregation write
             if agg_count > 0:
                 epoch_metrics = {
                     'epoch': int(self.current_epoch),
                     'mean_loss': agg['total_loss'] / agg_count,
                     'mean_accuracy': agg['accuracy'] / agg_count,
+                    'mean_cpc_loss': agg['cpc_loss'] / agg_count,
                     'mean_grad_norm_total': agg['grad_norm_total'] / agg_count,
                     'mean_spike_rate_mean': agg['spike_rate_mean'] / agg_count,
                     'mean_spike_rate_std': agg['spike_rate_std'] / agg_count,
-                    'eval_loss': float(eval_metrics.get('total_loss', 0.0)),
-                    'eval_accuracy': float(eval_metrics.get('accuracy', 0.0)),
-                    'eval_spike_rate_mean': float(eval_metrics.get('spike_rate_mean', 0.0)),
-                    'eval_spike_rate_std': float(eval_metrics.get('spike_rate_std', 0.0)),
+                    'eval_loss': float(avg_eval_loss_epoch),
+                    'eval_accuracy': float(avg_eval_acc_epoch),
                 }
                 try:
                     with epoch_jsonl_path.open('a') as f:
@@ -500,9 +518,8 @@ class CPCSNNTrainer(TrainerBase):
                         pass
             try:
                 self.logger.info(
-                    "eval epoch=%s loss=%.4f acc=%.3f spike_mean=%.3f spike_std=%.3f",
-                    eval_metrics['epoch'], eval_metrics['total_loss'], eval_metrics['accuracy'],
-                    eval_metrics['spike_rate_mean'], eval_metrics['spike_rate_std']
+                    "EVAL (full test) epoch=%s | avg_loss=%.4f acc=%.3f",
+                    int(self.current_epoch), avg_eval_loss_epoch, avg_eval_acc_epoch
                 )
             except Exception:
                 pass

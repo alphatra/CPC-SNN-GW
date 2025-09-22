@@ -633,6 +633,23 @@ Obserwacje: cpc_loss ~7.61 (okresowe minima ~6.23), spike_mean train≈0.14 / ev
 
 Efekt techniczny: whitening działa stabilnie (brak NaN/Concretization), spike_rate stabilny. Ograniczeniem pozostaje wolumen danych oraz długość treningu – zalecono generację 48h TRAIN/VAL.
 
+## 🔄 2025-09-22 – Stabilizacja ewaluacji/logów + wnioski dot. CPC
+
+- EVAL per‑epokę: agregacja po CAŁYM teście (avg_loss, acc) – spójniejsze metryki w trakcie treningu.
+- Logi TRAIN w formie skondensowanej: total/cls/cpc/acc/spikes/gnorm + rozbicie gnorm na moduły (cpc/bridge/snn) – ułatwia korelację pików gradientu z komponentami.
+- `focal_gamma` ↓ 1.2 (na małych/zbalansowanych setach rekomendowane CE bez focal).
+- Testy i pretrain:
+  - `test_loss_function.py`: porównanie idealnych vs przetasowanych celów (robustna asercja dla InfoNCE temporal).
+  - `pretrain_cpc.py`: wejście 3D [B,T,F], RNG `dropout`, `k_prediction` jako static_arg w JIT.
+- Wnioski techniczne z logów:
+  - Dominacja `gn_cpc` i sporadyczne piki do 100–210+ → ostry softmax InfoNCE przy `temperature=0.07` i większym `k`; klip działa, ale gradienty bardzo nierówne.
+  - `cpc_loss` ~7.65 (stabilna), sporadyczne minimy ~5.6 przy pikach gnorm – to chwilowe „peaki informacyjne”, nie trwały trend.
+  - Główne ograniczenie: wolumen (train/test ≪ zalecanego), co potęguje wariancję accuracy.
+- Zalecenia HPC/hparam (bez zmiany architektury):
+  - Podnieść `cpc_temperature` do 0.2–0.3, obniżyć `prediction_steps` do 4–6, wydłużyć warmup CPC (2 epoki z wagą 0.0; 0.05/0.10/0.20 w kolejnych zakresach epok).
+  - Wyłączyć focal na małym/zbalansowanym secie; wrócić przy realnym imbalance.
+  - Zwiększyć eval batch; logować `cpc_weight`, `temperature` w metadanych per‑epokę.
+
 ## 🚨 KRYTYCZNE PROBLEMY TECHNICZNE ZIDENTYFIKOWANE (2025-09-22)
 
 **ZEWNĘTRZNA ANALIZA KODU**: Przeprowadzona kompleksowa analiza ujawniła kilka krytycznych problemów technicznych wymagających natychmiastowej uwagi:

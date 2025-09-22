@@ -88,6 +88,10 @@ trainer = create_trainer(
 - Kontrola aktywności przez `threshold` i `surrogate_beta`
 
 ### ✅ PATTERN: JSONL TELEMETRY + PER‑MODULE GRAD NORMS
+### ✅ PATTERN: PER‑EPOCH FULL‑TEST EVAL + CZYTELNE LOGI (NOWE – 2025-09-22)
+- Ewaluacja per‑epokę na CAŁYM teście; zapis w logu jako `EVAL (full test) epoch=... | avg_loss=... acc=...`.
+- Linia logu TRAIN skondensowana i czytelna: `total/cls/cpc/acc/spikes(μ±σ)/gnorm(total,cpc,bridge,snn)`.
+- Ułatwia korelację pików gradientów z modułami i monitorowanie wpływu CPC.
 ### ✅ PATTERN: PSD WHITENING (IST) HYBRYDOWE + ANTI‑ALIAS DOWNSAMPLING (NOWE – 2025-09-22)
 - PSD z Welch (Hann, 50% overlap) na CPU (NumPy) + Inverse Spectrum Truncation (IST); wynik konwertowany do JAX bez JIT‑u.
 - Eliminacja Concretization/TracerBool: stałe liczbowe liczone w Pythonie, brak branchy zależnych od tracerów.

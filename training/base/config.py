@@ -59,7 +59,7 @@ class TrainingConfig:
     
     # ✅ New: focal loss and class weighting controls
     use_focal_loss: bool = True
-    focal_gamma: float = 1.8
+    focal_gamma: float = 1.2
     class1_weight: float = 1.1  # further reduce FP
     
     # ✅ New: Exponential Moving Average of parameters
