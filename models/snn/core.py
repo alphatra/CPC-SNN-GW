@@ -38,7 +38,7 @@ class SNNClassifier(nn.Module):
     num_layers: int = 3   # ✅ Increased depth for better capacity
     
     @nn.compact
-    def __call__(self, spikes: jnp.ndarray, training: bool = True) -> jnp.ndarray:
+    def __call__(self, spikes: jnp.ndarray, training: bool = True, return_spike_rates: bool = False) -> jnp.ndarray:
         """
         Classify spike trains using multi-layer SNN.
         
@@ -98,6 +98,9 @@ class SNNClassifier(nn.Module):
             name='classification_head'
         )(temporal_features)
         
+        if return_spike_rates:
+            spike_rates = jnp.mean(current_spikes, axis=(1, 2))  # per-sample average spike rate
+            return {'logits': logits, 'spike_rates': spike_rates}
         return logits
 
 
@@ -159,7 +162,7 @@ class EnhancedSNNClassifier(nn.Module):
         logger.debug(f"EnhancedSNNClassifier setup: {len(self.snn_layers)} layers, "
                     f"attention={self.config.use_attention}")
     
-    def __call__(self, spikes: jnp.ndarray, training: bool = True) -> jnp.ndarray:
+    def __call__(self, spikes: jnp.ndarray, training: bool = True, return_spike_rates: bool = False) -> jnp.ndarray:
         """
         Enhanced SNN classification with advanced features.
         
@@ -188,13 +191,8 @@ class EnhancedSNNClassifier(nn.Module):
             
             # ✅ NORMALIZATION: Layer normalization if enabled
             if self.config.use_layer_norm:
-                # Normalize temporal statistics
-                temporal_mean = jnp.mean(current_spikes, axis=1)
-                temporal_norm = nn.LayerNorm(name=f'enhanced_norm_{i+1}')(temporal_mean)
-                
-                # Apply normalization
-                norm_factor = temporal_norm / (jnp.mean(current_spikes, axis=1) + 1e-8)
-                current_spikes = current_spikes * norm_factor[:, None, :]
+                # Stable normalization directly on [batch, time, features]
+                current_spikes = nn.LayerNorm(name=f'enhanced_norm_{i+1}')(current_spikes)
             
             # ✅ DROPOUT: Layer-specific dropout
             if training and self.config.dropout_rate > 0:
@@ -233,6 +231,9 @@ class EnhancedSNNClassifier(nn.Module):
         # ✅ FIX: Spike rate regularization should be handled in the loss, not logits
         # Any regularization based on spike statistics must be added to the training
         # objective externally (e.g., snn_combined_loss), not mixed into logits.
+        if return_spike_rates:
+            spike_rates = jnp.mean(current_spikes, axis=(1, 2))
+            return {'logits': logits, 'spike_rates': spike_rates}
         return logits
 
 

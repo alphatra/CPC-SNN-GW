@@ -36,6 +36,8 @@ data:
     high: 1024.0  # Hz
   apply_whitening: true
   quality_threshold: 0.7
+  # Downsampling target length for runners (anti-aliased)
+  downsample_target_t: 1024
   
   # Dataset splitting
   train_split: 0.7

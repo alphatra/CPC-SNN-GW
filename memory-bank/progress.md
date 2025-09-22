@@ -517,3 +517,25 @@
 - W&B: dodane logi + artefakty (ROC, CM) i tryb offline z `upload_to_wandb.sh`.
 
 Wniosek: sieć jeszcze się nie wyuczyła (mały wolumen, krótki bieg). Rekomendacja: ≥30 epok, większy dataset (MLGWSC‑1 50k–100k okien), utrzymać `cpc_joint_weight=0.2` po 5. epoce.
+
+## 🔄 2025-09-22 – POSTĘP: stabilny whitening (IST), anty‑alias i fixy JAX
+
+### Co naprawiono dziś
+- PSD whitening: implementacja CPU (NumPy) inspirowana `gw-detection-deep-learning/modules/whiten.py` – Welch (Hann, 50% overlap) + Inverse Spectrum Truncation; konwersja do `jnp.ndarray`. Usunięte błędy Concretization/TracerBool.
+- Downsampling: anty‑aliasujący FIR (windowed‑sinc, Hann) + `data.downsample_target_t: 1024`; ograniczony `max_taps` (~97) dla szybszego autotune.
+- JAX: stałe obliczane w Pythonie (np. `min` zamiast `jnp.minimum`), `jax.tree_util.tree_map`, brak branchy zależnych od tracerów.
+- SNN: `nn.LayerNorm` na [B,T,F], realna regularyzacja `spike_rate` (model → `spike_rates`, trener → kara do `target_spike_rate`).
+- CPC/Trainer: temperatura z configu, warmup α≈0 na starcie, LR 5e‑5, `clip_by_global_norm=0.5`.
+
+### Status
+- ✅ Whitening aktywny, brak NaN, stabilny spike_rate.
+- ⚠️ Accuracy nadal ~0.50 przy krótkim treningu i ograniczonym wolumenie.
+
+### Działania danych
+- Uruchomiono generację TRAIN 48h (`.../data/dataset-4/gen48h_01/`).
+- Do uruchomienia: VAL 48h z `--start-offset 172800`.
+
+### Następne kroki
+1) Dokończyć generację 48h (TRAIN/VAL), sprawdzić rozmiar/ETA.
+2) Trening: `--epochs 30 --batch-size 8 --learning-rate 2e-5 --whiten-psd` (CPC łagodnie: 1 warstwa/1 head, α z warmupem).
+3) Ocena: raport ROC‑AUC/TPR; jeśli acc ~0.5, zwiększyć wolumen (do 72–96h) i rozważyć class‑weights.

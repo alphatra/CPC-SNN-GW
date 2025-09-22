@@ -51,7 +51,7 @@ def eval_step(trainer, train_state, batch):
         cpc_loss = enhanced_info_nce_loss(
             latents[:, :-1], 
             latents[:, 1:], 
-            temperature=0.1
+            temperature=getattr(trainer.config, 'cpc_temperature', 0.1)
         )
         
         return create_training_metrics(
@@ -67,7 +67,11 @@ def eval_step(trainer, train_state, batch):
             # Joint CPC+SNN evaluation
             logits, latents = trainer._snn_with_cpc_apply_fn(train_state.params, x, training=False)
             clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-            cpc_loss = enhanced_info_nce_loss(latents[:, :-1], latents[:, 1:], temperature=0.1)
+            cpc_loss = enhanced_info_nce_loss(
+                latents[:, :-1],
+                latents[:, 1:],
+                temperature=getattr(trainer.config, 'cpc_temperature', 0.1)
+            )
             total_loss = clf_loss + trainer.config.cpc_loss_weight * cpc_loss
         else:
             # Frozen CPC evaluation
@@ -93,7 +97,11 @@ def eval_step(trainer, train_state, batch):
         logits, latents = trainer._joint_apply_fn(train_state.params, x, training=False)
         
         clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-        cpc_loss = enhanced_info_nce_loss(latents[:, :-1], latents[:, 1:], temperature=0.1)
+        cpc_loss = enhanced_info_nce_loss(
+            latents[:, :-1],
+            latents[:, 1:],
+            temperature=getattr(trainer.config, 'cpc_temperature', 0.1)
+        )
         
         total_loss = (trainer.config.snn_loss_weight * clf_loss + 
                      trainer.config.cpc_loss_weight * cpc_loss)

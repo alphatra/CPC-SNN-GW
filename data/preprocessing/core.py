@@ -108,28 +108,23 @@ class AdvancedDataPreprocessor:
         Replaces SciPy cheby2 to maintain JAX compilation chain.
         Uses bilinear transform for stable IIR filter implementation.
         """
-        # Create normalized frequency array for filter design
-        w = jnp.linspace(0, 1, 1000)  # Normalized frequency [0, 1]
-        
-        # Butterworth magnitude response
-        # |H(w)|^2 = 1 / (1 + (w/wc)^(2*order))
-        
-        # Design bandpass as cascade of highpass and lowpass
-        # Highpass response
-        wp_high = low_freq
-        high_response = 1.0 / (1.0 + (wp_high / (w + 1e-10)) ** (2 * order))
-        
-        # Lowpass response  
-        wp_low = high_freq
-        low_response = 1.0 / (1.0 + (w / wp_low) ** (2 * order))
-        
-        # Bandpass = highpass * lowpass
-        bandpass_response = high_response * low_response
-        
-        # Convert to simple FIR representation for JAX compatibility
-        # This is a simplified approach - in production, would use proper IIR design
-        filter_coeffs = jnp.fft.irfft(bandpass_response, n=65)  # 65-tap FIR
-        filter_coeffs = filter_coeffs / jnp.sum(jnp.abs(filter_coeffs))  # Normalize
+        # Windowed-sinc FIR band-pass design (JAX-friendly)
+        # Compute symmetric taps length based on order for better selectivity
+        taps = int(max(129, 16 * order + 1))
+        n = jnp.arange(taps)
+        m = (taps - 1) / 2.0
+        # Ideal lowpass at high_freq and highpass at low_freq
+        h_lp = 2.0 * high_freq * jnp.sinc(2.0 * high_freq * (n - m))
+        h_hp = jnp.sinc(n - m) - 2.0 * low_freq * jnp.sinc(2.0 * low_freq * (n - m))
+        # Band-pass via spectral subtraction: hp then lp in time domain ~ convolution; use multiplication in freq approx by windowing both
+        # Here approximate bandpass as difference of two lowpasses
+        h_bp = h_lp - 2.0 * low_freq * jnp.sinc(2.0 * low_freq * (n - m))
+        # Apply Hann window to reduce ripple
+        w = 0.5 - 0.5 * jnp.cos(2.0 * jnp.pi * n / (taps - 1))
+        h = (h_hp * h_lp) * w
+        # Normalize DC/energy
+        h = h / (jnp.sum(h) + 1e-8)
+        filter_coeffs = h.astype(jnp.float32)
         
         logger.debug(f"JAX filter designed: order={order}, coeffs_shape={filter_coeffs.shape}")
         
@@ -174,7 +169,22 @@ class AdvancedDataPreprocessor:
         
         # ✅ PREPROCESSING PIPELINE
         
-        # Step 1: Band-pass filtering
+        # Step 1: Band-pass filtering (with caching of filter for current config)
+        try:
+            cache = create_professional_cache("preprocessing_filters")
+        except Exception:
+            cache = None
+        cache_key = f"bp_fs{self.config.sample_rate}_b{self.config.bandpass[0]}-{self.config.bandpass[1]}_order{self.config.filter_order}"
+        if cache is not None:
+            coeffs = cache.get(cache_key)
+            if coeffs is None:
+                coeffs = self._design_jax_butterworth_filter(
+                    order=self.config.filter_order,
+                    low_freq=self.config.bandpass[0] / (self.config.sample_rate / 2),
+                    high_freq=self.config.bandpass[1] / (self.config.sample_rate / 2)
+                )
+                cache.set(cache_key, coeffs)
+            self.filter_sos = coeffs
         filtered_strain = self._apply_bandpass_filter(strain_data)
         
         # Step 2: Whitening (if enabled)
@@ -229,7 +239,8 @@ class AdvancedDataPreprocessor:
             def segment_fft(start_idx):
                 seg = strain_data[start_idx:start_idx + nperseg]
                 # Hann window for variance reduction
-                window = jnp.hanning(nperseg)
+                n_vec = jnp.arange(nperseg)
+                window = 0.5 * (1.0 - jnp.cos(2.0 * jnp.pi * n_vec / (nperseg - 1)))
                 seg_win = seg * window
                 fft = jnp.fft.rfft(seg_win)
                 # Scale by window power

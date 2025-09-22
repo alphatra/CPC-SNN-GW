@@ -51,6 +51,32 @@
 
 Następne kroki: utrzymać `cpc_joint_weight=0.2` po 5. epoce, trenować ≥30 epok na większym wolumenie (docelowo MLGWSC‑1 50k–100k okien), monitorować ROC‑AUC i TPR.
 
+## 🔄 2025-09-22 – PSD whitening (IST) + anti‑alias downsampling + JAX fixes
+
+- Whitening: przebudowa PSD na stabilny wariant CPU (NumPy) inspirowany `gw-detection-deep-learning/modules/whiten.py` – Welch (Hann, 50% overlap) + Inverse Spectrum Truncation (IST); wynik konwertowany do `jnp.ndarray`. Usunięto JIT i zależności od tracerów (koniec Concretization/TracerBool błędów).
+- JAX fixes: `jnp.minimum` → `min` dla wartości, które muszą być skalarami Pythona; wyeliminowane gałęzie `if` zależne od tracerów; `jax.tree_map` → `jax.tree_util.tree_map`; sanitizacja NaN/Inf + clipping wejść/cech.
+- SNN: stabilna normalizacja (`nn.LayerNorm` na [B,T,F]) zamiast dzielenia przez średnią spikes; realna regularyzacja spike rate dzięki zwrotowi `spike_rates` z modeli i karze względem `target_spike_rate` w trainerze.
+- CPC: temperatura InfoNCE z configu; warmup (pierwsze ~100 kroków α≈0) dla stabilnego startu; domyślny LR 5e‑5, `clip_by_global_norm=0.5`.
+- Downsampling: anty‑aliasujący FIR (windowed‑sinc, Hann) w `cli/runners/standard.py`, konfigurowalny `data.downsample_target_t` (domyślnie 1024), `max_taps` ograniczone (~97) dla szybszej kompilacji/autotune.
+- Loader: whitening na mono (średnia po kanałach), po przetwarzaniu przywracany wymiar `[N,T,1]`; `sample_rate` z configu.
+- Zgodność importów: dodany stub `data/readligo_data_sources.py` (QualityMetrics/ProcessingResult) + brakujące importy (`time`, typy) – usuwa awarie whitening.
+
+Status po fixach:
+- ✅ Whitening aktywny (brak błędów JAX, brak NaN), spike_rate stabilny; anti‑alias działa.
+- ⚠️ Accuracy po krótkim biegu nadal ≈0.50 – ograniczenie wolumenem danych/krótkim treningiem. Zlecono generację większych zbiorów (48h TRAIN/VAL).
+
+Zalecana komenda treningowa (stabilna):
+```bash
+TF_GPU_ALLOCATOR=cuda_malloc_async CUDA_VISIBLE_DEVICES=0 JAX_PLATFORM_NAME=cuda \
+XLA_PYTHON_CLIENT_PREALLOCATE=false XLA_PYTHON_CLIENT_MEM_FRACTION=0.6 \
+JAX_DEFAULT_MATMUL_PRECISION=tensorfloat32 \
+python /teamspace/studios/this_studio/CPC-SNN-GW/cli.py train \
+  -c /teamspace/studios/this_studio/CPC-SNN-GW/configs/default.yaml \
+  --use-mlgwsc --whiten-psd --epochs 30 --batch-size 8 --learning-rate 2e-5 \
+  --cpc-layers 1 --cpc-heads 1 --snn-hidden 128 --spike-time-steps 32 \
+  --spike-threshold 0.35 --opt-threshold -v
+```
+
 ## 🏗️ MODULAR REFACTORING BREAKTHROUGH (COMPLETED - 2025-09-14)
 
 **HISTORIC ACHIEVEMENT**: Complete transformation from monolithic to world-class modular architecture

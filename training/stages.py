@@ -39,7 +39,7 @@ def _cpc_train_step(trainer, train_state, batch):
         loss = enhanced_info_nce_loss(
             latents[:, :-1],  # context
             latents[:, 1:],   # targets
-            temperature=0.1
+            temperature=getattr(trainer.config, 'cpc_temperature', 0.1)
         )
         return loss
 
@@ -66,7 +66,11 @@ def _snn_train_step(trainer, train_state, batch):
             # ✅ FIXED: Removed stop_gradient to allow CPC fine-tuning
             logits, latents = trainer._snn_with_cpc_apply_fn(params, x, training=True)
             clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-            cpc_reg = enhanced_info_nce_loss(latents[:, :-1], latents[:, 1:], temperature=0.1)
+            cpc_reg = enhanced_info_nce_loss(
+                latents[:, :-1],
+                latents[:, 1:],
+                temperature=getattr(trainer.config, 'cpc_temperature', 0.1)
+            )
             total_loss = clf_loss + trainer.config.cpc_loss_weight * cpc_reg
             accuracy = jnp.mean(jnp.argmax(logits, axis=-1) == y)
             return total_loss, (clf_loss, cpc_reg, accuracy)
@@ -113,7 +117,11 @@ def _joint_train_step(trainer, train_state, batch):
         logits, latents = trainer._joint_apply_fn(params, x, training=True)
         
         clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-        cpc_loss = enhanced_info_nce_loss(latents[:, :-1], latents[:, 1:], temperature=0.1)
+        cpc_loss = enhanced_info_nce_loss(
+            latents[:, :-1],
+            latents[:, 1:],
+            temperature=getattr(trainer.config, 'cpc_temperature', 0.1)
+        )
         
         total_loss = (trainer.config.snn_loss_weight * clf_loss + 
                      trainer.config.cpc_loss_weight * cpc_loss)

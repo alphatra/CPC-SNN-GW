@@ -12,6 +12,11 @@ This file maintains backward compatibility through delegation.
 
 import logging
 import warnings
+import time
+from typing import Optional, List, Tuple, Any
+import jax
+import jax.numpy as jnp
+import numpy as np
 
 # Import from new modular components
 from .preprocessing.sampler import SegmentSampler
@@ -274,84 +279,44 @@ class AdvancedDataPreprocessor:
         logger.info(f"✅ Initialized JAX-native Butterworth band-pass filter: {self.bandpass[0]}-{self.bandpass[1]} Hz")
         logger.info("   🚨 CRITICAL FIX: Pure JAX implementation maintains compilation chain")
     
+    def _design_fir_bandpass(self, taps: int = 257) -> jnp.ndarray:
+        """Design a stable windowed-sinc FIR band-pass filter in JAX."""
+        nyquist = self.sample_rate / 2.0
+        low = self.bandpass[0] / nyquist
+        high = self.bandpass[1] / nyquist
+        n = jnp.arange(taps)
+        m = (taps - 1) / 2.0
+        # Ideal lowpass responses
+        h_lp_high = 2.0 * high * jnp.sinc(2.0 * high * (n - m))
+        h_lp_low = 2.0 * low * jnp.sinc(2.0 * low * (n - m))
+        # Band-pass via difference of lowpasses
+        h_bp = h_lp_high - h_lp_low
+        # Hann window
+        w = 0.5 - 0.5 * jnp.cos(2.0 * jnp.pi * n / (taps - 1))
+        h = h_bp * w
+        # DC normalize (avoid zero)
+        h = h / (jnp.sum(h) + 1e-8)
+        return h.astype(jnp.float32)
+
     def _bandpass_filter_jax(self, data: jnp.ndarray) -> jnp.ndarray:
         """
-        🚨 CRITICAL FIX: JAX-native band-pass filtering (NO CPU fallback).
-        
-        Implements pure JAX Butterworth filter to maintain full compilation chain.
-        Replaces CPU SciPy fallback that breaks JAX optimization.
+        Stable FIR band-pass filtering using windowed-sinc kernel (JAX-friendly).
         """
-        
-        # 🚨 SOLUTION: Pure JAX implementation of SOS filter
-        @jax.jit
-        def jax_sos_filter(x: jnp.ndarray, sos: jnp.ndarray) -> jnp.ndarray:
-            """
-            JAX-native implementation of SciPy's sosfilt for IIR filtering.
-            
-            Args:
-                x: Input signal
-                sos: Second-order sections filter coefficients [n_sections, 6]
-                     Each row: [b0, b1, b2, a0, a1, a2]
-            
-            Returns:
-                Filtered signal
-            """
-            
-            def filter_section(carry, sos_section):
-                """Apply single second-order section"""
-                x_in, z1, z2 = carry
-                b0, b1, b2, a0, a1, a2 = sos_section
-                
-                # Normalize by a0 (should be 1.0 for standard SOS)
-                b0, b1, b2 = b0/a0, b1/a0, b2/a0
-                a1, a2 = a1/a0, a2/a0
-                
-                # Direct Form II implementation
-                y = jnp.zeros_like(x_in)
-                z1_new = jnp.zeros_like(z1)
-                z2_new = jnp.zeros_like(z2)
-                
-                def step_fn(carry_step, x_n):
-                    z1_curr, z2_curr = carry_step
-                    
-                    # Compute output
-                    y_n = b0 * x_n + z1_curr
-                    
-                    # Update delay elements
-                    z1_next = b1 * x_n - a1 * y_n + z2_curr
-                    z2_next = b2 * x_n - a2 * y_n
-                    
-                    return (z1_next, z2_next), y_n
-                
-                # Process all samples
-                (z1_final, z2_final), y_out = jax.lax.scan(
-                    step_fn, 
-                    (z1, z2), 
-                    x_in
-                )
-                
-                return (y_out, z1_final, z2_final), y_out
-            
-            # Initialize state for all sections
-            n_sections = sos.shape[0]
-            initial_state = (
-                data,
-                jnp.zeros(n_sections),  # z1 states
-                jnp.zeros(n_sections)   # z2 states  
-            )
-            
-            # Apply all sections sequentially
-            final_state, _ = jax.lax.scan(filter_section, initial_state, sos)
-            
-            return final_state[0]  # Return filtered signal
-        
-        # 🔧 Convert SciPy SOS coefficients to JAX array
-        sos_jax = jnp.array(self.filter_sos)
-        
-        # 🚨 SOLUTION: Pure JAX filtering (no CPU conversion)
-        filtered_jax = jax_sos_filter(data, sos_jax)
-        
-        return filtered_jax
+        # Lazy kernel init/cache
+        if not hasattr(self, "_fir_kernel"):
+            # Choose taps based on sample_rate/bandwidth (keep moderate for speed)
+            bw = max(1.0, self.bandpass[1] - self.bandpass[0])
+            taps = int(jnp.clip(4 * self.sample_rate / bw, 129, 513))
+            if (taps % 2) == 0:
+                taps += 1
+            self._fir_kernel = self._design_fir_bandpass(taps=taps)
+        k = self._fir_kernel
+        pad = (k.shape[0] // 2)
+        x_pad = jnp.pad(data, (pad, pad), mode='reflect')
+        y = jnp.convolve(x_pad, k, mode='valid')
+        # Numeric safety
+        y = jnp.where(jnp.isfinite(y), y, 0.0)
+        return y
     
     def _bandpass_filter_batch(self, data_batch: jnp.ndarray) -> jnp.ndarray:
         """
@@ -370,90 +335,80 @@ class AdvancedDataPreprocessor:
         
     def estimate_psd(self, strain_data: jnp.ndarray) -> jnp.ndarray:
         """
-        Estimate power spectral density using CPU Welch method.
-        
-        Args:
-            strain_data: Input strain timeseries
-            
-        Returns:
-            Power spectral density
+        Robust PSD estimation inspired by gw-detection-deep-learning Whiten:
+        - Overlapping Hann-windowed segments (m seconds, 50% overlap)
+        - Mean aggregation and proper scaling
+        - Inverse Spectrum Truncation (IST) with Hann taper
+        Returns one-sided PSD array (length = N//2+1).
         """
-        # Fix for short segments: ensure psd_length is at least 4 seconds
-        effective_psd_length = max(4, self.psd_length)
-        nperseg = effective_psd_length * self.sample_rate
-        
-        # Ensure nperseg doesn't exceed data length
-        nperseg = min(nperseg, len(strain_data) // 4)
-        
-        # 🚨 CRITICAL FIX: JAX-native PSD calculation (NO CPU conversion)
-        @jax.jit
-        def jax_welch_psd(data: jnp.ndarray, fs: float, nperseg: int) -> Tuple[jnp.ndarray, jnp.ndarray]:
-            """
-            JAX-native implementation of Welch's method for PSD estimation.
-            
-            Replaces SciPy's welch() to maintain full JAX compilation chain.
-            """
-            # Handle edge case
-            if nperseg > len(data):
-                nperseg = len(data)
-            
-            noverlap = nperseg // 2  # 50% overlap
-            
-            # Generate Hann window
-            n = jnp.arange(nperseg)
-            hann_window = 0.5 * (1 - jnp.cos(2 * jnp.pi * n / (nperseg - 1)))
-            
-            # Window normalization factor
-            window_norm = jnp.sum(hann_window**2)
-            
-            # Calculate number of segments
-            step = nperseg - noverlap
-            n_segments = (len(data) - noverlap) // step
-            
-            def process_segment(i):
-                """Process single segment for PSD"""
-                start_idx = i * step
-                end_idx = start_idx + nperseg
-                
-                # Extract and window the segment
-                segment = data[start_idx:end_idx] * hann_window
-                
-                # Compute FFT
-                fft_seg = jnp.fft.fft(segment)
-                
-                # Power spectral density (one-sided)
-                psd_seg = jnp.abs(fft_seg)**2
-                
-                return psd_seg
-            
-            # Process all segments
-            segment_indices = jnp.arange(n_segments)
-            all_psds = jax.vmap(process_segment)(segment_indices)
-            
-            # Average over segments
-            psd_avg = jnp.mean(all_psds, axis=0)
-            
-            # Apply scaling factors
-            # For one-sided PSD: scale by 2 (except DC and Nyquist)
-            scaling = 2.0 / (fs * window_norm)
-            psd_avg = psd_avg * scaling
-            
-            # Handle DC and Nyquist components (don't double them)
-            psd_avg = psd_avg.at[0].multiply(0.5)  # DC
-            if nperseg % 2 == 0:
-                psd_avg = psd_avg.at[nperseg//2].multiply(0.5)  # Nyquist
-            
-            # Generate frequency array
-            freqs = jnp.fft.fftfreq(nperseg, 1/fs)
-            
-            # Return only positive frequencies (one-sided)
-            n_freqs = nperseg // 2 + 1
-            return freqs[:n_freqs], psd_avg[:n_freqs]
-        
-        # 🚨 SOLUTION: Pure JAX PSD calculation
-        freqs, psd = jax_welch_psd(strain_data, self.sample_rate, nperseg)
-        
-        return psd
+        fs = float(self.sample_rate)
+        x = np.asarray(jax.device_get(strain_data)).astype(np.float64)
+        n_total = x.shape[0]
+        # Choose segment length ~1.25s when possible
+        m_seconds = min(1.25, max(0.5, n_total / fs - 0.01))
+        m = max(64, int(m_seconds * fs))
+        if m % 2 == 1:
+            m += 1
+        d = max(1, m // 2)
+        if n_total < m:
+            m = n_total
+            d = max(1, m // 2)
+
+        # Build overlapping segments using stride tricks
+        n_segments = 1 + max(0, (n_total - m) // d)
+        if n_segments <= 0:
+            # Fallback flat PSD
+            rfft = np.fft.rfft(x, norm='forward')
+            psd = np.abs(rfft) ** 2
+            return jnp.asarray(psd)
+
+        shape = (n_segments, m)
+        strides = (x.strides[0] * d, x.strides[0])
+        segs = np.lib.stride_tricks.as_strided(x, shape=shape, strides=strides, writeable=False)
+
+        # Hann window
+        w = np.hanning(m).astype(np.float64)
+        segs_w = segs * w[None, :]
+
+        # RFFT per segment
+        segs_fft = np.fft.rfft(segs_w, n=m, norm='forward')
+        segs_sq = np.abs(segs_fft) ** 2
+        # Half DC & Nyquist
+        segs_sq[:, 0] *= 0.5
+        if (m % 2) == 0:
+            segs_sq[:, -1] *= 0.5
+
+        # Aggregate and scale
+        t_psd = segs_sq.mean(axis=0)
+        delta_f = 1.0 / m_seconds
+        t_psd *= 2.0 * delta_f * m / (w * w).sum()
+
+        # Inverse Spectrum Truncation (Hann) similar to torch implementation
+        N = (t_psd.shape[0] - 1) * 2
+        inv_asd = np.zeros((1, t_psd.shape[0]), dtype=np.float64)
+        kmin = int(self.bandpass[0] / delta_f)
+        kmin = max(1, min(kmin, t_psd.shape[0] - 1))
+        inv_asd[0, kmin:N//2] = (1.0 / np.maximum(t_psd[None, kmin:N//2], 1e-30)) ** 0.5
+
+        q = np.fft.irfft(inv_asd, n=N, norm='forward')
+        max_filter_len_sec = 1.0
+        max_filter_len = int(max_filter_len_sec * fs)
+        trunc_start = max_filter_len // 2
+        trunc_end = N - max_filter_len // 2
+        if max_filter_len > 0:
+            win = np.hanning(max_filter_len).astype(np.float64)
+            if trunc_start > 0:
+                q[0, 0:trunc_start] *= win[-trunc_start:]
+            if max_filter_len // 2 > 0:
+                q[0, trunc_end:] *= win[:max_filter_len // 2]
+        if trunc_start < trunc_end:
+            q[0, trunc_start:trunc_end] = 0.0
+
+        psd_trunc = np.fft.rfft(q, n=N, norm='forward')
+        psd_trunc = psd_trunc * psd_trunc.conj()
+        psd = 1.0 / np.maximum(np.abs(psd_trunc[0]), 1e-30)
+        psd = psd / 2.0
+        return jnp.asarray(psd, dtype=jnp.float32)
     
     def estimate_psd_batch(self, strain_batch: jnp.ndarray) -> jnp.ndarray:
         """
@@ -578,7 +533,7 @@ class AdvancedDataPreprocessor:
         except ImportError:
             logger.warning("PyCBC not available, falling back to estimated PSD whitening")
             # Fall back to estimated PSD from data
-            psd_est = self._estimate_psd(strain_data)
+            psd_est = self.estimate_psd(strain_data)
             return self._whiten_data(strain_data, psd_est)
     
     def assess_quality(self, strain_data: jnp.ndarray, psd: Optional[jnp.ndarray] = None) -> QualityMetrics:

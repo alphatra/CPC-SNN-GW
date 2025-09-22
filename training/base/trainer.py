@@ -21,6 +21,7 @@ import optax
 import numpy as np
 import matplotlib.pyplot as plt
 from flax.training import train_state, checkpoints
+from flax.core import unfreeze
 from flax.traverse_util import flatten_dict
 
 from .config import TrainingConfig
@@ -230,7 +231,13 @@ class CPCSNNTrainer(TrainerBase):
                 self.snn = snn_classifier
             
             def __call__(self, x, training=True, return_stats: bool = False):
+                # Sanitize inputs to avoid NaNs/Infs propagation
+                x = jnp.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+                x = jnp.clip(x, -20.0, 20.0)
                 cpc_features = self.cpc(x, training=training)
+                # Sanitize CPC features
+                cpc_features = jnp.nan_to_num(cpc_features, nan=0.0, posinf=0.0, neginf=0.0)
+                cpc_features = jnp.clip(cpc_features, -50.0, 50.0)
                 # Reduce feature dimension for SpikeBridge (expects [batch, time])
                 spike_in = jnp.mean(cpc_features, axis=-1)
                 # Per-sample normalization to stabilize spikes
@@ -238,7 +245,9 @@ class CPCSNNTrainer(TrainerBase):
                 _std = jnp.std(spike_in, axis=1, keepdims=True) + 1e-6
                 spike_in = (spike_in - _mean) / _std
                 spikes = self.bridge(spike_in[..., None], training=training)
+                spikes = jnp.nan_to_num(spikes, nan=0.0, posinf=0.0, neginf=0.0)
                 logits = self.snn(spikes, training=training)
+                logits = jnp.nan_to_num(logits, nan=0.0, posinf=0.0, neginf=0.0)
                 if return_stats:
                     spike_rate_mean = jnp.mean(spikes)
                     spike_rate_std = jnp.std(spikes)
@@ -291,9 +300,12 @@ class CPCSNNTrainer(TrainerBase):
                         loss = jnp.mean(focal_weight * ce_loss)
                     else:
                         loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
-                    # Joint objective with epoch-based soft schedule for CPC weight
+                    # Joint objective with warmup + epoch-based schedule for CPC weight
                     epoch = jax.lax.convert_element_type(getattr(self, 'current_epoch', 0), jnp.int32)
-                    cpc_w = jnp.where(epoch < 2, 0.05, jnp.where(epoch < 5, 0.10, 0.20))
+                    base_cpc_w = jnp.where(epoch < 2, 0.05, jnp.where(epoch < 5, 0.10, 0.20))
+                    # Zero CPC weight for first 100 optimizer steps to avoid early explosions
+                    warmup_mask = (state.step < 100)
+                    cpc_w = jnp.where(warmup_mask, 0.0, base_cpc_w)
                     total_loss = loss + cpc_w * cpc_loss
                     acc = jnp.mean(jnp.argmax(logits, axis=-1) == y)
                     spike_mean = out['spike_rate_mean']
@@ -301,6 +313,9 @@ class CPCSNNTrainer(TrainerBase):
                     return total_loss, (acc, spike_mean, spike_std, cpc_loss, loss)
 
                 (loss, (acc, spike_mean, spike_std, cpc_loss, cls_loss)), grads = jax.value_and_grad(loss_fn, has_aux=True)(state.params)
+                # Sanitize grads to avoid NaN propagation
+                from jax.tree_util import tree_map
+                grads = tree_map(lambda g: jnp.nan_to_num(g, nan=0.0, posinf=0.0, neginf=0.0), grads)
 
                 # Gradient norms
                 def l2_norm(tree):
@@ -385,11 +400,12 @@ class CPCSNNTrainer(TrainerBase):
         sample_input = train_signals[:1]
         init_rngs = {'params': jax.random.PRNGKey(0), 'dropout': jax.random.PRNGKey(1)}
         params = model.init(init_rngs, sample_input, training=True)
+        # More conservative LR and clipping for CPC stability if provided
+        lr = float(getattr(self.config, 'learning_rate', 5e-5))
         tx = optax.chain(
-            # ✅ Stabilizacja startu: mocniejsze ograniczenie na pierwsze kroki
             optax.adaptive_grad_clip(0.5),
-            optax.clip_by_global_norm(1.0),
-            optax.adamw(self.config.learning_rate, weight_decay=1e-4),
+            optax.clip_by_global_norm(0.5),
+            optax.adamw(lr, weight_decay=1e-4),
         )
         state = train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
         

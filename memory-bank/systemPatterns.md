@@ -88,6 +88,11 @@ trainer = create_trainer(
 - Kontrola aktywności przez `threshold` i `surrogate_beta`
 
 ### ✅ PATTERN: JSONL TELEMETRY + PER‑MODULE GRAD NORMS
+### ✅ PATTERN: PSD WHITENING (IST) HYBRYDOWE + ANTI‑ALIAS DOWNSAMPLING (NOWE – 2025-09-22)
+- PSD z Welch (Hann, 50% overlap) na CPU (NumPy) + Inverse Spectrum Truncation (IST); wynik konwertowany do JAX bez JIT‑u.
+- Eliminacja Concretization/TracerBool: stałe liczbowe liczone w Pythonie, brak branchy zależnych od tracerów.
+- Downsampling anty‑aliasujący: FIR windowed‑sinc (Hann), konfigurowalny `data.downsample_target_t` (np. 1024), limit `max_taps` (~97) dla szybkiej kompilacji.
+- Normalizacja SNN: `nn.LayerNorm` na [B,T,F], brak dzielenia przez średnie spikes; regulacja `spike_rate` względem celu.
 - Zapis per‑step: `training_results.jsonl`, per‑epoch: `epoch_metrics.jsonl`
 - Loguj: total_loss, accuracy, cpc_loss, grad_norm_total/cpc/bridge/snn, spike_rate_mean/std
 

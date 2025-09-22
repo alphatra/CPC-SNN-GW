@@ -117,16 +117,21 @@ class SNNTrainer:
         
         def loss_fn(params):
             # Forward pass
-            logits = self.train_state.apply_fn(params, spikes, training=True)
+            out = self.train_state.apply_fn(params, spikes, training=True, return_spike_rates=True)
+            if isinstance(out, dict) and 'logits' in out:
+                logits = out['logits']
+                spike_rates = out.get('spike_rates', None)
+            else:
+                logits = out
+                spike_rates = None
             
             # ✅ CLASSIFICATION LOSS: Cross-entropy
             clf_loss = optax.softmax_cross_entropy_with_integer_labels(logits, labels).mean()
             
             # ✅ SPIKE RATE REGULARIZATION: Encourage reasonable spike rates
-            if isinstance(self.config, EnhancedSNNConfig) and self.config.spike_rate_regularization > 0:
-                # This would require access to intermediate spike rates
-                # For now, include a simple regularization term
-                reg_loss = self.config.spike_rate_regularization * 0.01  # Placeholder
+            if isinstance(self.config, EnhancedSNNConfig) and self.config.spike_rate_regularization > 0 and spike_rates is not None:
+                target_rate = getattr(self.config, 'target_spike_rate', 0.1)
+                reg_loss = self.config.spike_rate_regularization * jnp.mean((spike_rates - target_rate) ** 2)
             else:
                 reg_loss = 0.0
             

@@ -86,7 +86,12 @@ def _load_mlgwsc_data(args) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.
     
     # Optional PSD whitening
     if getattr(args, 'whiten_psd', False):
-        signals, test_signals = _apply_psd_whitening(signals, test_signals)
+        # Use sample_rate from config if available; fallback 4096
+        try:
+            sr = int(cfg.get('data', {}).get('sample_rate', 4096))
+        except Exception:
+            sr = 4096
+        signals, test_signals = _apply_psd_whitening(signals, test_signals, sample_rate=sr)
     
     return signals, labels, test_signals, test_labels
 
@@ -227,24 +232,30 @@ def _mix_with_pycbc(enhanced_signals, enhanced_labels, pycbc_ds):
     return mixed_signals, mixed_labels
 
 
-def _apply_psd_whitening(train_signals, test_signals):
+def _apply_psd_whitening(train_signals, test_signals, sample_rate: int = 4096):
     """Apply PSD whitening to signals."""
     try:
         logger.info("🔧 Applying PSD whitening (AdvancedDataPreprocessor)...")
         from data.gw_preprocessor import AdvancedDataPreprocessor
         
-        preprocessor = AdvancedDataPreprocessor(sample_rate=2048, apply_whitening=True)
+        preprocessor = AdvancedDataPreprocessor(sample_rate=sample_rate, apply_whitening=True)
         
+        # Reduce multi-channel to mono (mean over features) and ensure 1D per sample
+        train_list = [jnp.mean(train_signals[i], axis=-1) if train_signals[i].ndim == 2 else train_signals[i]
+                      for i in range(len(train_signals))]
+        test_list = [jnp.mean(test_signals[i], axis=-1) if test_signals[i].ndim == 2 else test_signals[i]
+                     for i in range(len(test_signals))]
         # Process training signals
-        train_results = preprocessor.process_batch([train_signals[i] for i in range(len(train_signals))])
+        train_results = preprocessor.process_batch(train_list)
         processed_train = jnp.stack([r.strain_data for r in train_results])
         
         # Process test signals
-        test_results = preprocessor.process_batch([test_signals[i] for i in range(len(test_signals))])
+        test_results = preprocessor.process_batch(test_list)
         processed_test = jnp.stack([r.strain_data for r in test_results])
         
         logger.info("✅ PSD whitening applied to train/test sets")
-        return processed_train, processed_test
+        # Expand channel dim to [N, T, 1]
+        return processed_train[..., None], processed_test[..., None]
         
     except Exception as e:
         logger.warning(f"⚠️ Whitening skipped due to error: {e}")

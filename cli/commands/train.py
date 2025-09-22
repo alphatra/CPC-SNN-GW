@@ -83,7 +83,7 @@ def train_cmd():
     parser.add_argument(
         "--learning-rate", "--lr",
         type=float,
-        default=1e-3,
+        default=5e-5,
         help="Learning rate"
     )
 

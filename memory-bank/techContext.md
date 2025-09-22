@@ -621,3 +621,14 @@ if test_results['model_collapse']:
 - Parametry SNN/Bridge: threshold=0.55, time_steps=32, surrogate hard‑sigmoid β≈4; brak `jnp.where` twardych, `lax.select` na ciągłych wyjściach; per‑sample normalizacja wejścia do mostka.
 
 Obserwacje: cpc_loss ~7.61 (okresowe minima ~6.23), spike_mean train≈0.14 / eval≈0.27–0.29, final test_accuracy≈0.502 – potrzeba większego wolumenu (MLGWSC‑1) i dłuższego treningu (≥30 epok), by przekroczyć 0.5 stabilnie oraz podnieść ROC‑AUC.
+
+## 🔄 2025-09-22 – PSD whitening (IST), anti‑alias downsampling i JAX stabilizacja
+
+- PSD Whitening: implementacja inspirowana `gw-detection-deep-learning/modules/whiten.py` – Welch (Hann, 50% overlap), poprawne skalowanie i Inverse Spectrum Truncation (IST). Obliczenia na CPU (NumPy), wynik konwertowany do `jnp.ndarray`; brak JIT/tracerów → koniec Concretization/TracerBool.
+- Anti‑alias downsampling: FIR windowed‑sinc (Hann) z konfigurowalnym celem `data.downsample_target_t` (domyślnie 1024) i limitem `max_taps` (~97) dla szybkiego autotune.
+- JAX fixes: stałe liczbowe liczone w Pythonie (np. `min` zamiast `jnp.minimum` dla nperseg), usunięte branchowanie zależne od tracerów, `jax.tree_util.tree_map` zamiast `jax.tree_map`.
+- SNN normalization: `nn.LayerNorm` na [B,T,F] (bez dzielenia przez średnie spikes), zwracanie `spike_rates` i kara względem `target_spike_rate` w trainerze.
+- CPC stabilizacja: temperatura z configu, warmup α≈0 przez ~100 kroków, LR 5e‑5 i `clip_by_global_norm=0.5`.
+- Loader: whitening na mono (mean over features), po przetwarzaniu przywrócenie `[N,T,1]`; sample_rate z configu.
+
+Efekt techniczny: whitening działa stabilnie (brak NaN/Concretization), spike_rate stabilny. Ograniczeniem pozostaje wolumen danych oraz długość treningu – zalecono generację 48h TRAIN/VAL.
