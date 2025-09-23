@@ -36,6 +36,7 @@ Ten Memory Bank stanowi centralną bazę wiedzy dla projektu detekcji fal grawit
 - **systemPatterns.md**: nowe komponenty, zmiana API
 - **techContext.md**: upgrade dependencies, nowe tools
 - **progress.md**: completed features, test results
+- **activeContext.md**: zanotuj istotne FIX-y parametrów (np. propagacja CPC z YAML → logi EVAL)
 - **projectbrief.md**: zmiana scope lub success metrics
 - **productContext.md**: nowa competitive intelligence
 

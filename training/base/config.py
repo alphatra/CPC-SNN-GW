@@ -80,19 +80,42 @@ class TrainingConfig:
     
     # ✅ CPC pretraining / multitask parameters
     use_cpc_aux_loss: bool = True
-    cpc_aux_weight: float = 0.05
-    ce_loss_weight: float = 1.0
+    # ✅ ENHANCED: Wagi składników straty z greckim nazewnictwem (α, β)
+    # Główne składniki straty
+    alpha_classification: float = 1.0      # α - waga straty klasyfikacji (CE/Focal)
+    beta_contrastive: float = 1.0          # β - waga straty kontrastującej (CPC)
+    gamma_reconstruction: float = 0.0      # γ - waga straty rekonstrukcji (SNN-AE)
+    
+    # Legacy names for backward compatibility
+    snn_loss_weight: float = 1.0           # = alpha_classification
+    cpc_loss_weight: float = 1.0           # = beta_contrastive  
+    recon_loss_weight: float = 0.0         # = gamma_reconstruction
+    cpc_aux_weight: float = 0.05           # Harmonogram wagi CPC (dynamiczny)
+    ce_loss_weight: float = 1.0            # Deprecated - use alpha_classification
     cpc_freeze_first_n_convs: int = 0  # 0,1,2
     cpc_prediction_steps: int = 4
     cpc_num_negatives: int = 128
     cpc_use_hard_negatives: bool = True
     cpc_temperature: float = 0.20
+    cpc_loss_type: str = "temporal_info_nce"  # ✅ NEW: "temporal_info_nce" or "gw_twins_inspired"
+    gw_twins_redundancy_weight: float = 0.1  # ✅ NEW: λ parameter for GW Twins redundancy reduction
     cpc_use_temporal_transformer: bool = True
     cpc_attention_heads: int = 8
     cpc_transformer_layers: int = 4
     cpc_dropout_rate: float = 0.1
     cpc_use_grad_checkpointing: bool = True
     cpc_use_mixed_precision: bool = True
+    
+    # ✅ ENHANCED: Advanced gradient clipping parameters
+    adaptive_grad_clip_threshold: float = 0.5     # Adaptive gradient clipping threshold
+    global_grad_clip_norm: float = 0.5            # Global norm clipping threshold
+    per_module_grad_clip: bool = True             # Enable per-module gradient clipping
+    cpc_grad_clip_multiplier: float = 0.8         # CPC-specific multiplier (more conservative)
+    snn_grad_clip_multiplier: float = 1.0         # SNN-specific multiplier
+    bridge_grad_clip_multiplier: float = 1.2      # Bridge-specific multiplier (less aggressive)
+    
+    # ✅ CPC model parameters
+    cpc_latent_dim: int = 256                     # CPC encoder latent dimension
     
     # ✅ SNN hyperparameters (exposed)
     snn_hidden_sizes: tuple = (256, 128, 64)  # ✅ 3 layers (256-128-64)

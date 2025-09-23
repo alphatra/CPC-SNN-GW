@@ -115,6 +115,74 @@ def train_cmd():
         help="Apply PSD whitening to train/test signals"
     )
     
+    # ✅ NEW: Advanced loss configuration arguments
+    parser.add_argument(
+        "--cpc-loss-type",
+        type=str,
+        default="temporal_info_nce",
+        choices=["temporal_info_nce", "gw_twins_inspired"],
+        help="CPC loss type: temporal InfoNCE or GW Twins inspired"
+    )
+    parser.add_argument(
+        "--gw-twins-redundancy-weight",
+        type=float,
+        default=0.1,
+        help="Lambda parameter for GW Twins redundancy reduction"
+    )
+    
+    # ✅ NEW: Loss component weights (α,β,γ)
+    parser.add_argument(
+        "--alpha-classification",
+        type=float,
+        default=1.0,
+        help="α - Classification loss weight (CE/Focal)"
+    )
+    parser.add_argument(
+        "--beta-contrastive",
+        type=float,
+        default=1.0,
+        help="β - Contrastive loss weight (CPC/GW-Twins)"
+    )
+    parser.add_argument(
+        "--gamma-reconstruction",
+        type=float,
+        default=0.0,
+        help="γ - Reconstruction loss weight (SNN-AE)"
+    )
+    
+    # ✅ NEW: Advanced gradient clipping arguments
+    parser.add_argument(
+        "--adaptive-grad-clip-threshold",
+        type=float,
+        default=0.5,
+        help="Adaptive gradient clipping threshold"
+    )
+    parser.add_argument(
+        "--per-module-grad-clip",
+        type=str,
+        default="true",
+        choices=["true", "false"],
+        help="Enable per-module gradient clipping"
+    )
+    parser.add_argument(
+        "--cpc-grad-clip-multiplier",
+        type=float,
+        default=0.8,
+        help="CPC gradient clipping multiplier (more conservative)"
+    )
+    parser.add_argument(
+        "--snn-grad-clip-multiplier",
+        type=float,
+        default=1.0,
+        help="SNN gradient clipping multiplier"
+    )
+    parser.add_argument(
+        "--bridge-grad-clip-multiplier",
+        type=float,
+        default=1.2,
+        help="Bridge gradient clipping multiplier (less aggressive)"
+    )
+    
     args = parser.parse_args()
     
     # Import training runners

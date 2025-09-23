@@ -633,6 +633,27 @@ Obserwacje: cpc_loss ~7.61 (okresowe minima ~6.23), spike_mean train≈0.14 / ev
 
 Efekt techniczny: whitening działa stabilnie (brak NaN/Concretization), spike_rate stabilny. Ograniczeniem pozostaje wolumen danych oraz długość treningu – zalecono generację 48h TRAIN/VAL.
 
+## 🔄 2025-09-23 – TECH FIX: Propagacja CPC z YAML + spójne logowanie
+
+- Źródło problemu: wartości CPC w logach (`temp=0.200`, `cpc_weight=0.000`) nie odzwierciedlały ustawień YAML (`training.cpc_temperature=0.30`, `training.cpc_aux_weight=0.02`).
+- Naprawa implementacyjna:
+  - `cli/runners/standard.py`: `TrainingConfig(..., cpc_temperature, cpc_aux_weight, eval_batch_size)` pobierane z `config['training']`.
+  - `cli/commands/training/standard.py`: analogiczne wstrzyknięcie parametrów CPC do `TrainingConfig`.
+- Skutek:
+  - `RealCPCConfig.temperature` i harmonogram wag CPC w `CPCSNNTrainer` korzystają z wartości YAML.
+  - `EVAL (full test)` raportuje rzeczywiste `temp` i efektywny `cpc_weight` po warmupie (step ≥ 200).
+
+## 📑 2025-09-23 – Analiza i Synteza Metod Uczenia (CPC+SNN): Diagnoza i Rekomendacje
+
+- Diagnoza problemów:
+  - Stagnacja CPC (plateau InfoNCE), niestabilność klasyfikacji, dominacja jednego składnika straty, niestabilność gradientów.
+- Wnioski z literatury:
+  - GW Twins (2302.00295v2): pozytywne pary bez negatywnych, redukcja redundancji; BYOL/SimSiam – brak negatywnych; VAE (2411.19450v2) – AUC≈0.89; SNN‑AE (2506.09194v1, 2508.00063v1) – stabilność i lepsze reprezentacje.
+- Rekomendacje minimalnie inwazyjne (bez multi‑detector pairs):
+  - Dodać komponent rekonstrukcji (MSE) do enkodera (wariant SNN‑AE) oraz wagi α, β jako hiperparametry.
+  - Zastąpić/uzupełnić InfoNCE wersją bez negatywnych inspirowaną GW Twins (redukcja redundancji) – etapowo, feature‑flag.
+  - Włączyć gradient clipping (już aktywny) i kontrolę harmonogramu `cpc_aux_weight` (z YAML) do stabilizacji.
+
 ## 🔄 2025-09-22 – Stabilizacja ewaluacji/logów + wnioski dot. CPC
 
 - EVAL per‑epokę: agregacja po CAŁYM teście (avg_loss, acc) – spójniejsze metryki w trakcie treningu.

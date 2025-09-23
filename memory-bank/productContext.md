@@ -122,3 +122,16 @@
 - **Compatibility**: 100% success rate na Apple M1/M2
 - **Performance**: 2x speedup vs. equivalent CUDA solution
 - **Adoption**: Integration w min. 1 official astronomical tool 
+
+## 📣 Plan Strony WWW: Udoskonalenie Modelu CPC+SNN (Architektura Treści)
+
+- **cel**: edukować i uzyskać akceptację planu działań.
+- **sekcje**:
+  - Strona Główna – impas i przełom (hook, wizja, nawigacja)
+  - Diagnoza – objawy i przyczyny (interaktywne wykresy, tabela symptomów)
+  - State‑of‑the‑Art – literatura (tabela porównawcza, streszczenia i linki)
+  - Rekomendacja – architektura i strategia (SNN‑AE, strata GW‑Twins bez multi‑detector pairs, gradient clipping)
+  - Roadmapa – fazy i kamienie milowe
+  - Ewaluacja – ryzyka i KPI (macierz ryzyka, karty metryk)
+- **interaktywność**: hover na wykresach, filtrowalna tabela publikacji, przełącznik diagramów „Przed/Po”, klikalne fragmenty kodu, klikalne fazy roadmapy, interaktywna macierz ryzyka.
+- **zasoby wizualne**: diagramy architektury (przed/po), wizualizacja GW Twins, roadmapa, macierz ryzyka, KPI.

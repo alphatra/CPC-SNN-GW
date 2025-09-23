@@ -6,7 +6,7 @@
 # =============================================================================
 system:
   # Data paths - PARAMETERIZED (no hardcoded paths)
-  data_dir: "/teamspace/studios/this_studio/data/dataset-4/gen48h_01"
+  data_dir: "/teamspace/studios/this_studio/data/dataset-4/v2"
   output_dir: "./outputs"
   cache_dir: "./cache"
   checkpoint_dir: "./checkpoints"
@@ -46,12 +46,12 @@ data:
   
   # MLGWSC-1 specific
   mlgwsc_files:
-    train_background: "train_background_gen48h_01.hdf"
-    train_foreground: "train_foreground_gen48h_01.hdf" 
-    train_injections: "train_injections_gen48h_01.hdf"
-    val_background: "val_background_gen48h_01.hdf"
-    val_foreground: "val_foreground_gen48h_01.hdf"
-    val_injections: "val_injections_gen48h_01.hdf"
+    train_background: "train_background_s24w61w_1.hdf"
+    train_foreground: "train_foreground_s24w61w_1.hdf" 
+    train_injections: "train_injections_s24w61w_1.hdf"
+    val_background: "val_background_s24w6d1_1.hdf"
+    val_foreground: "val_foreground_s24w6d1_1.hdf"
+    val_injections: "val_injections_s24w6d1_1.hdf"
 
 # =============================================================================
 # MODEL CONFIGURATION
@@ -114,12 +114,31 @@ training:
   # CPC auxiliary loss tuning
   cpc_aux_weight: 0.02
   cpc_temperature: 0.30
+  cpc_loss_type: "temporal_info_nce"  # "temporal_info_nce" or "gw_twins_inspired"
+  gw_twins_redundancy_weight: 0.1     # λ parameter for GW Twins redundancy reduction
+  # ✅ ENHANCED: Loss component weights with Greek notation (α,β,γ)
+  alpha_classification: 1.0    # α - Classification loss weight (CE/Focal)
+  beta_contrastive: 1.0        # β - Contrastive loss weight (CPC/GW-Twins)  
+  gamma_reconstruction: 0.0    # γ - Reconstruction loss weight (SNN-AE)
+  
+  # Legacy names (backward compatibility)
+  snn_loss_weight: 1.0         # = alpha_classification
+  cpc_loss_weight: 1.0         # = beta_contrastive
+  recon_loss_weight: 0.0       # = gamma_reconstruction
   
   # Optimization
   optimizer: "adamw"  # adamw, adam, sgd
   scheduler: "cosine"  # cosine, linear, constant
   warmup_epochs: 5
   gradient_clip_norm: 1.0
+  
+  # ✅ ENHANCED: Advanced gradient clipping
+  adaptive_grad_clip_threshold: 0.5     # Adaptive gradient clipping
+  global_grad_clip_norm: 0.5            # Global norm clipping
+  per_module_grad_clip: true            # Per-module clipping
+  cpc_grad_clip_multiplier: 0.8         # CPC more conservative
+  snn_grad_clip_multiplier: 1.0         # SNN standard
+  bridge_grad_clip_multiplier: 1.2      # Bridge less aggressive
   
   # Memory optimization
   gradient_accumulation_steps: 4  # effective batch = batch_size * this

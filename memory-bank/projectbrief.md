@@ -110,6 +110,7 @@ python run_advanced_pipeline.py
 - `cli.py` - 6-stage GPU warmup + real data + test evaluation
 - `enhanced_cli.py` - CPC fixes + enhanced logging + GPU optimization
 - `run_advanced_pipeline.py` - ReadLIGO integration + clean architecture
+ - `cli/runners/standard.py` & `cli/commands/training/standard.py` – propagacja `cpc_temperature` i `cpc_aux_weight` z YAML do `TrainingConfig` (poprawne logi EVAL)
 
 ## 🌟 PROJECT IMPACT
 

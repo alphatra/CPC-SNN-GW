@@ -34,7 +34,8 @@ from .losses import (
     info_nce_loss,
     temporal_info_nce_loss,
     advanced_info_nce_loss_with_momentum,
-    momentum_enhanced_info_nce_loss
+    momentum_enhanced_info_nce_loss,
+    gw_twins_inspired_loss  # ✅ NEW: GW Twins inspired loss
 )
 from .miners import MomentumHardNegativeMiner, AdaptiveTemperatureController  
 from .metrics import (
@@ -81,6 +82,7 @@ __all__ = [
     "temporal_info_nce_loss",
     "advanced_info_nce_loss_with_momentum",
     "momentum_enhanced_info_nce_loss",
+    "gw_twins_inspired_loss",  # ✅ NEW
     
     # Mining and control
     "MomentumHardNegativeMiner",

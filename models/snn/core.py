@@ -38,16 +38,18 @@ class SNNClassifier(nn.Module):
     num_layers: int = 3   # ✅ Increased depth for better capacity
     
     @nn.compact
-    def __call__(self, spikes: jnp.ndarray, training: bool = True, return_spike_rates: bool = False) -> jnp.ndarray:
+    def __call__(self, spikes: jnp.ndarray, training: bool = True, return_spike_rates: bool = False, return_hidden: bool = False) -> jnp.ndarray:
         """
         Classify spike trains using multi-layer SNN.
         
         Args:
             spikes: Input spike trains [batch_size, time_steps, input_features]
             training: Training mode flag
+            return_spike_rates: Return spike rate statistics
+            return_hidden: Return hidden states for reconstruction (SNN-AE)
             
         Returns:
-            Classification logits [batch_size, num_classes]
+            Classification logits [batch_size, num_classes] or dict with additional outputs
         """
         batch_size, time_steps, input_features = spikes.shape
         
@@ -98,9 +100,16 @@ class SNNClassifier(nn.Module):
             name='classification_head'
         )(temporal_features)
         
-        if return_spike_rates:
-            spike_rates = jnp.mean(current_spikes, axis=(1, 2))  # per-sample average spike rate
-            return {'logits': logits, 'spike_rates': spike_rates}
+        # ✅ SNN-AE SUPPORT: Return additional outputs for reconstruction
+        if return_spike_rates or return_hidden:
+            result = {'logits': logits}
+            if return_spike_rates:
+                spike_rates = jnp.mean(current_spikes, axis=(1, 2))  # per-sample average spike rate
+                result['spike_rates'] = spike_rates
+            if return_hidden:
+                # Return last hidden state for reconstruction
+                result['hidden_states'] = current_spikes  # [batch_size, time_steps, features]
+            return result
         return logits
 
 
@@ -237,9 +246,53 @@ class EnhancedSNNClassifier(nn.Module):
         return logits
 
 
+class SNNDecoder(nn.Module):
+    """
+    Simple SNN decoder for reconstruction loss (SNN-AE pattern).
+    
+    Reconstructs input features from SNN hidden states to improve
+    representation quality as recommended in literature analysis.
+    """
+    
+    output_size: int = 256  # Target reconstruction size
+    hidden_size: int = 128
+    
+    @nn.compact
+    def __call__(self, snn_hidden: jnp.ndarray, training: bool = True) -> jnp.ndarray:
+        """
+        Reconstruct input features from SNN hidden states.
+        
+        Args:
+            snn_hidden: Hidden states from SNN [batch_size, time_steps, hidden_size]
+            training: Training mode flag
+            
+        Returns:
+            Reconstructed features [batch_size, time_steps, output_size]
+        """
+        # Simple linear reconstruction
+        # Mean pooling over time to get stable representation
+        pooled = jnp.mean(snn_hidden, axis=1)  # [batch_size, hidden_size]
+        
+        # Linear layers for reconstruction
+        x = nn.Dense(features=self.hidden_size * 2, name='decoder_hidden')(pooled)
+        x = nn.relu(x)
+        
+        if training:
+            x = nn.Dropout(rate=0.1, name='decoder_dropout')(x, deterministic=not training)
+        
+        # Reconstruct to original size
+        reconstructed = nn.Dense(features=self.output_size, name='decoder_output')(x)
+        
+        # Expand back to time dimension (broadcast to match input)
+        reconstructed = jnp.expand_dims(reconstructed, axis=1)  # [batch_size, 1, output_size]
+        
+        return reconstructed
+
+
 # Export core classifier classes
 __all__ = [
     "SNNClassifier",
-    "EnhancedSNNClassifier"
+    "EnhancedSNNClassifier",
+    "SNNDecoder"
 ]
 

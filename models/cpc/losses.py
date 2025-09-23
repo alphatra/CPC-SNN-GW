@@ -307,12 +307,76 @@ def momentum_enhanced_info_nce_loss(context_embeddings: jnp.ndarray,
     return loss, updated_queue
 
 
+def gw_twins_inspired_loss(features: jnp.ndarray, temperature: float = 0.07, 
+                          redundancy_weight: float = 0.1) -> jnp.ndarray:
+    """
+    GW Twins inspired contrastive loss without multi-detector pairs.
+    
+    Inspired by GW Twins method (2302.00295v2) but adapted for single detector data.
+    Instead of using multi-detector pairs, this creates positive pairs from
+    temporal augmentations and minimizes redundancy in representations.
+    
+    Key innovations:
+    1. No negative samples needed (like BYOL/SimSiam)
+    2. Redundancy reduction to prevent collapse
+    3. Temporal coherence preservation
+    
+    Args:
+        features: Input features [batch_size, time_steps, feature_dim]
+        temperature: Temperature for similarity scaling
+        redundancy_weight: Weight for redundancy reduction term (λ parameter)
+        
+    Returns:
+        Combined loss (similarity + redundancy reduction)
+    """
+    batch_size, time_steps, feature_dim = features.shape
+    
+    if time_steps <= 1:
+        return jnp.array(0.0)
+    
+    # ✅ CREATE POSITIVE PAIRS: Temporal shifts (like GW Twins but temporal)
+    # Instead of H1/L1 detector pairs, use t and t+1 temporal pairs
+    context_features = features[:, :-1, :]  # [batch, time-1, features]
+    target_features = features[:, 1:, :]    # [batch, time-1, features]
+    
+    # Flatten for processing
+    context_flat = context_features.reshape(-1, feature_dim)  # [batch*(time-1), features]
+    target_flat = target_features.reshape(-1, feature_dim)    # [batch*(time-1), features]
+    
+    # L2 normalize features
+    context_norm = context_flat / (jnp.linalg.norm(context_flat, axis=-1, keepdims=True) + 1e-8)
+    target_norm = target_flat / (jnp.linalg.norm(target_flat, axis=-1, keepdims=True) + 1e-8)
+    
+    # ✅ SIMILARITY TERM: Maximize similarity between positive pairs (no negatives!)
+    # Cosine similarity between paired representations
+    positive_similarities = jnp.sum(context_norm * target_norm, axis=-1)  # [batch*(time-1)]
+    similarity_loss = -jnp.mean(positive_similarities / temperature)
+    
+    # ✅ REDUNDANCY REDUCTION: Prevent representation collapse (key GW Twins innovation)
+    # Cross-correlation matrix between feature dimensions
+    context_centered = context_norm - jnp.mean(context_norm, axis=0, keepdims=True)
+    target_centered = target_norm - jnp.mean(target_norm, axis=0, keepdims=True)
+    
+    # Compute cross-correlation matrix
+    cross_corr = jnp.dot(context_centered.T, target_centered) / context_centered.shape[0]
+    
+    # Off-diagonal elements should be minimized (reduce redundancy)
+    # Diagonal elements represent useful correlations, off-diagonal = redundancy
+    redundancy_loss = jnp.sum(jnp.square(cross_corr - jnp.diag(jnp.diag(cross_corr))))
+    
+    # ✅ COMBINED LOSS: Similarity + Redundancy reduction
+    total_loss = similarity_loss + redundancy_weight * redundancy_loss
+    
+    return total_loss
+
+
 # Export loss functions
 __all__ = [
     "info_nce_loss",
     "enhanced_info_nce_loss",
     "temporal_info_nce_loss", 
     "advanced_info_nce_loss_with_momentum",
-    "momentum_enhanced_info_nce_loss"
+    "momentum_enhanced_info_nce_loss",
+    "gw_twins_inspired_loss"  # ✅ NEW: GW Twins inspired loss without multi-detector pairs
 ]
 

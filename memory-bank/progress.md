@@ -540,6 +540,14 @@ Wniosek: sieć jeszcze się nie wyuczyła (mały wolumen, krótki bieg). Rekomen
 2) Trening: `--epochs 30 --batch-size 8 --learning-rate 2e-5 --whiten-psd` (CPC łagodnie: 1 warstwa/1 head, α z warmupem).
 3) Ocena: raport ROC‑AUC/TPR; jeśli acc ~0.5, zwiększyć wolumen (do 72–96h) i rozważyć class‑weights.
 
+## 🔄 2025-09-23 – PROGRESS: Naprawa propagacji CPC z YAML i logów EVAL
+
+- Zmiany wprowadzone:
+  - Runner `cli/runners/standard.py` oraz `cli/commands/training/standard.py` przekazują `training.cpc_temperature` i `training.cpc_aux_weight` do `TrainingConfig`.
+  - Ujednolicono `eval_batch_size` z YAML dla stabilniejszych metryk per‑epokę.
+- Oczekiwania:
+  - Logi EVAL pokazują `temp=0.30` i `cpc_weight>0` po minięciu warmupu (step ≥ 200), koniec rozjazdów z YAML.
+
 ## 🚨 MILESTONE 13: KRYTYCZNA ANALIZA KODU I IDENTYFIKACJA PROBLEMÓW (2025-09-22)
 
 **PRZEŁOMOWA ANALIZA**: Przeprowadzona zewnętrzna analiza kodu ujawniła kluczowe problemy techniczne wymagające natychmiastowej uwagi

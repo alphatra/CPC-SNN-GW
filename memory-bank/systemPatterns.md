@@ -82,6 +82,7 @@ trainer = create_trainer(
 ### ✅ PATTERN: JOINT LOSS WITH TEMPORAL INFO NCE
 - `total_loss = cls_loss + α · temporal_info_nce_loss(features)`
 - α w configu (domyślnie 0.2); nadzoruje wpływ CPC na joint training
+ - Nowe: `cpc_temperature` i `cpc_aux_weight` wczytywane z YAML przez runnery → spójne logi `EVAL` (temp i efektywny `cpc_weight`).
 
 ### ✅ PATTERN: SPIKE STABILITY VIA INPUT NORMALIZATION
 - Per‑sample zero‑mean/unit‑std normalizacja przed SpikeBridge

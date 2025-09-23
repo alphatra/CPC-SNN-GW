@@ -58,7 +58,14 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
             output_dir=str(training_dir),
             use_wandb=getattr(args, 'wandb', False),
             optimizer=recommended_config['optimizer'],
-            scheduler=recommended_config['scheduler']
+            scheduler=recommended_config['scheduler'],
+            # ✅ CPC hyperparams from YAML (propagated to logs and loss)
+            cpc_temperature=float(config['training'].get('cpc_temperature', 0.20)),
+            cpc_aux_weight=float(config['training'].get('cpc_aux_weight', 0.05)),
+            # ✅ Eval batch size for stable per-epoch EVAL metrics
+            eval_batch_size=int(config['training'].get('eval_batch_size', 64)),
+            # ✅ CPC model parameters from YAML
+            cpc_latent_dim=int(config.get('models', {}).get('cpc', {}).get('latent_dim', 256))
         )
         
         logger.info("🔧 Standard CPC+SNN training pipeline:")

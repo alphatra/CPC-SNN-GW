@@ -60,7 +60,31 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
             spike_learnable=args.spike_learnable,
             spike_threshold_levels=args.spike_threshold_levels,
             spike_surrogate_type=args.spike_surrogate_type,
-            spike_surrogate_beta=args.spike_surrogate_beta
+            spike_surrogate_beta=args.spike_surrogate_beta,
+            # ✅ CPC from YAML training section
+            cpc_temperature=float(config.get('training', {}).get('cpc_temperature', 0.20)),
+            cpc_aux_weight=float(config.get('training', {}).get('cpc_aux_weight', 0.05)),
+            # ✅ Eval batch size from YAML to stabilize per-epoch metrics
+            eval_batch_size=int(config.get('training', {}).get('eval_batch_size', 64)),
+            
+            # ✅ NEW: Advanced loss configuration from CLI
+            cpc_loss_type=getattr(args, 'cpc_loss_type', 'temporal_info_nce'),
+            gw_twins_redundancy_weight=getattr(args, 'gw_twins_redundancy_weight', 0.1),
+            
+            # ✅ NEW: Loss component weights (α,β,γ) from CLI
+            alpha_classification=getattr(args, 'alpha_classification', 1.0),
+            beta_contrastive=getattr(args, 'beta_contrastive', 1.0),
+            gamma_reconstruction=getattr(args, 'gamma_reconstruction', 0.0),
+            
+            # ✅ NEW: Advanced gradient clipping from CLI
+            adaptive_grad_clip_threshold=getattr(args, 'adaptive_grad_clip_threshold', 0.5),
+            per_module_grad_clip=(getattr(args, 'per_module_grad_clip', 'true') == 'true'),
+            cpc_grad_clip_multiplier=getattr(args, 'cpc_grad_clip_multiplier', 0.8),
+            snn_grad_clip_multiplier=getattr(args, 'snn_grad_clip_multiplier', 1.0),
+            bridge_grad_clip_multiplier=getattr(args, 'bridge_grad_clip_multiplier', 1.2),
+            
+            # ✅ CPC model parameters from YAML
+            cpc_latent_dim=int(config.get('models', {}).get('cpc', {}).get('latent_dim', 256))
         )
         
         logger.info(f"   📊 Config: {args.epochs} epochs, batch={args.batch_size}")
