@@ -6,7 +6,7 @@
 # =============================================================================
 system:
   # Data paths - PARAMETERIZED (no hardcoded paths)
-  data_dir: "/teamspace/studios/this_studio/data/dataset-4/v2"
+  data_dir: "/teamspace/studios/this_studio/data/dataset-4/gen48h_01"
   output_dir: "./outputs"
   cache_dir: "./cache"
   checkpoint_dir: "./checkpoints"
@@ -46,12 +46,12 @@ data:
   
   # MLGWSC-1 specific
   mlgwsc_files:
-    train_background: "train_background_s24w61w_1.hdf"
-    train_foreground: "train_foreground_s24w61w_1.hdf" 
-    train_injections: "train_injections_s24w61w_1.hdf"
-    val_background: "val_background_s24w6d1_1.hdf"
-    val_foreground: "val_foreground_s24w6d1_1.hdf"
-    val_injections: "val_injections_s24w6d1_1.hdf"
+    train_background: "train_background_gen48h_01.hdf"
+    train_foreground: "train_foreground_gen48h_01.hdf" 
+    train_injections: "train_injections_gen48h_01.hdf"
+    val_background: "val_background_gen48h_01.hdf"
+    val_foreground: "val_foreground_gen48h_01.hdf"
+    val_injections: "val_injections_gen48h_01.hdf"
 
 # =============================================================================
 # MODEL CONFIGURATION
