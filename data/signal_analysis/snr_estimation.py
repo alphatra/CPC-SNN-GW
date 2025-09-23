@@ -376,3 +376,4 @@ def estimate_snr_template_bank(
     
     best_template_idx = int(result.template_match * len(template_bank)) if result.template_match else 0
     return result.optimal_snr, best_template_idx
+

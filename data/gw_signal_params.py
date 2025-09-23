@@ -17,7 +17,8 @@ try:
     logger.info("PyFstat available - enhanced F-statistic features enabled")
 except ImportError:
     PYFSTAT_AVAILABLE = False
-    logger.warning("PyFstat not available - using fallback synthetic generation")
+    # Downgrade to INFO to avoid noisy warnings in normal runs; still visible at INFO once.
+    logger.info("PyFstat not available - using fallback synthetic generation")
 
 
 @dataclass

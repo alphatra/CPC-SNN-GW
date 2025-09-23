@@ -6,7 +6,7 @@
 # =============================================================================
 system:
   # Data paths - PARAMETERIZED (no hardcoded paths)
-  data_dir: "/teamspace/studios/this_studio/data/dataset-4/v2"
+  data_dir: "/teamspace/studios/this_studio/data/dataset-4/gen48h_01"
   output_dir: "./outputs"
   cache_dir: "./cache"
   checkpoint_dir: "./checkpoints"
@@ -27,8 +27,8 @@ system:
 data:
   # LIGO data parameters - PARAMETERIZED
   sample_rate: 4096  # Hz
-  segment_length: 8.0  # seconds
-  overlap: 0.5  # fraction
+  segment_length: 4.0  # seconds
+  overlap: 0.9  # fraction
   
   # Preprocessing
   bandpass:
@@ -46,12 +46,12 @@ data:
   
   # MLGWSC-1 specific
   mlgwsc_files:
-    train_background: "train_background_s24w61w_1.hdf"
-    train_foreground: "train_foreground_s24w61w_1.hdf" 
-    train_injections: "train_injections_s24w61w_1.hdf"
-    val_background: "val_background_s24w6d1_1.hdf"
-    val_foreground: "val_foreground_s24w6d1_1.hdf"
-    val_injections: "val_injections_s24w6d1_1.hdf"
+    train_background: "train_background_gen48h_01.hdf"
+    train_foreground: "train_foreground_gen48h_01.hdf" 
+    train_injections: "train_injections_gen48h_01.hdf"
+    val_background: "val_background_gen48h_01.hdf"
+    val_foreground: "val_foreground_gen48h_01.hdf"
+    val_injections: "val_injections_gen48h_01.hdf"
 
 # =============================================================================
 # MODEL CONFIGURATION
@@ -111,6 +111,9 @@ training:
   weight_decay: 0.0001
   # Joint loss weight for CPC auxiliary objective (soft start)
   cpc_joint_weight: 0.2
+  # CPC auxiliary loss tuning
+  cpc_aux_weight: 0.02
+  cpc_temperature: 0.30
   
   # Optimization
   optimizer: "adamw"  # adamw, adam, sgd
@@ -151,7 +154,8 @@ training:
   save_best_model: true
   
   # Evaluation - PARAMETERIZED
-  eval_every_n_epochs: 5
+  # Force evaluation every epoch for consistent EVAL logs
+  eval_every_n_epochs: 1
   eval_batch_size: 16
   compute_detailed_metrics: true
 

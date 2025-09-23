@@ -256,8 +256,9 @@ class MLGWSCDataLoader:
         if strain_jax.ndim == 2:
             strain_jax = strain_jax[None, ...]
             
-        logger.info(f"✅ Preprocessed for neuromorphic pipeline")
-        logger.info(f"   - Output shape: {strain_jax.shape}")
+        # Reduce log verbosity: keep only a final summary at dataset creation level
+        logger.debug(f"✅ Preprocessed for neuromorphic pipeline")
+        logger.debug(f"   - Output shape: {strain_jax.shape}")
         
         return strain_jax
     
@@ -271,30 +272,44 @@ class MLGWSCDataLoader:
         data_segments = []
         labels = []
         
-        # Load and process background data (label = 0)
-        background_data, injection_data = self.load_training_data()
+        # Use configurable overlap (fallback 0.5)
+        try:
+            overlap = float(self.config.get('data', {}).get('overlap', 0.5))
+        except Exception:
+            overlap = 0.5
         
-        if background_data:
-            bg_segments = self.create_segments(background_data)
-            for segment in bg_segments:
-                processed = self.preprocess_for_neuromorphic(segment)
-                data_segments.append(processed[0])  # Remove batch dim
-                labels.append(0)  # Background/noise
-                
-        # Load and process injection data (label = 1)  
-        if injection_data:
-            inj_segments = self.create_segments(injection_data)
-            for segment in inj_segments:
-                processed = self.preprocess_for_neuromorphic(segment)
-                data_segments.append(processed[0])  # Remove batch dim
-                labels.append(1)  # Signal
+        # Process ALL background files (label = 0)
+        if self.available_files.get('train_background'):
+            for bg_file in self.available_files['train_background']:
+                try:
+                    background_data = self.load_hdf5_file(bg_file)
+                    bg_segments = self.create_segments(background_data, overlap=overlap)
+                    for segment in bg_segments:
+                        processed = self.preprocess_for_neuromorphic(segment)
+                        data_segments.append(processed[0])  # Remove batch dim
+                        labels.append(0)  # Background/noise
+                except Exception as e:
+                    logger.warning(f"⚠️ Skipping background file {bg_file}: {e}")
+        
+        # Process ALL injection files (label = 1)
+        if self.available_files.get('train_injections'):
+            for inj_file in self.available_files['train_injections']:
+                try:
+                    injection_data = self.load_hdf5_file(inj_file)
+                    inj_segments = self.create_segments(injection_data, overlap=overlap)
+                    for segment in inj_segments:
+                        processed = self.preprocess_for_neuromorphic(segment)
+                        data_segments.append(processed[0])  # Remove batch dim
+                        labels.append(1)  # Signal
+                except Exception as e:
+                    logger.warning(f"⚠️ Skipping injection file {inj_file}: {e}")
         
         # ✅ NEW: Load and process foreground data (label = 1)
         if self.available_files.get('train_foreground'):
             for fg_file in self.available_files['train_foreground']:
                 try:
                     fg_data = self.load_hdf5_file(fg_file)
-                    fg_segments = self.create_segments(fg_data)
+                    fg_segments = self.create_segments(fg_data, overlap=overlap)
                     for segment in fg_segments:
                         processed = self.preprocess_for_neuromorphic(segment)
                         data_segments.append(processed[0])
@@ -303,10 +318,10 @@ class MLGWSCDataLoader:
                 except Exception as e:
                     logger.warning(f"⚠️ Skipping foreground file {fg_file}: {e}")
                 
-        logger.info(f"✅ Created labeled dataset")
-        logger.info(f"   - Total segments: {len(data_segments)}")
-        logger.info(f"   - Background segments: {labels.count(0)}")
-        logger.info(f"   - Signal segments: {labels.count(1)}")
+        # Single concise summary line instead of many per-segment logs
+        logger.info(
+            f"✅ Labeled dataset ready | total={len(data_segments)} bg={labels.count(0)} fg={labels.count(1)} seg_len={self.segment_length}s overlap={overlap*100:.1f}%"
+        )
         
         return data_segments, labels
     

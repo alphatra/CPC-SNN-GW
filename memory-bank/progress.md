@@ -638,3 +638,66 @@ Po implementacji napraw:
 - Testy: InfoNCE (idealne vs przetasowane), pretrain CPC (3D input, dropout RNG, JIT static), standaryzacja [N,T,1] w testach.
 - Obserwacje: `cpc_loss` ~7.65 stabilna, sporadyczne piki `gn_cpc`; accuracy per‑epokę (full test) zmienne z powodu małego testu.
 - Następne kroki: MLGWSC‑1 (50k–100k okien), `temperature=0.2–0.3`, `k=4–6`, wydłużony warmup CPC, CE bez focal, większy eval batch, logowanie `cpc_weight`/`temperature`.
+
+## 🔬 2025-09-22 – Eksperyment 30 epok (MLGWSC mini) z uspokojonym CPC
+
+- Uruchomienie (CUDA/JAX):
+  - `TF_GPU_ALLOCATOR=cuda_malloc_async`, `XLA_PYTHON_CLIENT_PREALLOCATE=false`, `XLA_PYTHON_CLIENT_MEM_FRACTION=0.6`, `JAX_DEFAULT_MATMUL_PRECISION=tensorfloat32`
+  - Komenda: `cli.py train -c configs/default.yaml --use-mlgwsc --whiten-psd --epochs 30 --batch-size 8 --learning-rate 5e-5 --spike-time-steps 32 --opt-threshold -v`
+- Dane: Train=145, Test=37; Downsample T=1024, F=1; PSD whitening aktywny
+- Hiperparametry CPC (stabilizacja): `temperature=0.20`, `prediction_steps k=4`, `cpc_aux_weight target=0.05` (warmup: 0→0.5·w→1.0·w)
+- Klasyfikacja: CE (focal off), `eval_batch_size=64`, EVAL per‑epokę na CAŁYM teście
+
+Wyniki (30 epok):
+- Final: accuracy=0.622, loss=0.706
+- EVAL per‑epokę: waha się 0.43–0.68 (mały test-set → wysoka wariancja)
+- `spike_rate`: stabilny ~0.14–0.15 (most zachowuje się poprawnie)
+- `grad_norm`: wysoki na ścieżce CPC (gn_cpc ≫ gn_snn/gn_bridge), ale bez NaN/Inf
+- `cpc_loss`: ~7.62 bez trwałego trendu; sporadyczne spadki ~5.54 korelują z pikami gn_cpc
+
+Zmiana → wpływ (empirycznie w tym biegu):
+- temperature 0.07→0.20: łagodniejszy softmax, mniej ekstremalne piki gn_cpc; brak degradacji acc
+- k 12→4: krótsza ścieżka predykcji, stabilniejszy update; brak wyraźnego spadku `cpc_loss` na małym secie
+- cpc_aux_weight 0.20→0.05: dominacja straty klasyfikacji → stabilniejsze acc (final 0.622)
+- focal off: mniejsza wariancja metryk na małym/zbalansowanym teście
+- EVAL full‑test + eval_batch_size=64: stabilniejsze (mniej zaszumione) raporty epokowe
+
+Uwagi diagnostyczne:
+- Log `cpc_weight` w EVAL pokazuje 0.000 – to artefakt logowania (brak pewności co do propagacji `eff_cpc_w` poza pętlę stepu). Zalecenie: zapisywać `eff_cpc_w` do metryk epokowych lub logować `base_cpc_w` niezależnie od zakresu zmiennych.
+- Efektywny wpływ CPC ograniczony przez mały wolumen danych; dla efektu reprezentacyjnego potrzebne ≥50k–100k okien (MLGWSC‑1).
+
+Rekomendacje:
+- Podnieść temperaturę do 0.30, utrzymać k=4–6, wciąż `cpc_aux_weight≤0.05` do czasu zwiększenia wolumenu.
+- Naprawić log `cpc_weight` (epokowe), rozważyć wcześniejsze wygaszenie warmupu (kiedy `step≥200`).
+- Zebrać większy set (48–96h) i ponowić bieg (30–50 epok) z tymi parametrami.
+
+---
+
+## 🔄 2025-09-23 – 48h L4 sanity run (3 ep) + OOM fix w loaderze
+
+### Konfiguracja i zmiany
+- Dane: `gen48h_01` (TRAIN≈19 909, TEST≈4 978), T=1024, F=1 (po redukcji kanałów).
+- Sprzęt: NVIDIA L4 (CUDA/JAX), eval per‑epokę na całym teście.
+- Loader/runner: usunięto `jnp.stack` całego zestawu (OOM), split na CPU + chunkowany anty‑aliasowy downsampling w runnerze (batche ~128).
+- Config: dodano `training.cpc_aux_weight: 0.02`, `training.cpc_temperature: 0.30` (YAML).
+
+### Wyniki (3 epoki)
+- Stabilizacja gradientów: `mean_grad_norm_total` spada z ~100→~11 w trakcie epoki 0 (kolejne <~6–8).
+- `cpc_loss` ≈ 7.62 (płaski, bez trwałego trendu spadkowego).
+- EVAL (full test) accuracy oscyluje ~0.49–0.62 (brak wyraźnego trendu po 3 ep.).
+- Spike rate stabilny ~0.14–0.15; brak NaN/Inf, brak OOM po zmianach.
+
+### Usterki zaobserwowane
+- Log EVAL pokazuje `cpc_weight=0.000` i `temp=0.200` → nowe parametry CPC z YAML (0.02 / 0.30) nie są jeszcze propagowane w trenerze/metrykach epokowych.
+- PSD whitening bywa pomijany przy starcie (fragmentacja pamięci); działa w trybie CPU/chunk kosztem czasu.
+
+### Wnioski i rekomendacje
+- 48h bieg jest kosztowny czasowo dla strojenia hiperparametrów; używać do finalnej walidacji, nie do iteracji.
+- Najpierw podpiąć w trenerze: `cpc_temperature` i `cpc_aux_weight` oraz poprawny log epokowy `cpc_weight`.
+- Iterować na mniejszym wycinku (~5k okien, 1–2 epoki) do doboru CPC, potem pełny 48h run.
+- Opcjonalnie wymusić whitening CPU/chunk (stabilne, wolniejsze) lub zostawić wyłączony na czas strojenia.
+
+### Następne kroki
+1) Naprawić propagację CPC (`cpc_temperature`, `cpc_aux_weight`) w `trainer` + metrykach epokowych.
+2) Krótki sanity run (~5k okien) z nowymi CPC parametrami; monitorować `cpc_loss` i `gnorm_cpc`.
+3) Po stabilizacji CPC → pełny 48h run (30 epok) i porównanie EVAL.

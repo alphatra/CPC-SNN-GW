@@ -7,6 +7,7 @@ Extracted from cli.py for better modularity.
 import logging
 import time
 from typing import Dict, Any
+import numpy as np
 import jax.numpy as jnp
 import jax
 
@@ -77,11 +78,11 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
             train_signals = train_signals[..., None]
         if test_signals.ndim == 2:
             test_signals = test_signals[..., None]
-        # Reduce channels → single feature for CPC if multi-channel
+        # Reduce channels → single feature for CPC if multi-channel (on CPU to avoid device OOM)
         if train_signals.shape[-1] > 1:
-            train_signals = jnp.mean(train_signals, axis=-1, keepdims=True)
+            train_signals = np.mean(train_signals, axis=-1, keepdims=True)
         if test_signals.shape[-1] > 1:
-            test_signals = jnp.mean(test_signals, axis=-1, keepdims=True)
+            test_signals = np.mean(test_signals, axis=-1, keepdims=True)
         # Downsample long sequences to stabilize attention memory (configurable target T with anti-aliasing)
         def _design_lowpass_kernel(decim_factor: int, taps: int) -> jnp.ndarray:
             # Normalized cutoff for anti-aliasing (Nyquist/decim_factor)
@@ -133,8 +134,20 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
         # ✅ UNIFIED: Use professional unified filtering system
         # Get target length from config (fallback to 512)
         target_t = int(config.get('data', {}).get('downsample_target_t', 512))
-        train_signals = antialias_downsample(train_signals, target_length=target_t)
-        test_signals = antialias_downsample(test_signals, target_length=target_t)
+        # Downsample in chunks to avoid device OOM for large N
+        def _downsample_in_chunks(arr_np: np.ndarray, target_len: int, chunk_size: int = 128) -> np.ndarray:
+            outputs = []
+            n = arr_np.shape[0]
+            for start in range(0, n, chunk_size):
+                end = min(start + chunk_size, n)
+                chunk = jnp.asarray(arr_np[start:end])
+                y = antialias_downsample(chunk, target_length=target_len)
+                outputs.append(np.asarray(y))
+            return np.concatenate(outputs, axis=0)
+
+        target_t = int(config.get('data', {}).get('downsample_target_t', 512))
+        train_signals = _downsample_in_chunks(train_signals, target_t)
+        test_signals = _downsample_in_chunks(test_signals, target_t)
         logger.info(f"   ⏬ Downsampled T: train={train_signals.shape[1]}, test={test_signals.shape[1]}, F={train_signals.shape[-1]}")
         logger.info(f"   📊 Train: {len(train_signals)} samples")
         logger.info(f"   📊 Test: {len(test_signals)} samples")

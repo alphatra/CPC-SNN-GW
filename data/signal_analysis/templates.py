@@ -301,3 +301,4 @@ def create_default_template_bank(
         sample_rate=sample_rate,
         duration=duration
     )
+

@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 from typing import Tuple
 import jax.numpy as jnp
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -49,32 +50,36 @@ def _load_mlgwsc_data(args) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.
         config=cfg
     )
     
-    # Collect samples efficiently
-    max_samples = int(getattr(args, 'mlgwsc_samples', -1))
-    collected_x = []
-    collected_y = []
-    total_collected = 0
-    
-    # Create labeled segments from available files
+    # Create labeled segments from available files (list of arrays + label list)
     data_segments, labels = loader.create_labeled_dataset()
-    all_signals = jnp.stack([seg for seg in data_segments])
-    all_labels = jnp.array(labels)
-    
-    if max_samples > 0 and total_collected == 0:
-        # Respect max_samples if provided
-        take = min(max_samples, int(all_signals.shape[0]))
-        all_signals = all_signals[:take]
-        all_labels = all_labels[:take]
-        total_collected = take
-    else:
-        total_collected = int(all_signals.shape[0])
-    
-    if total_collected == 0:
+    if len(data_segments) == 0:
         raise RuntimeError("MLGWSC loader yielded no samples. Check dataset paths.")
-    
-    (signals, labels), (test_signals, test_labels) = create_stratified_split(
-        all_signals, all_labels, train_ratio=0.8, random_seed=42
-    )
+
+    # Optional sub-sampling before any large stack to avoid OOM
+    max_samples = int(getattr(args, 'mlgwsc_samples', -1))
+    if max_samples > 0 and len(data_segments) > max_samples:
+        data_segments = data_segments[:max_samples]
+        labels = labels[:max_samples]
+
+    # Stratified split on CPU using NumPy indices to avoid device OOM
+    labels_np = np.asarray(labels, dtype=np.int32)
+    class0_idx = np.where(labels_np == 0)[0]
+    class1_idx = np.where(labels_np == 1)[0]
+    rng = np.random.default_rng(42)
+    rng.shuffle(class0_idx)
+    rng.shuffle(class1_idx)
+    n_train_0 = max(1, int(0.8 * len(class0_idx)))
+    n_train_1 = max(1, int(0.8 * len(class1_idx)))
+    train_idx = np.concatenate([class0_idx[:n_train_0], class1_idx[:n_train_1]])
+    test_idx = np.concatenate([class0_idx[n_train_0:], class1_idx[n_train_1:]])
+    rng.shuffle(train_idx)
+    rng.shuffle(test_idx)
+
+    # Stack only the selected subsets on host memory (NumPy)
+    signals = np.stack([np.asarray(data_segments[i]) for i in train_idx], axis=0)
+    test_signals = np.stack([np.asarray(data_segments[i]) for i in test_idx], axis=0)
+    labels = np.asarray(labels_np[train_idx])
+    test_labels = np.asarray(labels_np[test_idx])
     
     # Log true temporal and feature dims assuming [N, T, F]
     try:
@@ -91,6 +96,7 @@ def _load_mlgwsc_data(args) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.
             sr = int(cfg.get('data', {}).get('sample_rate', 4096))
         except Exception:
             sr = 4096
+        # Preprocessor expects lists; keep CPU arrays and let preprocessor handle device placement per batch
         signals, test_signals = _apply_psd_whitening(signals, test_signals, sample_rate=sr)
     
     return signals, labels, test_signals, test_labels

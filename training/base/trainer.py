@@ -310,17 +310,23 @@ class CPCSNNTrainer(TrainerBase):
                         loss = optax.softmax_cross_entropy_with_integer_labels(logits, y).mean()
                     # Joint objective with warmup + epoch-based schedule for CPC weight
                     epoch = jax.lax.convert_element_type(getattr(self, 'current_epoch', 0), jnp.int32)
-                    base_cpc_w = jnp.where(epoch < 2, 0.05, jnp.where(epoch < 5, 0.10, 0.20))
+                    # ✅ NEW: Longer warmup schedule driven by config.cpc_aux_weight (default 0.05)
+                    target_w = float(getattr(self.config, 'cpc_aux_weight', 0.05))
+                    stage2 = min(target_w * 0.5, target_w)
+                    stage3 = min(target_w * 1.0, target_w)
+                    base_cpc_w = jnp.where(epoch < 2, 0.0,
+                                   jnp.where(epoch < 4, stage2,
+                                   jnp.where(epoch < 6, stage3, target_w)))
                     # Zero CPC weight for first 100 optimizer steps to avoid early explosions
-                    warmup_mask = (state.step < 100)
+                    warmup_mask = (state.step < 200)
                     cpc_w = jnp.where(warmup_mask, 0.0, base_cpc_w)
                     total_loss = loss + cpc_w * cpc_loss
                     acc = jnp.mean(jnp.argmax(logits, axis=-1) == y)
                     spike_mean = out['spike_rate_mean']
                     spike_std = out['spike_rate_std']
-                    return total_loss, (acc, spike_mean, spike_std, cpc_loss, loss)
+                    return total_loss, (acc, spike_mean, spike_std, cpc_loss, loss, cpc_w)
 
-                (loss, (acc, spike_mean, spike_std, cpc_loss, cls_loss)), grads = jax.value_and_grad(loss_fn, has_aux=True)(state.params)
+                (loss, (acc, spike_mean, spike_std, cpc_loss, cls_loss, eff_cpc_w)), grads = jax.value_and_grad(loss_fn, has_aux=True)(state.params)
                 # Sanitize grads to avoid NaN propagation
                 from jax.tree_util import tree_map
                 grads = tree_map(lambda g: jnp.nan_to_num(g, nan=0.0, posinf=0.0, neginf=0.0), grads)
@@ -349,12 +355,12 @@ class CPCSNNTrainer(TrainerBase):
                 gn_snn = l2_norm_by_module(gparams, 'snn')
 
                 new_state = state.apply_gradients(grads=grads)
-                return new_state, loss, acc, spike_mean, spike_std, cpc_loss, cls_loss, total_norm, gn_cpc, gn_bridge, gn_snn
+                return new_state, loss, acc, spike_mean, spike_std, cpc_loss, cls_loss, total_norm, gn_cpc, gn_bridge, gn_snn, eff_cpc_w
 
             # Donate state to reduce copies on GPU
             self._jit_update = jax.jit(update_fn, donate_argnums=(0,))
 
-        new_state, loss, acc, spike_mean, spike_std, cpc_loss, cls_loss, total_norm, gn_cpc, gn_bridge, gn_snn = self._jit_update(train_state, signals, labels)
+        new_state, loss, acc, spike_mean, spike_std, cpc_loss, cls_loss, total_norm, gn_cpc, gn_bridge, gn_snn, eff_cpc_w = self._jit_update(train_state, signals, labels)
 
         metrics = {
             'step': int(new_state.step),
@@ -369,6 +375,7 @@ class CPCSNNTrainer(TrainerBase):
             'grad_norm_cpc': float(gn_cpc),
             'grad_norm_bridge': float(gn_bridge),
             'grad_norm_snn': float(gn_snn),
+            'cpc_weight': float(eff_cpc_w),
         }
         return new_state, metrics
     
@@ -484,8 +491,10 @@ class CPCSNNTrainer(TrainerBase):
             total_eval_loss_epoch = 0.0
             total_eval_acc_epoch = 0.0
             total_eval_count_epoch = 0
-            for s in range(0, len(test_signals), batch_size):
+            eval_bs = int(getattr(self.config, 'eval_batch_size', batch_size))
+            for s in range(0, len(test_signals), eval_bs):
                 e = min(s + batch_size, len(test_signals))
+                e = min(s + eval_bs, len(test_signals))
                 eval_dict = self.eval_step(state, (test_signals[s:e], test_labels[s:e]))
                 bsz = (e - s)
                 total_eval_loss_epoch += float(eval_dict.get('total_loss', 0.0)) * bsz
@@ -517,9 +526,16 @@ class CPCSNNTrainer(TrainerBase):
                     except Exception:
                         pass
             try:
+                # Log also CPC schedule context for correlation
+                # Report effective CPC weight from the last step of epoch if available
+                try:
+                    eff_w = float(metrics.get('cpc_weight', 0.0))  # last step metrics in scope
+                except Exception:
+                    eff_w = 0.0
                 self.logger.info(
-                    "EVAL (full test) epoch=%s | avg_loss=%.4f acc=%.3f",
-                    int(self.current_epoch), avg_eval_loss_epoch, avg_eval_acc_epoch
+                    "EVAL (full test) epoch=%s | avg_loss=%.4f acc=%.3f | cpc_weight=%.3f temp=%.3f",
+                    int(self.current_epoch), avg_eval_loss_epoch, avg_eval_acc_epoch,
+                    eff_w, float(getattr(self.config, 'cpc_temperature', 0.07))
                 )
             except Exception:
                 pass

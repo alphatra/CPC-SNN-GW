@@ -251,3 +251,4 @@ def create_antialias_filter(decim_factor: int, taps: int = 97) -> jnp.ndarray:
     Provides backward compatibility for existing code.
     """
     return design_windowed_sinc_lowpass(0.5, decim_factor, taps)
+

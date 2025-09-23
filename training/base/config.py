@@ -38,6 +38,7 @@ class TrainingConfig:
     log_every: int = 10
     eval_every: int = 100
     save_every: int = 1000
+    eval_batch_size: int = 64  # ✅ NEW: dedicated eval batch size for stable metrics
     
     # Paths and experiment tracking
     output_dir: str = "outputs"
@@ -58,7 +59,7 @@ class TrainingConfig:
     checkpoint_every_epochs: int = 5
     
     # ✅ New: focal loss and class weighting controls
-    use_focal_loss: bool = True
+    use_focal_loss: bool = False
     focal_gamma: float = 1.2
     class1_weight: float = 1.1  # further reduce FP
     
@@ -79,13 +80,13 @@ class TrainingConfig:
     
     # ✅ CPC pretraining / multitask parameters
     use_cpc_aux_loss: bool = True
-    cpc_aux_weight: float = 0.2
+    cpc_aux_weight: float = 0.05
     ce_loss_weight: float = 1.0
     cpc_freeze_first_n_convs: int = 0  # 0,1,2
-    cpc_prediction_steps: int = 12
+    cpc_prediction_steps: int = 4
     cpc_num_negatives: int = 128
     cpc_use_hard_negatives: bool = True
-    cpc_temperature: float = 0.07
+    cpc_temperature: float = 0.20
     cpc_use_temporal_transformer: bool = True
     cpc_attention_heads: int = 8
     cpc_transformer_layers: int = 4
