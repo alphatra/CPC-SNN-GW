@@ -71,17 +71,17 @@ def run_standard_training(config: Dict, args) -> Dict[str, Any]:
             cpc_loss_type=getattr(args, 'cpc_loss_type', 'temporal_info_nce'),
             gw_twins_redundancy_weight=getattr(args, 'gw_twins_redundancy_weight', 0.1),
             
-            # ✅ NEW: Loss component weights (α,β,γ) from CLI
+            # ✅ NEW: Loss component weights (α,β,γ) from YAML
             alpha_classification=getattr(args, 'alpha_classification', 1.0),
             beta_contrastive=getattr(args, 'beta_contrastive', 1.0),
-            gamma_reconstruction=getattr(args, 'gamma_reconstruction', 0.0),
+            gamma_reconstruction=float(config.get('training', {}).get('gamma_reconstruction', 0.15)),  # ✅ LHC FIX: Z YAML
             
             # ✅ NEW: Advanced gradient clipping from CLI
-            adaptive_grad_clip_threshold=getattr(args, 'adaptive_grad_clip_threshold', 0.5),
-            per_module_grad_clip=(getattr(args, 'per_module_grad_clip', 'true') == 'true'),
-            cpc_grad_clip_multiplier=getattr(args, 'cpc_grad_clip_multiplier', 0.8),
+            adaptive_grad_clip_threshold=float(config.get('training', {}).get('adaptive_grad_clip_threshold', 0.1)),  # ✅ LHC FIX
+            per_module_grad_clip=config.get('training', {}).get('per_module_grad_clip', True),
+            cpc_grad_clip_multiplier=float(config.get('training', {}).get('cpc_grad_clip_multiplier', 0.5)),  # ✅ LHC FIX
             snn_grad_clip_multiplier=getattr(args, 'snn_grad_clip_multiplier', 1.0),
-            bridge_grad_clip_multiplier=getattr(args, 'bridge_grad_clip_multiplier', 1.2),
+            bridge_grad_clip_multiplier=float(config.get('training', {}).get('bridge_grad_clip_multiplier', 0.5)),  # ✅ LHC FIX
             
             # ✅ CPC model parameters from YAML
             cpc_latent_dim=int(config.get('models', {}).get('cpc', {}).get('latent_dim', 256))

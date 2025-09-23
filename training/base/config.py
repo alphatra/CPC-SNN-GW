@@ -84,7 +84,7 @@ class TrainingConfig:
     # Główne składniki straty
     alpha_classification: float = 1.0      # α - waga straty klasyfikacji (CE/Focal)
     beta_contrastive: float = 1.0          # β - waga straty kontrastującej (CPC)
-    gamma_reconstruction: float = 0.0      # γ - waga straty rekonstrukcji (SNN-AE)
+    gamma_reconstruction: float = 0.15     # γ - waga straty rekonstrukcji (SNN-AE) - LHC ACTIVE
     
     # Legacy names for backward compatibility
     snn_loss_weight: float = 1.0           # = alpha_classification

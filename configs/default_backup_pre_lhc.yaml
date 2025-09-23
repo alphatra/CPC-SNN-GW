@@ -1,0 +1,278 @@
+# CPC-SNN-GW Default Configuration
+# All parameters should be configured here, not hardcoded in Python files
+
+# =============================================================================
+# SYSTEM CONFIGURATION
+# =============================================================================
+system:
+  # Data paths - PARAMETERIZED (no hardcoded paths)
+  data_dir: "/teamspace/studios/this_studio/data/dataset-4/gen48h_01"
+  output_dir: "./outputs"
+  cache_dir: "./cache"
+  checkpoint_dir: "./checkpoints"
+  
+  # Hardware configuration
+  device: "auto"  # auto, cpu, gpu
+  memory_fraction: 0.8
+  use_mixed_precision: true
+  
+  # Logging
+  log_level: "INFO"
+  use_wandb: false
+  use_tensorboard: false
+
+# =============================================================================
+# DATA CONFIGURATION  
+# =============================================================================
+data:
+  # LIGO data parameters - PARAMETERIZED
+  sample_rate: 4096  # Hz
+  segment_length: 4.0  # seconds
+  overlap: 0.9  # fraction
+  
+  # Preprocessing
+  bandpass:
+    low: 20.0   # Hz
+    high: 1024.0  # Hz
+  apply_whitening: true
+  quality_threshold: 0.7
+  # Downsampling target length for runners (anti-aliased)
+  downsample_target_t: 1024
+  
+  # Dataset splitting
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  
+  # MLGWSC-1 specific
+  mlgwsc_files:
+    train_background: "train_background_gen48h_01.hdf"
+    train_foreground: "train_foreground_gen48h_01.hdf" 
+    train_injections: "train_injections_gen48h_01.hdf"
+    val_background: "val_background_gen48h_01.hdf"
+    val_foreground: "val_foreground_gen48h_01.hdf"
+    val_injections: "val_injections_gen48h_01.hdf"
+
+# =============================================================================
+# MODEL CONFIGURATION
+# =============================================================================
+model:
+  # CPC Encoder - PARAMETERIZED
+  cpc:
+    latent_dim: 256
+    num_layers: 3
+    hidden_dim: 512
+    dropout_rate: 0.1
+    use_layer_norm: true
+    
+  # SNN Classifier - OPTIMIZED based on PDF 2508.00063v1 analysis
+  snn:
+    num_classes: 2  # binary: noise vs signal
+    hidden_sizes: [128, 128, 64]
+    
+    # ✅ OPTIMIZED TIME STEPS: Based on GW signal characteristics
+    time_steps: 64  # Increased from 32 for better temporal resolution
+    
+    # ✅ OPTIMIZED THRESHOLD: Adaptive threshold for better spike encoding
+    threshold: 0.55  # Slightly higher for more selective spiking
+    adaptive_threshold: true  # Enable adaptive threshold adjustment
+    
+    # ✅ OPTIMIZED TIME CONSTANTS: Based on neuromorphic research
+    tau_mem: 15.0  # Reduced membrane time constant for faster response
+    tau_syn: 8.0   # Reduced synaptic time constant for better temporal precision
+    
+    # ✅ ADVANCED SNN FEATURES: From research analysis
+    surrogate_gradient: "hard_sigmoid"  # More stable than sigmoid
+    surrogate_beta: 4.0  # Steeper gradient approximation
+    spike_regularization_target: 0.15  # Target 15% spike rate
+    membrane_reset: "subtract"  # Better than hard reset
+    
+  # Spike Bridge - OPTIMIZED based on research analysis
+  bridge:
+    encoding_type: "learnable_multi_threshold"  # Best performance in research
+    num_threshold_levels: 8  # Increased from 4 for finer encoding
+    spike_regularization: 0.005  # Reduced for less aggressive regularization
+    
+    # ✅ ADVANCED BRIDGE FEATURES: From PDF analysis
+    temporal_encoding: true  # Enable temporal spike patterns
+    rate_coding_window: 16  # Window for rate coding
+    latency_coding: false  # Focus on rate coding for GW signals
+    normalization_method: "layer_norm"  # Stable normalization
+    gradient_scaling: 1.0  # Gradient flow optimization
+
+# =============================================================================
+# TRAINING CONFIGURATION
+# =============================================================================
+training:
+  # Basic parameters - PARAMETERIZED (no hardcoded values)
+  num_epochs: 30
+  batch_size: 1  # memory-safe default
+  learning_rate: 0.00005  # conservative default
+  weight_decay: 0.0001
+  # Joint loss weight for CPC auxiliary objective (soft start)
+  cpc_joint_weight: 0.2
+  # CPC auxiliary loss tuning
+  cpc_aux_weight: 0.02
+  cpc_temperature: 0.30
+  cpc_loss_type: "temporal_info_nce"  # "temporal_info_nce" or "gw_twins_inspired"
+  gw_twins_redundancy_weight: 0.1     # λ parameter for GW Twins redundancy reduction
+  # ✅ ENHANCED: Loss component weights with Greek notation (α,β,γ)
+  alpha_classification: 1.0    # α - Classification loss weight (CE/Focal)
+  beta_contrastive: 1.0        # β - Contrastive loss weight (CPC/GW-Twins)  
+  gamma_reconstruction: 0.0    # γ - Reconstruction loss weight (SNN-AE)
+  
+  # Legacy names (backward compatibility)
+  snn_loss_weight: 1.0         # = alpha_classification
+  cpc_loss_weight: 1.0         # = beta_contrastive
+  recon_loss_weight: 0.0       # = gamma_reconstruction
+  
+  # Optimization
+  optimizer: "adamw"  # adamw, adam, sgd
+  scheduler: "cosine"  # cosine, linear, constant
+  warmup_epochs: 5
+  gradient_clip_norm: 1.0
+  
+  # ✅ ENHANCED: Advanced gradient clipping
+  adaptive_grad_clip_threshold: 0.5     # Adaptive gradient clipping
+  global_grad_clip_norm: 0.5            # Global norm clipping
+  per_module_grad_clip: true            # Per-module clipping
+  cpc_grad_clip_multiplier: 0.8         # CPC more conservative
+  snn_grad_clip_multiplier: 1.0         # SNN standard
+  bridge_grad_clip_multiplier: 1.2      # Bridge less aggressive
+  
+  # Memory optimization
+  gradient_accumulation_steps: 4  # effective batch = batch_size * this
+  max_memory_fraction: 0.8
+  use_gradient_checkpointing: false
+  
+  # Regularization - PARAMETERIZED
+  label_smoothing: 0.1
+  dropout_rate: 0.15
+  early_stopping_patience: 10
+  
+  # Multi-stage training
+  stages:
+    cpc_pretrain:
+      epochs: 50
+      learning_rate: 0.001
+      freeze_encoder: false
+      
+    snn_training:  
+      epochs: 30
+      learning_rate: 0.0005
+      freeze_cpc: false
+      
+    joint_training:
+      epochs: 20
+      learning_rate: 0.0001
+      freeze_none: true
+  
+  # Checkpointing - PARAMETERIZED
+  save_every_n_epochs: 5
+  keep_last_n_checkpoints: 3
+  save_best_model: true
+  
+  # Evaluation - PARAMETERIZED
+  # Force evaluation every epoch for consistent EVAL logs
+  eval_every_n_epochs: 1
+  eval_batch_size: 16
+  compute_detailed_metrics: true
+
+# =============================================================================
+# INFERENCE CONFIGURATION
+# =============================================================================
+inference:
+  # Processing parameters - PARAMETERIZED
+  batch_size: 32
+  real_time_mode: false
+  confidence_threshold: 0.5
+  
+  # Output format
+  save_predictions: true
+  save_spike_patterns: false
+  output_format: "hdf5"  # hdf5, json, npz
+  
+  # MLGWSC-1 compatibility
+  mlgwsc_format: true
+  include_timestamps: true
+  include_ranking_statistics: true
+
+# =============================================================================
+# EVALUATION CONFIGURATION  
+# =============================================================================
+evaluation:
+  # Metrics - PARAMETERIZED
+  compute_roc_auc: true
+  compute_pr_auc: true
+  compute_confusion_matrix: true
+  compute_classification_report: true
+  
+  # Thresholds
+  optimal_threshold_method: "youden"  # youden, f1, precision_recall
+  threshold_range: [0.1, 0.9]
+  threshold_steps: 50
+  
+  # Visualization
+  save_plots: true
+  plot_format: "png"  # png, pdf, svg
+  plot_dpi: 300
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+logging:
+  # Levels and formats - PARAMETERIZED
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # File logging
+  log_to_file: true
+  log_file: "cpc_snn_gw.log"
+  max_log_size_mb: 100
+  backup_count: 3
+  
+  # Weights & Biases - PARAMETERIZED
+  wandb:
+    project: "cpc-snn-gw"
+    entity: null  # your wandb username
+    tags: ["neuromorphic", "gravitational-waves"]
+    notes: "CPC+SNN neuromorphic GW detection"
+    
+  # TensorBoard
+  tensorboard:
+    log_dir: "./tensorboard_logs"
+    update_freq: "epoch"  # batch, epoch
+
+# =============================================================================
+# PERFORMANCE PROFILING
+# =============================================================================
+profiling:
+  # Benchmarking - PARAMETERIZED
+  enabled: false
+  target_inference_ms: 100
+  batch_sizes: [1, 4, 8, 16, 32]
+  num_warmup_runs: 10
+  num_benchmark_runs: 100
+  
+  # Memory monitoring
+  track_memory: true
+  memory_alert_threshold: 0.9  # fraction of available memory
+
+# =============================================================================
+# DEVELOPMENT & TESTING
+# =============================================================================
+development:
+  # Quick modes for testing - PARAMETERIZED
+  quick_mode: false
+  quick_epochs: 5
+  quick_samples: 100
+  
+  # Debugging
+  debug_mode: false
+  verbose_logging: false
+  save_intermediate_outputs: false
+  
+  # Testing
+  run_unit_tests: false
+  run_integration_tests: false
+  test_data_fraction: 0.1

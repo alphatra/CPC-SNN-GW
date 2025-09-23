@@ -337,11 +337,16 @@ class CPCSNNTrainer(TrainerBase):
                     if cpc_feats is not None:
                         if getattr(self.config, 'cpc_loss_type', 'temporal_info_nce') == 'gw_twins_inspired':
                             # GW Twins inspired loss (no negatives, redundancy reduction)
-                            cpc_loss = gw_twins_inspired_loss(
+                            cpc_loss_result = gw_twins_inspired_loss(
                                 cpc_feats,
                                 temperature=self.config.cpc_temperature,
                                 redundancy_weight=getattr(self.config, 'gw_twins_redundancy_weight', 0.1)
                             )
+                            # Extract scalar loss (GW Twins returns tuple)
+                            if isinstance(cpc_loss_result, tuple):
+                                cpc_loss = cpc_loss_result[0]
+                            else:
+                                cpc_loss = cpc_loss_result
                         else:
                             # Default: temporal InfoNCE loss
                             cpc_loss = temporal_info_nce_loss(
@@ -368,8 +373,9 @@ class CPCSNNTrainer(TrainerBase):
                     base_cpc_w = jnp.where(epoch < 2, 0.0,
                                    jnp.where(epoch < 4, stage2,
                                    jnp.where(epoch < 6, stage3, target_w)))
-                    # Zero CPC weight for first 100 optimizer steps to avoid early explosions
-                    warmup_mask = (state.step < 200)
+                    # ✅ LHC FIX: Shorter warmup for quick tests (20 steps vs 200)
+                    warmup_steps = 20  # Reduced from 200 for quick tests
+                    warmup_mask = (state.step < warmup_steps)
                     cpc_w = jnp.where(warmup_mask, 0.0, base_cpc_w)
                     # ✅ SNN-AE: Reconstruction loss (MSE between reconstruction and CPC features)
                     recon_loss = jnp.array(0.0)

@@ -380,3 +380,44 @@ __all__ = [
     "gw_twins_inspired_loss"  # ✅ NEW: GW Twins inspired loss without multi-detector pairs
 ]
 
+
+
+# ✅ GW TWINS CONTRASTIVE LOSS: Optimized for ultra-weak GW signals
+from .gw_twins_loss import gw_twins_contrastive_loss, create_gw_twins_loss_fn
+
+def gw_twins_inspired_loss(features: jnp.ndarray, 
+                          temperature: float = 0.3,
+                          redundancy_weight: float = 0.1) -> Tuple[jnp.ndarray, Dict[str, Any]]:
+    """
+    GW Twins inspired contrastive loss for ultra-weak signals.
+    
+    This implementation is specifically designed for gravitational wave detection
+    where signals are naturally ultra-weak (SNR ~0.05-20) and traditional
+    separability-based methods fail.
+    
+    Args:
+        features: CPC features [batch_size, time_steps, feature_dim]
+        temperature: Temperature for similarity scaling
+        redundancy_weight: Weight for redundancy reduction
+        
+    Returns:
+        Tuple of (loss, metrics)
+    """
+    if features is None or features.shape[1] <= 1:
+        return jnp.array(0.0), {'gw_twins_loss': 0.0}
+    
+    batch_size, time_steps, feature_dim = features.shape
+    
+    # Create temporal pairs for contrastive learning
+    z1 = features[:, :-1, :].reshape(-1, feature_dim)  # [batch*(time-1), features]
+    z2 = features[:, 1:, :].reshape(-1, feature_dim)   # [batch*(time-1), features]
+    
+    # Apply GW Twins contrastive loss
+    loss, metrics = gw_twins_contrastive_loss(
+        z1, z2, 
+        temperature=temperature,
+        redundancy_weight=redundancy_weight,
+        temporal_consistency_weight=0.05
+    )
+    
+    return loss, metrics
