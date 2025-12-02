@@ -31,8 +31,7 @@ class SpikingCNN(nn.Module):
         self.pool1 = nn.MaxPool1d(2)
         
         # Block 2
-        # Added stride=2 to further reduce time steps (256 -> 128)
-        self.conv2 = nn.Conv1d(16, 32, kernel_size=5, padding=2, stride=1)
+        self.conv2 = nn.Conv1d(16, 32, kernel_size=5, padding=2)
         self.bn2 = nn.BatchNorm1d(32)
         self.lif2 = snn.Leaky(beta=beta, spike_grad=spike_grad, init_hidden=False)
         self.pool2 = nn.MaxPool1d(2)
@@ -57,11 +56,7 @@ class SpikingCNN(nn.Module):
         # Transpose to (Time, Batch, Channels) for looping
         currents = currents.permute(2, 0, 1)
         spk_rec = []
-        spk_rec = []
-        # Manual init to handle variable batch sizes
-        batch_size = currents.shape[1]
-        channels = currents.shape[2]
-        mem = torch.zeros(batch_size, channels, device=currents.device)
+        mem = lif.init_leaky()
         
         for step in range(currents.shape[0]):
             spk, mem = lif(currents[step], mem)
@@ -128,29 +123,38 @@ class RSNN(nn.Module):
         """
         batch_size, time_steps, _ = x.shape
         
-        # --- OPTIMIZATION: Parallelize Linear and LN ---
-        # (Batch, Time, Input) -> (Batch, Time, Hidden)
-        x_processed = self.linear(x)
-        x_processed = self.ln(x_processed)
-        # -----------------------------------------------
-        
         # Initialize hidden states
-        # Manual init to handle variable batch sizes (e.g. last batch) correctly
-        spk = torch.zeros(batch_size, self.hidden_size, device=x.device)
-        mem = torch.zeros(batch_size, self.hidden_size, device=x.device)
+        spk, mem = self.rleaky.init_rleaky()
+        spk = spk.to(x.device)
+        mem = mem.to(x.device)
         
+        # Handle batch size mismatch if init returns simplistic shapes or wrong batch size
+        if spk.shape[0] != batch_size:
+             if spk.dim() == 0 or (spk.dim() > 0 and spk.shape[0] == 1):
+                 spk = spk.expand(batch_size, -1)
+                 mem = mem.expand(batch_size, -1)
+             else:
+                 # If shape mismatch and not broadcastable (e.g. previous batch size 64 vs current 32)
+                 # Re-initialize with zeros
+                 spk = torch.zeros(batch_size, self.hidden_size).to(x.device)
+                 mem = torch.zeros(batch_size, self.hidden_size).to(x.device)
+
         mem_rec = []
         
-        # Loop is now lighter - only neuron dynamics
         for t in range(time_steps):
-            # Get pre-processed input
-            inp = x_processed[:, t, :]
+            # Input at time t
+            inp = self.linear(x[:, t, :])
             
+            # --- APLIKACJA LAYERNORM ---
+            inp = self.ln(inp)
+            # ---------------------------
+            
+            # Recurrent step
             spk, mem = self.rleaky(inp, spk, mem)
             
-            # In-place clamp is faster
+            # Clamp membrane potential
             if mem.requires_grad:
-                mem = torch.clamp(mem, -2.0, 2.0)
+                mem.register_hook(lambda x: torch.clamp(x, -1.0, 1.0))
             
             mem_rec.append(mem)
             

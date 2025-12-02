@@ -1,44 +1,25 @@
 import torch
 import torch.nn as nn
 
-# Static JIT-compiled function for Delta Modulation
-@torch.jit.script
-def delta_encode_jit(x: torch.Tensor, threshold: float) -> torch.Tensor:
-    # x: (Batch, Channels, Time)
-    B, C, T = x.shape
-    
-    # Pre-allocate output tensors
-    spikes = torch.zeros_like(x)
-    recon = torch.zeros((B, C), device=x.device, dtype=x.dtype)
-    
-    # Loop runs in C++ (TorchScript)
-    for t in range(T):
-        current_input = x[:, :, t]
-        error = current_input - recon
-        
-        pos_spikes = (error > threshold).float()
-        neg_spikes = (error < -threshold).float()
-        
-        # Update
-        net_spike = pos_spikes - neg_spikes
-        recon += net_spike * threshold
-        
-        # Store spikes
-        spikes[:, :, t] = net_spike
-        
-    return spikes
-
 class DeltaModulationEncoder(nn.Module):
     """
     Delta Modulation Encoder for converting continuous signals into spikes.
-    Uses JIT compilation for performance.
+    
+    Implements a temporal delta modulator:
+    - Tracks a reconstruction of the signal.
+    - If input > reconstruction + threshold -> Positive Spike (+1), Reconstruction += threshold
+    - If input < reconstruction - threshold -> Negative Spike (-1), Reconstruction -= threshold
+    
+    Args:
+        threshold (float): The delta threshold for spike generation.
+        channels (int): Number of input channels.
     """
-    def __init__(self, threshold: float = 0.1):
+    def __init__(self, threshold=0.1):
         super().__init__()
-        # Register threshold as buffer for JIT compatibility
-        self.register_buffer('threshold', torch.tensor(float(threshold)))
+        # Make threshold a learnable parameter
+        self.threshold = nn.Parameter(torch.tensor(float(threshold)))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x):
         """
         Args:
             x (torch.Tensor): Input tensor of shape (Batch, Channels, Time)
@@ -46,10 +27,35 @@ class DeltaModulationEncoder(nn.Module):
         Returns:
             spikes (torch.Tensor): Spike tensor of shape (Batch, Channels, Time) with values {-1, 0, 1}.
         """
-        # Ensure threshold is within reasonable bounds
-        # Note: In JIT, we pass the float value
-        thresh_val = float(torch.clamp(self.threshold, min=0.01, max=0.5).item())
-        return delta_encode_jit(x, thresh_val)
+        # Ensure threshold is within [0.01, 0.5] to prevent saturation
+        threshold = torch.clamp(self.threshold, min=0.01, max=0.5)
+        
+        # Initialize reconstruction
+        recon = torch.zeros_like(x[:, :, 0])
+        spikes = []
+        
+        # Iterate over time steps
+        for t in range(x.shape[2]):
+            current_input = x[:, :, t]
+            
+            # Calculate error
+            error = current_input - recon
+            
+            # Generate spikes
+            pos_spikes = (error > threshold).float()
+            neg_spikes = (error < -threshold).float()
+            
+            # Update reconstruction
+            recon += pos_spikes * threshold
+            recon -= neg_spikes * threshold
+            
+            # Combine spikes (1 for pos, -1 for neg)
+            # Note: In rare cases where threshold is 0, both could be true, but threshold > 0 usually.
+            net_spikes = pos_spikes - neg_spikes
+            spikes.append(net_spikes)
+            
+        # Stack along time dimension
+        return torch.stack(spikes, dim=2)
 
 class ThresholdCrossingEncoder(nn.Module):
     """

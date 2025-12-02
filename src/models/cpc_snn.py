@@ -37,11 +37,6 @@ class CPCSNN(nn.Module):
         
         # 1. Encoder (Delta Mod)
         self.encoder = DeltaModulationEncoder(threshold=delta_threshold)
-        # Script the encoder instance for performance
-        try:
-            self.encoder = torch.jit.script(self.encoder)
-        except Exception as e:
-            print(f"WARNING: Failed to script encoder: {e}")
         
         # 2. Feature Extractor (Spiking CNN)
         self.feature_extractor = SpikingCNN(in_channels, hidden_dim, beta=beta)

@@ -39,8 +39,6 @@ class HDF5SFTPairDataset(Dataset):
         fs: float = 4096.0,
         window_sec: float = 0.25,
         overlap_frac: float = 0.5,
-        injection_mode: bool = False,
-        signal_bank: Optional[List[Dict[str, np.ndarray]]] = None
     ) -> None:
         super().__init__()
         self.h5_path = h5_path
@@ -53,14 +51,6 @@ class HDF5SFTPairDataset(Dataset):
         self.fs = fs
         self.window_sec = window_sec
         self.overlap_frac = overlap_frac
-        
-        # Injection params
-        self.injection_mode = injection_mode
-        self.signal_bank = signal_bank
-        self.current_snr = 20.0 # Default, can be updated via set_snr()
-
-    def set_snr(self, snr: float):
-        self.current_snr = snr
 
     def __len__(self) -> int:
         return len(self.ids)
@@ -159,9 +149,6 @@ class HDF5SFTPairDataset(Dataset):
             mask_L1 = h5[f"{gid}/mask_L1"][()]
             f = h5[f"{gid}/f"][()]
             y = h5[f"{gid}/label"][()] if f"{gid}/label" in h5 else None
-
-        # --- On-the-Fly Injection Logic Removed ---
-        # Injection is now handled on GPU in the training loop for performance.
 
         if self.enforce_same_shape:
             T = min(H1["mag"].shape[0], L1["mag"].shape[0],
@@ -282,7 +269,7 @@ class HDF5SFTPairDataset(Dataset):
                 hop_length=nperseg - noverlap,
                 win_length=nperseg,
                 window=window,
-                center=False, 
+                center=True, 
                 normalized=False,
                 onesided=True,
                 return_complex=False
@@ -331,191 +318,3 @@ class HDF5TimeSeriesDataset(Dataset):
             out["label"] = torch.tensor(float(y), dtype=self.dtype)
             
         return out
-
-class InMemoryHDF5Dataset(Dataset):
-    """
-    Loads the entire HDF5 dataset into RAM for zero-copy access.
-    Best for datasets that fit in memory (<16GB).
-    """
-    def __init__(self, h5_path, index_list, device='cpu', use_phase=True, add_mask_channel=True, dtype=torch.float32, fs=4096.0, window_sec=0.25, overlap_frac=0.5):
-        print(f"Loading entire dataset from {h5_path} into RAM...")
-        self.data = []
-        self.dtype = dtype
-        self.use_phase = use_phase
-        self.add_mask_channel = add_mask_channel
-        self.fs = fs
-        self.window_sec = window_sec
-        self.overlap_frac = overlap_frac
-        
-        # Injection params (placeholder for compatibility)
-        self.injection_mode = False
-        self.signal_bank = None
-        self.current_snr = 20.0
-        
-        from tqdm import tqdm
-        
-        with h5py.File(h5_path, 'r') as h5:
-            for idx in tqdm(index_list, desc="Loading to RAM"):
-                gid = str(idx)
-                
-                # Read H1
-                h1_g = h5[f"{gid}/H1"]
-                h1_mag = h1_g["mag"][()]
-                
-                # Determine T
-                T = h1_mag.shape[0]
-                
-                # Read L1
-                l1_g = h5[f"{gid}/L1"]
-                l1_mag = l1_g["mag"][()]
-                
-                # Read Masks
-                mask_h1 = h5[f"{gid}/mask_H1"][()]
-                mask_l1 = h5[f"{gid}/mask_L1"][()]
-                
-                # Crop to min T
-                T = min(h1_mag.shape[0], l1_mag.shape[0], mask_h1.shape[0], mask_l1.shape[0])
-                
-                # Helper to pack channels
-                def pack(g, mask, t_len):
-                    mag = g["mag"][:t_len]
-                    if "cos" in g:
-                        cos = g["cos"][:t_len]
-                        sin = g["sin"][:t_len]
-                    else:
-                        # Re/Im fallback
-                        re = g["re"][:t_len]
-                        im = g["im"][:t_len]
-                        pha = np.arctan2(im, re)
-                        cos = np.cos(pha)
-                        sin = np.sin(pha)
-                        
-                    channels = [mag]
-                    if use_phase:
-                        channels.extend([cos, sin])
-                    if add_mask_channel:
-                         mask_2d = np.repeat(mask[:t_len, None], mag.shape[1], axis=1)
-                         channels.append(mask_2d)
-                    return np.stack(channels, axis=0) # (C, T, F)
-
-                h1_packed = pack(h1_g, mask_h1, T)
-                l1_packed = pack(l1_g, mask_l1, T)
-                
-                sample = {
-                    "H1": torch.from_numpy(h1_packed).to(dtype),
-                    "L1": torch.from_numpy(l1_packed).to(dtype),
-                    "f": torch.from_numpy(h5[f"{gid}/f"][()]).to(dtype),
-                    "mask_H1": torch.from_numpy(mask_h1[:T]).to(dtype),
-                    "mask_L1": torch.from_numpy(mask_l1[:T]).to(dtype)
-                }
-                
-                if f"{gid}/label" in h5:
-                    sample["label"] = torch.tensor(float(h5[f"{gid}/label"][()]), dtype=dtype)
-                    
-                self.data.append(sample)
-                
-        print(f"Loaded {len(self.data)} samples.")
-
-    def set_snr(self, snr: float):
-        self.current_snr = snr
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        return self.data[idx]
-
-class InMemoryGPU_Dataset(Dataset):
-    """
-    Loads the entire dataset directly into GPU memory (MPS/CUDA) as complex tensors.
-    Eliminates CPU-GPU transfer latency.
-    Maps cropped SFTs to full frequency grid (513 bins) for compatibility with injection.
-    """
-    def __init__(self, h5_path, index_list, device, fs=4096.0, window_sec=0.25, overlap_frac=0.5):
-        print(f"Loading {len(index_list)} samples directly to {device}...")
-        
-        # Constants for Full SFT
-        nperseg = int(window_sec * fs)
-        n_freq_full = nperseg // 2 + 1
-        
-        temp_data = []
-        
-        with h5py.File(h5_path, 'r') as h5:
-            from tqdm import tqdm
-            for idx in tqdm(index_list, desc="Loading to RAM"):
-                gid = str(idx)
-                
-                # Read f to map frequencies
-                f = h5[f"{gid}/f"][()]
-                
-                # Calculate indices
-                k_indices = np.round(f * nperseg / fs).astype(int)
-                valid_mask = (k_indices >= 0) & (k_indices < n_freq_full)
-                valid_k = k_indices[valid_mask]
-                
-                # Read H1
-                h1_mag = torch.from_numpy(h5[f"{gid}/H1"]['mag'][()])
-                T = h1_mag.shape[0]
-                
-                if "cos" in h5[f"{gid}/H1"]:
-                    h1_cos = torch.from_numpy(h5[f"{gid}/H1"]['cos'][()])
-                    h1_sin = torch.from_numpy(h5[f"{gid}/H1"]['sin'][()])
-                else:
-                    re = torch.from_numpy(h5[f"{gid}/H1"]['re'][()])
-                    im = torch.from_numpy(h5[f"{gid}/H1"]['im'][()])
-                    pha = torch.atan2(im, re)
-                    h1_cos = torch.cos(pha)
-                    h1_sin = torch.sin(pha)
-                    
-                # H1 Complex: (T, F_stored)
-                h1_c = torch.complex(h1_mag * h1_cos, h1_mag * h1_sin)
-                
-                # Read L1
-                l1_mag = torch.from_numpy(h5[f"{gid}/L1"]['mag'][()])
-                if "cos" in h5[f"{gid}/L1"]:
-                    l1_cos = torch.from_numpy(h5[f"{gid}/L1"]['cos'][()])
-                    l1_sin = torch.from_numpy(h5[f"{gid}/L1"]['sin'][()])
-                else:
-                    re = torch.from_numpy(h5[f"{gid}/L1"]['re'][()])
-                    im = torch.from_numpy(h5[f"{gid}/L1"]['im'][()])
-                    pha = torch.atan2(im, re)
-                    l1_cos = torch.cos(pha)
-                    l1_sin = torch.sin(pha)
-                    
-                # L1 Complex: (T, F_stored)
-                l1_c = torch.complex(l1_mag * l1_cos, l1_mag * l1_sin)
-                
-                # Ensure same T
-                T = min(h1_c.shape[0], l1_c.shape[0])
-                h1_c = h1_c[:T, :]
-                l1_c = l1_c[:T, :]
-                
-                # Map to Full SFT: (2, F_full, T)
-                # Create zero tensor
-                full_sft = torch.zeros((2, n_freq_full, T), dtype=torch.complex64)
-                
-                # Assign H1 (transpose to F, T)
-                full_sft[0, valid_k, :] = h1_c[:, valid_mask].T
-                
-                # Assign L1
-                full_sft[1, valid_k, :] = l1_c[:, valid_mask].T
-                
-                temp_data.append(full_sft)
-
-        # Convert to single tensor and move to device
-        print("Moving data to GPU memory...")
-        # Stack: (N, 2, F_full, T)
-        self.data_complex = torch.stack(temp_data).to(device)
-        
-        print(f"Dataset ready on {device}: {self.data_complex.shape} ({self.data_complex.element_size() * self.data_complex.numel() / 1e9:.2f} GB)")
-
-    def __len__(self):
-        return len(self.data_complex)
-
-    def __getitem__(self, idx):
-        # Returns dictionary with 'x' as complex tensor on GPU
-        # and 'label' as 0.0 (noise)
-        return {
-            "x": self.data_complex[idx], 
-            "label": torch.tensor(0.0, device=self.data_complex.device)
-        }
