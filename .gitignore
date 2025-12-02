@@ -1,0 +1,17 @@
+# Data
+data/
+*.h5
+*.pt
+*.npy
+
+# Logs and Checkpoints
+checkpoints/
+wandb/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+.DS_Store

@@ -1,0 +1,90 @@
+_wandb:
+    value:
+        cli_version: 0.23.0
+        e:
+            0m83pnhtef6zyydbqv5ezwrcc6c8q98q:
+                apple:
+                    ecpuCores: 4
+                    gpuCores: 40
+                    memoryGb: 48
+                    name: Apple M3 Max
+                    pcpuCores: 12
+                    ramTotalBytes: "51539607552"
+                    swapTotalBytes: "1073741824"
+                args:
+                    - --run_name
+                    - cpc_fix_v3_stable
+                    - --epochs
+                    - "1"
+                    - --batch_size
+                    - "64"
+                    - --temperature
+                    - "0.07"
+                    - --fast
+                cpu_count: 16
+                cpu_count_logical: 16
+                disk:
+                    /:
+                        total: "994662584320"
+                        used: "671761346560"
+                email: alpphatra@gmail.com
+                executable: /Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/.venv/bin/python
+                host: MacBook-Pro-Gracjan.local
+                memory:
+                    total: "51539607552"
+                os: macOS-26.0.1-arm64-arm-64bit-Mach-O
+                program: -m src.train.train_cpc
+                python: CPython 3.13.5
+                root: /Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection
+                startedAt: "2025-11-29T23:27:40.991870Z"
+                writerId: 0m83pnhtef6zyydbqv5ezwrcc6c8q98q
+        m: []
+        python_version: 3.13.5
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 1
+                - 2
+                - 13
+                - 16
+            "4": 3.13.5
+            "5": 0.23.0
+            "12": 0.23.0
+            "13": darwin-arm64
+amp:
+    value: true
+batch_size:
+    value: 64
+channel:
+    value: null
+context_dim:
+    value: 64
+delta_threshold:
+    value: 0.05
+epochs:
+    value: 1
+fast:
+    value: true
+h5_path:
+    value: /Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/data/cpc_snn_train.h5
+hidden_dim:
+    value: 64
+lr:
+    value: 0.001
+no_wandb:
+    value: false
+noise_indices:
+    value: /Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/data/indices_noise.json
+prediction_steps:
+    value: 12
+run_name:
+    value: cpc_fix_v3_stable
+temperature:
+    value: 0.07
+weight_decay:
+    value: 0.0001
+workers:
+    value: 0

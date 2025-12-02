@@ -1,0 +1,9 @@
+# configs/cpc.yaml
+tau_k: 12
+K_pos: 12
+N_neg: 16
+temperature: 0.07
+prediction_steps: 6
+loss_type: "InfoNCE"
+encoder_dim: 256
+ar_hidden: 512

@@ -1,0 +1,19 @@
+ifo_list:
+- H1
+- L1
+sample_rate: 2048.0
+duration: 4.0
+f_low: 20.0
+f_high: 1000.0
+n_samples: 10
+snr_range:
+- 8.0
+- 15.0
+mass_range:
+- 10.0
+- 50.0
+output_path: data/mini_test.h5
+search_start: 1262304018
+search_end: 1262314018
+min_segment_len: 4100
+seed: 42

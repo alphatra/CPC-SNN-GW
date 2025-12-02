@@ -1,0 +1,17 @@
+Environment:
+datetime: 2025-11-09 22:33:56.417734
+python_version: 3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 11:23:37) [Clang 14.0.6 ]
+torch_version: 2.9.0
+
+Config:
+h5_path: /Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/src/data_handling/data/gw150914_sft.h5
+use_phase: True
+add_mask_channel: True
+batch_size: 8
+num_workers: 2
+val_fraction: 0.2
+lr: 0.001
+weight_decay: 0.0
+epochs: 15
+save_path: checkpoints/mvp_simple_cnn.pt
+log_dir: runs/mvp

@@ -1,0 +1,18 @@
+  # configs/train.yaml
+seed: 42
+precision: "bf16"
+grad_accum: 2
+early_stop: 10
+max_epochs: 200
+batch_size: 64
+lr: 3.0e-4
+weight_decay: 1.0e-2
+optimizer: "adamw"
+device: "mps"
+log_dir: "./outputs"
+
+snr_scheduler:
+  enabled: true
+  start_snr: 50.0
+  min_snr: 4.0
+  warmup_epochs: 5

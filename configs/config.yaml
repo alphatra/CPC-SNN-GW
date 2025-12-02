@@ -1,0 +1,10 @@
+defaults:
+  - dataset: dataset
+  - model: model
+
+# globalne
+paths:
+  data_dir: data
+  ckpt_dir: checkpoints
+  runs_dir: runs
+  events_file: configs/events.yaml

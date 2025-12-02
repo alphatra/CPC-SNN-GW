@@ -1,0 +1,26 @@
+[2025-11-20 22:15:28,844][__main__][INFO] - === Dr. Gravitas Data Generator (Hydra + Multi-IFO) ===
+[2025-11-20 22:15:28,844][__main__][INFO] - Config:
+ifo_list:
+- H1
+- L1
+sample_rate: 2048.0
+duration: 4.0
+f_low: 20.0
+f_high: 1000.0
+n_samples: 10
+snr_range:
+- 8.0
+- 15.0
+mass_range:
+- 10.0
+- 50.0
+output_path: data/mini_test.h5
+search_start: 1262304018
+search_end: 1262314018
+min_segment_len: 4100
+seed: 42
+
+[2025-11-20 22:15:28,844][__main__][INFO] - Searching for coincident segments for ['H1', 'L1'] in [1262304018, 1262314018]...
+[2025-11-20 22:15:30,525][__main__][INFO] - Found 1 coincident segments > 4100s.
+[2025-11-20 22:15:30,543][__main__][INFO] - Processing segment 1262304018-1262308114 (4096s)...
+[2025-11-20 22:15:30,544][__main__][INFO] -   [H1] Fetching...

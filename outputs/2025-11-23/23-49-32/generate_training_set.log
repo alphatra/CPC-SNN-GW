@@ -1,0 +1,5 @@
+[2025-11-23 23:49:32,552][__main__][INFO] - === Dr. Gravitas Data Generator (Hydra + Multi-IFO) ===
+[2025-11-23 23:49:32,552][__main__][INFO] - Searching for coincident segments for ['H1', 'L1'] in [1262304018, 1263304018]...
+[2025-11-23 23:49:35,699][__main__][INFO] - Found 29 coincident segments > 4100s.
+[2025-11-23 23:49:35,699][__main__][INFO] - File /Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/data/cpc_snn_train.h5 exists. Appending to it.
+[2025-11-23 23:49:35,972][__main__][INFO] - Target samples (10000) already reached (found 10000). Exiting.

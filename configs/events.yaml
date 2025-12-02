@@ -1,0 +1,106 @@
+events:
+  # -------------------------------
+  # O1 (2015) – TYLKO H1, L1
+  # -------------------------------
+  - name: GW150914
+    gps: 1126259462.422
+    class: BBH
+    detectors: [H1, L1]
+
+  - name: GW151012
+    gps: 1128678900.4
+    class: BBH
+    detectors: [H1, L1]
+
+  - name: GW151226
+    gps: 1135136350.6
+    class: BBH
+    detectors: [H1, L1]
+
+  # -------------------------------
+  # O2 (2017) – większość: H1, L1
+  # Virgo pojawia się dopiero w sierpniu 2017
+  # -------------------------------
+  - name: GW170104
+    gps: 1167559936.6
+    class: BBH
+    detectors: [H1, L1]
+
+  - name: GW170608
+    gps: 1180922494.5
+    class: BBH
+    detectors: [H1, L1]
+
+  - name: GW170729
+    gps: 1185389807.3
+    class: BBH
+    detectors: [H1, L1]
+
+  - name: GW170809
+    gps: 1186302519.8
+    class: BBH
+    detectors: [H1, L1]
+
+  # PIERWSZY 3-detektorowy event (Virgo!)
+  - name: GW170814
+    gps: 1186741861.5
+    class: BBH
+    detectors: [H1, L1, V1]
+
+  - name: GW170817
+    gps: 1187008882.43
+    class: BNS
+    detectors: [H1, L1, V1]
+
+  - name: GW170818
+    gps: 1187058327.1
+    class: BBH
+    detectors: [H1, L1]
+
+  # -------------------------------
+  # O3 (2019–2020) – H1/L1/V1
+  # KAGRA NIE MA DANYCH O3
+  # -------------------------------
+  - name: GW190412
+    gps: 1239082262.2
+    class: BBH
+    detectors: [H1, L1, V1]
+
+  - name: GW190521
+    gps: 1242442967.4
+    class: BBH
+    detectors: [H1, L1, V1]
+
+  - name: GW190814
+    gps: 1249852257.0
+    class: NSBH
+    detectors: [H1, L1, V1]
+
+  - name: GW200105_162426
+    gps: 1262273735.0
+    class: NSBH
+    detectors: [H1, L1, V1]
+
+  - name: GW200115_042309
+    gps: 1262564387.0
+    class: NSBH
+    detectors: [H1, L1, V1]
+
+  # -------------------------------
+  # O4 (2023) — DOPIERO TERAZ ISTNIEJE KAGRA
+  # (GWOSC udostępnia bardzo mało danych, ale to są pierwsze realne)
+  # -------------------------------
+  - name: GW230529
+    gps: 1369672280.0
+    class: BBH
+    detectors: [H1, L1, V1, K1]
+
+  - name: GW230721
+    gps: 1371261335.0
+    class: BBH
+    detectors: [H1, L1, V1, K1]
+
+  - name: GW230918
+    gps: 1372925211.0
+    class: BBH
+    detectors: [H1, L1, V1, K1]

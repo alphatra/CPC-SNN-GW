@@ -1,0 +1,6 @@
+lr: 1.0e-3
+delta_threshold: 0.1
+weight_decay: 0.0
+epochs: 15
+save_path: ${paths.ckpt_dir}/mvp_simple_cnn.pt
+log_dir: ${paths.runs_dir}/mvp

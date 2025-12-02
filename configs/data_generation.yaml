@@ -1,0 +1,40 @@
+defaults:
+  - _self_
+
+# Interferometers to use
+ifo_list: ["H1", "L1"]
+
+# Data parameters
+sample_rate: 2048.0
+duration: 4.0
+f_low: 20.0
+f_high: 1000.0
+
+# Generation parameters
+n_samples: 5000  # per class (total = 2 * n_samples)
+snr_range: [8.0, 15.0]
+mass_range: [10.0, 50.0]
+
+# Glitch parameters
+glitch_prob: 0.25  # 25% of "signals" will be glitches (if is_signal=True)
+# Or maybe we treat glitches as a separate class?
+# For binary classification (Signal vs Noise), glitches are usually "Noise" (Background).
+# But if we want to train a robust model, we might want to inject glitches into the background class.
+# Let's assume:
+# Class 0: Background (Gaussian Noise + Real Noise + Glitches)
+# Class 1: Signal (BBH)
+
+# Probability of injecting a glitch into a BACKGROUND sample
+glitch_prob_bg: 0.3 
+
+
+# Output
+output_path: "data/cpc_snn_train.h5"
+
+# Segment search (O3a)
+search_start: 1262304018
+search_end: 1272304018 # Extended to 10M seconds (~4 months)
+min_segment_len: 4100
+
+# Random seed
+seed: 42

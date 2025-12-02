@@ -1,0 +1,7 @@
+h5_path: ${paths.data_dir}/gw_multi_events_sft.h5
+use_phase: true
+add_mask_channel: true
+batch_size: 16
+num_workers: 0
+val_fraction: 0.2
+pin_memory: false

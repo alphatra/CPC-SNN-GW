@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/src/train/train_cpc.py", line 12, in <module>
+    from src.models.cpc_snn import CPCSNN
+ModuleNotFoundError: No module named 'src'

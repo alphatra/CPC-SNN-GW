@@ -1,0 +1,13 @@
+defaults:
+  - data_generation
+
+# Override for mini test
+n_samples: 10
+output_path: "data/mini_test.h5"
+duration: 4.0
+# Use a known good segment or search
+# O3a segment
+search_start: 1262304018
+search_end: 1262304118
+min_segment_len: 64
+
