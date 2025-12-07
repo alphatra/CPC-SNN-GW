@@ -5,19 +5,21 @@ import json
 import os
 import argparse
 import numpy as np
-from tqdm import tqdm
 import wandb
 import time
 
 from src.models.cpc_snn import CPCSNN
-from src.data_handling.torch_dataset import HDF5SFTPairDataset
+from src.data_handling.torch_dataset import HDF5SFTPairDataset, HDF5TimeSeriesDataset, InMemoryHDF5Dataset, InMemoryGPU_Dataset
+from src.utils.scheduler import SNRScheduler
+from src.train.cpc_trainer import CPCTrainer, generate_signal_bank
+from src.data_handling.generate_balanced_bank import generate_balanced_bank
 
 def train(args):
     # 1. W&B Init
-    # 1. W&B Init
     if not args.no_wandb:
+        mode = "offline" if args.offline else "online"
         wandb_id = args.resume_id if args.resume_id else wandb.util.generate_id()
-        wandb.init(project="cpc-snn-gw", config=args, name=args.run_name, id=wandb_id, resume="allow")
+        wandb.init(project="cpc-snn-gw", config=args, name=args.run_name, id=wandb_id, resume="allow", mode=mode)
     
     # 2. Device
     if torch.backends.mps.is_available():
@@ -44,57 +46,95 @@ def train(args):
     use_spikes = os.path.exists(spikes_path)
     use_timeseries = os.path.exists(ts_path)
     
-    if use_spikes:
-        print(f"Using pre-encoded spikes from {spikes_path}")
-        from src.data_handling.torch_dataset import HDF5TimeSeriesDataset
-        dataset = HDF5TimeSeriesDataset(
-            h5_path=spikes_path,
-            index_list=noise_indices
-        )
-    elif use_timeseries:
-        print(f"Using pre-processed time series data from {ts_path}")
-        from src.data_handling.torch_dataset import HDF5TimeSeriesDataset
-        dataset = HDF5TimeSeriesDataset(
-            h5_path=ts_path,
-            index_list=noise_indices
-        )
-    else:
-        print("Using on-the-fly reconstruction (Slower)")
-        dataset = HDF5SFTPairDataset(
-            h5_path=args.h5_path,
-            index_list=noise_indices,
-            return_time_series=False
-        )
+    # Force on-the-fly if SNR Scheduler is active
+    if args.snr_scheduler:
+        if use_spikes or use_timeseries:
+            print("WARNING: Dynamic SNR Scheduling enabled. Ignoring pre-computed spikes/timeseries to allow on-the-fly injection.")
+        use_spikes = False
+        use_timeseries = False
     
-    # Split
-    # NOWE (DOBRE - Time Series Split):
-    # Dataset indeksuje pliki po kolei, więc wystarczy podzielić indeksy
-    indices = list(range(len(dataset)))
-    split_idx = int(len(dataset) * 0.8) # 80% trening, 20% walidacja
+    # Set flags in args for Trainer
+    args.use_spikes = use_spikes
+    args.use_timeseries = use_timeseries
+    
+    # Signal Bank for Injection (GPU Tensor)
+    # Load if we are using on-the-fly dataset (HDF5SFTPairDataset/InMemory)
+    # Even if snr_scheduler is False, we might want fixed SNR injection.
+    signal_bank = None
+    if not (use_spikes or use_timeseries):
+         if args.balanced_bank:
+             bank_path = args.balanced_bank_path
+             if os.path.exists(bank_path):
+                 print(f"Loading Balanced Signal Bank from {bank_path}...")
+                 signal_bank = torch.load(bank_path, map_location=device)
+                 print(f"Balanced Bank Loaded: {len(signal_bank)} bins")
+             else:
+                 print(f"Balanced Bank not found at {bank_path}. Generating...")
+                 generate_balanced_bank(bank_path, n_per_bin=100)
+                 signal_bank = torch.load(bank_path, map_location=device)
+                 print(f"Balanced Bank Generated and Loaded: {len(signal_bank)} bins")
+         else:
+             # Legacy Random Generation
+             signal_bank = generate_signal_bank(n_signals=200 if not args.fast else 10).to(device)
+             print(f"Signal Bank Loaded on GPU: {signal_bank.shape}")
+    
+    # Split indices for train/val
+    indices = list(range(len(noise_indices))) # Use noise_indices length for splitting
+    split_idx = int(len(indices) * 0.8) # 80% training, 20% validation
 
     train_indices = indices[:split_idx]
     val_indices = indices[split_idx:]
 
-    train_set = torch.utils.data.Subset(dataset, train_indices)
-    val_set = torch.utils.data.Subset(dataset, val_indices)
-
-    print(f"Time Series Split: Train [{len(train_set)}] samples, Val [{len(val_set)}] samples")
+    # Dataset loading logic
+    if use_spikes:
+        print(f"Using pre-encoded spikes from {spikes_path}")
+        train_dataset = HDF5TimeSeriesDataset(h5_path=spikes_path, index_list=[noise_indices[i] for i in train_indices])
+        val_dataset = HDF5TimeSeriesDataset(h5_path=spikes_path, index_list=[noise_indices[i] for i in val_indices])
+    elif use_timeseries:
+        print(f"Using pre-processed time series data from {ts_path}")
+        train_dataset = HDF5TimeSeriesDataset(h5_path=ts_path, index_list=[noise_indices[i] for i in train_indices])
+        val_dataset = HDF5TimeSeriesDataset(h5_path=ts_path, index_list=[noise_indices[i] for i in val_indices])
+    else:
+        # Use InMemoryGPU_Dataset for maximum speed (Total Cache)
+        print("Using InMemoryGPU_Dataset (Total Cache) for maximum speed...")
+        train_dataset = InMemoryGPU_Dataset(
+            args.h5_path, 
+            [noise_indices[i] for i in train_indices], 
+            device=device
+        )
+        val_dataset = InMemoryGPU_Dataset(
+            args.h5_path, 
+            [noise_indices[i] for i in val_indices], 
+            device=device
+        )
+    
+    print(f"Time Series Split: Train [{len(train_dataset)}] samples, Val [{len(val_dataset)}] samples")
     
     loader_kwargs = {
         "batch_size": args.batch_size,
-        "num_workers": args.workers,
-        "pin_memory": False,
+        "pin_memory": False, # Data already on GPU
+        "num_workers": 0, # No workers needed
     }
     
-    if args.workers > 0:
-        loader_kwargs["persistent_workers"] = True
-        loader_kwargs["prefetch_factor"] = 2
+    if use_spikes or use_timeseries:
+        # For legacy datasets, we might want workers
+        loader_kwargs["num_workers"] = args.workers
+        loader_kwargs["pin_memory"] = True
+        if args.workers > 0:
+            loader_kwargs["persistent_workers"] = True
+            loader_kwargs["prefetch_factor"] = 2
         
-    train_loader = DataLoader(train_set, shuffle=True, **loader_kwargs)
-    val_loader = DataLoader(val_set, shuffle=False, **loader_kwargs)
+    train_loader = DataLoader(train_dataset, shuffle=True, **loader_kwargs)
+    val_loader = DataLoader(val_dataset, shuffle=False, **loader_kwargs)
     
     # 4. Model
-    in_channels = 1 if args.channel else 2
+    # In Barlow Twins and Hybrid mode, we process H1 and L1 separately (Siamese), so in_channels=1
+    if args.ssl_mode in ["barlow", "hybrid"]:
+        in_channels = 1
+        print(f"SSL Mode: {args.ssl_mode} - Forcing in_channels=1 for Siamese Network")
+    else:
+        in_channels = 1 if args.channel else 2
+        
     model = CPCSNN(
         in_channels=in_channels,
         hidden_dim=args.hidden_dim,
@@ -102,34 +142,93 @@ def train(args):
         prediction_steps=args.prediction_steps,
         delta_threshold=args.delta_threshold,
         temperature=args.temperature,
-        beta=args.beta
+        beta=args.beta,
+        learnable_encoding=args.learnable_encoding
     ).to(device)
+    
+    # AMP Scaler
+    use_amp = args.amp and hasattr(torch, 'amp')
+    if use_amp and hasattr(torch.amp, 'GradScaler'):
+        scaler = torch.amp.GradScaler('mps')
+    elif use_amp:
+        scaler = torch.cuda.amp.GradScaler()
+    else:
+        scaler = None
+
+    # Optimize with torch.compile (PyTorch 2.0+)
+    if args.compile and hasattr(torch, "compile"):
+        print(f"Compiling model with torch.compile (backend={args.compile_backend})...")
+        print("Setting TORCH_LOGS='+dynamo' for verbose output.")
+        os.environ["TORCH_LOGS"] = "+dynamo"
+        torch._dynamo.config.suppress_errors = True
+        
+        # Clean up memory before compilation to avoid OOM
+        import gc
+        gc.collect()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        
+        try:
+            t0_comp = time.time()
+            # Use specified backend (default 'inductor' often fails on MPS, 'aot_eager' is safer)
+            model = torch.compile(model, backend=args.compile_backend)
+            
+            # Trigger compilation with a dummy forward pass
+            print("Triggering compilation with dummy input...")
+            # Use a smaller batch for compilation trigger to save memory? 
+            # No, graph should match runtime.
+            dummy_input = torch.randn(args.batch_size, in_channels, 16384).to(device)
+            with torch.no_grad():
+                if use_amp:
+                    with torch.autocast(device_type="mps", dtype=torch.bfloat16):
+                        _ = model(dummy_input, is_encoded=False)
+                else:
+                    _ = model(dummy_input, is_encoded=False)
+            
+            print(f"Model compiled successfully in {time.time() - t0_comp:.1f}s!")
+        except Exception as e:
+            print(f"WARNING: torch.compile failed: {e}")
+            print("Continuing without compilation...")
+            # Fallback to uncompiled model if compilation failed (and didn't crash process)
+            # Note: If it crashed (SIGKILL), we can't catch it here.
+            if hasattr(model, "_orig_mod"):
+                model = model._orig_mod
     
     if not args.no_wandb:
         wandb.watch(model, log="all")
         
     # Optimizer
-    # Reduced LR to 1e-4 as requested
-    learning_rate = args.lr
-    
-    if args.weight_decay > 0:
-        optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=args.weight_decay)
-    else:
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    # Use fused=True if supported (PyTorch 2.0+)
+    try:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay, fused=True)
+        print("Using Fused AdamW optimizer.")
+    except:
+        print("Fused AdamW not supported, falling back to standard.")
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 
-    # Scheduler
-    # Scheduler
-    # Use OneCycleLR for better stability
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    # Scheduler (LR)
+    scheduler_lr = torch.optim.lr_scheduler.OneCycleLR(
         optimizer,
-        max_lr=3e-3,           # Higher peak
+        max_lr=3e-3,
         epochs=args.epochs,
         steps_per_epoch=len(train_loader),
-        pct_start=0.3,         # 30% warmup
+        pct_start=0.3,
         div_factor=25,
         final_div_factor=1e4
     )
     
+    # SNR Scheduler
+    snr_scheduler = None
+    if args.snr_scheduler:
+        snr_scheduler = SNRScheduler(
+            start_snr=args.start_snr,
+            min_snr=args.min_snr,
+            total_epochs=args.epochs,
+            warmup_epochs=args.warmup_epochs
+        )
+        print(f"SNR Scheduler Active: Start={args.start_snr}, Min={args.min_snr}, Warmup={args.warmup_epochs}")
     
     # Resume Logic
     start_epoch = 0
@@ -140,160 +239,47 @@ def train(args):
             start_epoch = checkpoint['epoch']
             model.load_state_dict(checkpoint['model_state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-            # Note: OneCycleLR scheduler state might be tricky to resume perfectly if not saved/loaded carefully,
-            # but usually loading state_dict works if the total steps match.
-            # However, since we re-create scheduler based on args.epochs, we might need to adjust if resuming mid-run.
-            # For now, we'll try to load it if present.
-            if 'scheduler_state_dict' in checkpoint: # We didn't save it before, but good to have for future
-                 # scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            if 'scheduler_state_dict' in checkpoint:
+                 # scheduler_lr.load_state_dict(checkpoint['scheduler_state_dict'])
                  pass
             
             print(f"=> loaded checkpoint '{args.resume}' (epoch {checkpoint['epoch']})")
         else:
             print(f"=> no checkpoint found at '{args.resume}'")
 
-    # 5. Training Loop
+    # 5. Initialize Trainer
+    trainer = CPCTrainer(
+        model=model,
+        optimizer=optimizer,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        args=args,
+        device=device,
+        scaler=scaler,
+        scheduler_lr=scheduler_lr,
+        snr_scheduler=snr_scheduler,
+        signal_bank=signal_bank
+    )
+
+    # 6. Training Loop
     best_val_loss = float('inf')
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     save_dir = os.path.join("checkpoints", args.run_name or timestamp)
     os.makedirs(save_dir, exist_ok=True)
     
-    # AMP Scaler for MPS
-    # Check if torch.amp.GradScaler exists (PyTorch 2.3+)
-    use_amp = args.amp and hasattr(torch, 'amp')
-    if use_amp and hasattr(torch.amp, 'GradScaler'):
-        scaler = torch.amp.GradScaler('mps')
-    elif use_amp:
-        # Fallback for older PyTorch (might not work on MPS)
-        scaler = torch.cuda.amp.GradScaler()
-    else:
-        scaler = None
-    
     print(f"Starting training for {args.epochs} epochs (starting from {start_epoch})...")
     print(f"AMP Enabled: {use_amp}")
     
+    # Warmup Encoder (if starting fresh)
+    if start_epoch == 0 and args.warmup_epochs > 0:
+        trainer.train_warmup(args.warmup_epochs)
+        
     for epoch in range(start_epoch, args.epochs):
-        model.train()
-        train_loss = 0
-        train_acc = 0
+        # Train
+        avg_train_loss, avg_train_acc = trainer.train_epoch(epoch)
         
-        pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{args.epochs}")
-        for batch in pbar:
-            t0 = time.time()
-            
-            if use_spikes or use_timeseries:
-                x = batch['x'].to(device)
-            else:
-                # GPU Reconstruction
-                x = HDF5SFTPairDataset.batch_reconstruct_torch(batch, device=device)
-                
-                # Normalize (Instance Norm)
-                mean = x.mean(dim=2, keepdim=True)
-                std = x.std(dim=2, keepdim=True)
-                x = (x - mean) / (std + 1e-8)
-            
-            # Select channel if needed
-            if args.channel == "H1":
-                x = x[:, 0:1, :] # Keep dim: (B, 1, T)
-            elif args.channel == "L1":
-                x = x[:, 1:2, :] # Keep dim: (B, 1, T)
-            
-            # --- Time Jittering (Data Augmentation) ---
-            if model.training:
-                # Shift by +/- 5% of window length
-                max_shift = int(x.shape[-1] * 0.05)
-                if max_shift > 0:
-                    shift = np.random.randint(-max_shift, max_shift)
-                    x = torch.roll(x, shifts=shift, dims=-1)
-            # ------------------------------------------
-            
-            t_data = time.time() - t0
-            t1 = time.time()
-            
-            optimizer.zero_grad()
-            
-            # Mixed Precision Forward
-            if use_amp:
-                with torch.autocast(device_type="mps", dtype=torch.bfloat16):
-                    z, c, spikes = model(x, is_encoded=use_spikes)
-                    # Regularize z (SNN output) instead of encoder spikes
-                    loss, metrics = model.compute_cpc_loss(z, c, spikes=z)
-                    acc = metrics["acc1"]
-                
-                scaler.scale(loss).backward()
-                scaler.unscale_(optimizer)
-                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                scaler.step(optimizer)
-                scaler.update()
-            else:
-                z, c, spikes = model(x, is_encoded=use_spikes)
-                # Regularize z (SNN output) instead of encoder spikes
-                loss, metrics = model.compute_cpc_loss(z, c, spikes=z)
-                acc = metrics["acc1"]
-                loss.backward()
-                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-                optimizer.step()
-                scheduler.step()
-            
-            t_model = time.time() - t1
-            batch_time = time.time() - t0
-            
-            train_loss += loss.item()
-            train_acc += acc
-            
-            pbar.set_postfix({'loss': loss.item(), 'acc': acc, 't_data': f"{t_data:.2f}s", 't_model': f"{t_model:.2f}s"})
-            
-            if not args.no_wandb:
-                wandb.log({
-                    "batch_loss": loss.item(), 
-                    "batch_acc": acc,
-                    "train_acc_top5": metrics["acc5"],
-                    "cpc_pos_score": metrics["pos_score"],
-                    "cpc_neg_score": metrics["neg_score"],
-                    "cpc_margin": metrics["pos_score"] - metrics["neg_score"],
-                    "latent_diversity": z.std(dim=0).mean().item(),
-                    "grad_norm": grad_norm,
-                    "lr": optimizer.param_groups[0]['lr'],
-                    "batch_time": batch_time,
-                    "time_data_load": t_data,
-                    "time_model_fwd_bwd": t_model,
-                    "snn_spike_density": z.mean().item(),
-                    "rsnn_context_mean": c.mean().item(),
-                    "rsnn_context_std": c.std().item(),
-                    "input_rms": x.std().item()
-                })
-            
-        avg_train_loss = train_loss / len(train_loader)
-        avg_train_acc = train_acc / len(train_loader)
-        
-        # Validation
-        model.eval()
-        val_loss = 0
-        val_acc = 0
-        with torch.no_grad():
-            for batch in val_loader:
-                if use_spikes or use_timeseries:
-                    x = batch['x'].to(device)
-                else:
-                    x = HDF5SFTPairDataset.batch_reconstruct_torch(batch, device=device)
-                    # Normalize
-                    mean = x.mean(dim=2, keepdim=True)
-                    std = x.std(dim=2, keepdim=True)
-                    x = (x - mean) / (std + 1e-8)
-                    
-                if args.channel == "H1":
-                    x = x[:, 0:1, :]
-                elif args.channel == "L1":
-                    x = x[:, 1:2, :]
-                    
-                z, c, spikes = model(x, is_encoded=use_spikes)
-                loss, metrics = model.compute_cpc_loss(z, c, spikes=z)
-                acc = metrics["acc1"]
-                val_loss += loss.item()
-                val_acc += acc
-        
-        avg_val_loss = val_loss / len(val_loader)
-        avg_val_acc = val_acc / len(val_loader)
+        # Validate
+        avg_val_loss, avg_val_acc = trainer.validate()
         
         print(f"Epoch {epoch+1}: Train Loss={avg_train_loss:.4f} | Val Loss={avg_val_loss:.4f}")
         
@@ -318,14 +304,16 @@ def train(args):
         # Save latest
         torch.save(checkpoint, os.path.join(save_dir, "latest.pt"))
         
+        # Save periodic
+        if (epoch + 1) % args.save_interval == 0:
+            torch.save(checkpoint, os.path.join(save_dir, f"checkpoint_epoch_{epoch+1}.pt"))
+            print(f"Saved periodic checkpoint to {save_dir}/checkpoint_epoch_{epoch+1}.pt")
+        
         # Save best
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             torch.save(checkpoint, os.path.join(save_dir, "best.pt"))
             print(f"New best model saved to {save_dir}/best.pt")
-        
-        # Step Scheduler
-        # scheduler.step() # Moved to batch loop for OneCycleLR
 
     print("Training complete.")
     if not args.no_wandb:
@@ -334,9 +322,6 @@ def train(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train CPC-SNN on Background Noise")
     
-    # Resolve paths relative to project root
-    # script_dir = src/train
-    # project_root = src/train/../..
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.abspath(os.path.join(script_dir, "../../"))
     
@@ -353,6 +338,7 @@ if __name__ == "__main__":
     parser.add_argument("--context_dim", type=int, default=64)
     parser.add_argument("--prediction_steps", type=int, default=6)
     parser.add_argument("--delta_threshold", type=float, default=0.1)
+    parser.add_argument("--use_delta_mod", action="store_true", help="Use Delta Modulation instead of Learnable Encoding (Default: False -> Learnable Enabled)")
     parser.add_argument("--temperature", type=float, default=0.07, help="InfoNCE temperature")
     parser.add_argument("--beta", type=float, default=0.85, help="LIF decay rate (beta)")
     
@@ -362,14 +348,38 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=3e-4, help="Default changed to 3e-4")
     parser.add_argument("--workers", type=int, default=0)
     parser.add_argument("--weight_decay", type=float, default=1e-2)
+    parser.add_argument("--save_interval", type=int, default=10, help="Save checkpoint every N epochs")
+    
+    # SNR Scheduling
+    parser.add_argument("--snr_scheduler", action="store_true", default=False, help="Enable Dynamic SNR Scheduling")
+    parser.add_argument("--start_snr", type=float, default=20.0, help="Starting SNR for Warmup")
+    parser.add_argument("--min_snr", type=float, default=4.0, help="Minimum SNR after decay")
+    parser.add_argument("--warmup_epochs", type=int, default=5, help="Number of warmup epochs")
+    parser.add_argument("--balanced_bank", action="store_true", default=True, help="Use pre-computed Balanced SNR Bank")
+    parser.add_argument("--balanced_bank_path", type=str, default="data/balanced_signal_bank.pt", help="Path to balanced bank file")
     
     # Misc
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--fast", action="store_true", help="Run fast verification mode")
     parser.add_argument("--no_wandb", action="store_true", help="Disable W&B logging")
+    parser.add_argument("--offline", action="store_true", default=False, help="Run W&B in offline mode (sync later)")
     parser.add_argument("--amp", action="store_true", default=True, help="Enable Mixed Precision (AMP)")
     parser.add_argument("--resume", type=str, default=None, help="Path to checkpoint to resume from")
     parser.add_argument("--resume_id", type=str, default=None, help="WandB Run ID to resume")
+    parser.add_argument("--compile", action="store_true", default=False, help="Enable torch.compile optimization")
+    parser.add_argument("--compile_backend", type=str, default="aot_eager", help="Backend for torch.compile (e.g., inductor, aot_eager)")
+    parser.add_argument("--ssl_mode", type=str, default="hybrid", choices=["cpc", "barlow", "hybrid"], help="SSL Mode: 'cpc', 'barlow' (GW Twins), or 'hybrid'")
     
     args = parser.parse_args()
+    
+    # Handle flag logic
+    args.learnable_encoding = not args.use_delta_mod
+    
+    # Prevent Sleep (macOS)
+    if os.uname().sysname == 'Darwin':
+        import subprocess
+        print("Preventing system sleep (caffeinate)...")
+        # -i: prevent idle sleep, -s: prevent system sleep
+        subprocess.Popen(['caffeinate', '-i'])
+        
     train(args)

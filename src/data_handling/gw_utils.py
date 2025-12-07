@@ -165,14 +165,29 @@ def generate_waveform(
     mass_range: tuple = (10, 50),
     sample_rate: float = 2048.0,
     f_lower: float = 20.0,
-    approximant: str = "IMRPhenomD"
+    approximant: str = "IMRPhenomD",
+    preferential_prob: float = 0.5
 ) -> Tuple[PyCBCTimeSeries, PyCBCTimeSeries]:
     """
     Generates a synthetic gravitational wave (BBH) waveform (plus and cross).
+    
+    Args:
+        preferential_prob (float): Probability (0.0-1.0) of applying Preferential Accretion physics 
+                                   (Comerford & Simon 2025), which favors equal mass ratios q->1.
     """
     m1 = np.random.uniform(*mass_range)
-    m2 = np.random.uniform(*mass_range)
-    if m2 > m1: m1, m2 = m2, m1
+    
+    if np.random.random() < preferential_prob:
+        # --- SCIENTIFIC PATH (Comerford & Simon 2025) ---
+        # Preferential Accretion favors q values close to 1.0 (equal masses).
+        # Beta(5, 1) provides a distribution heavily skewed towards 1.
+        q = np.random.beta(a=5, b=1)
+        m2 = m1 * q
+    else:
+        # --- CLASSICAL PATH (Hard cases coverage) ---
+        # Naive uniform sampling, allows for highly asymmetric binaries (q << 1)
+        m2 = np.random.uniform(*mass_range)
+        if m2 > m1: m1, m2 = m2, m1
 
     try:
         hp, hc = get_td_waveform(

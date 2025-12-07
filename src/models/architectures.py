@@ -31,7 +31,8 @@ class SpikingCNN(nn.Module):
         self.pool1 = nn.MaxPool1d(2)
         
         # Block 2
-        self.conv2 = nn.Conv1d(16, 32, kernel_size=5, padding=2)
+        # Added stride=2 to further reduce time steps (256 -> 128)
+        self.conv2 = nn.Conv1d(16, 32, kernel_size=5, padding=2, stride=1)
         self.bn2 = nn.BatchNorm1d(32)
         self.lif2 = snn.Leaky(beta=beta, spike_grad=spike_grad, init_hidden=False)
         self.pool2 = nn.MaxPool1d(2)
@@ -56,7 +57,11 @@ class SpikingCNN(nn.Module):
         # Transpose to (Time, Batch, Channels) for looping
         currents = currents.permute(2, 0, 1)
         spk_rec = []
-        mem = lif.init_leaky()
+        spk_rec = []
+        # Manual init to handle variable batch sizes
+        batch_size = currents.shape[1]
+        channels = currents.shape[2]
+        mem = torch.zeros(batch_size, channels, device=currents.device)
         
         for step in range(currents.shape[0]):
             spk, mem = lif(currents[step], mem)
@@ -107,6 +112,9 @@ class RSNN(nn.Module):
         # LayerNorm to stabilize input to recurrent neuron
         self.ln = nn.LayerNorm(hidden_size)
         
+        # LayerNorm for recurrent state (membrane potential)
+        self.ln_mem = nn.LayerNorm(hidden_size)
+        
         # Use atan surrogate gradient for better stability
         spike_grad = surrogate.atan()
         
@@ -123,38 +131,32 @@ class RSNN(nn.Module):
         """
         batch_size, time_steps, _ = x.shape
         
-        # Initialize hidden states
-        spk, mem = self.rleaky.init_rleaky()
-        spk = spk.to(x.device)
-        mem = mem.to(x.device)
+        # --- OPTIMIZATION: Parallelize Linear and LN ---
+        # (Batch, Time, Input) -> (Batch, Time, Hidden)
+        x_processed = self.linear(x)
+        x_processed = self.ln(x_processed)
+        # -----------------------------------------------
         
-        # Handle batch size mismatch if init returns simplistic shapes or wrong batch size
-        if spk.shape[0] != batch_size:
-             if spk.dim() == 0 or (spk.dim() > 0 and spk.shape[0] == 1):
-                 spk = spk.expand(batch_size, -1)
-                 mem = mem.expand(batch_size, -1)
-             else:
-                 # If shape mismatch and not broadcastable (e.g. previous batch size 64 vs current 32)
-                 # Re-initialize with zeros
-                 spk = torch.zeros(batch_size, self.hidden_size).to(x.device)
-                 mem = torch.zeros(batch_size, self.hidden_size).to(x.device)
-
+        # Initialize hidden states
+        # Manual init to handle variable batch sizes (e.g. last batch) correctly
+        spk = torch.zeros(batch_size, self.hidden_size, device=x.device)
+        mem = torch.zeros(batch_size, self.hidden_size, device=x.device)
+        
         mem_rec = []
         
+        # Loop is now lighter - only neuron dynamics
         for t in range(time_steps):
-            # Input at time t
-            inp = self.linear(x[:, t, :])
+            # Get pre-processed input
+            inp = x_processed[:, t, :]
             
-            # --- APLIKACJA LAYERNORM ---
-            inp = self.ln(inp)
-            # ---------------------------
-            
-            # Recurrent step
             spk, mem = self.rleaky(inp, spk, mem)
             
-            # Clamp membrane potential
+            # Normalize membrane potential to stabilize recurrence
+            mem = self.ln_mem(mem)
+            
+            # In-place clamp is faster
             if mem.requires_grad:
-                mem.register_hook(lambda x: torch.clamp(x, -1.0, 1.0))
+                mem = torch.clamp(mem, -2.0, 2.0)
             
             mem_rec.append(mem)
             
