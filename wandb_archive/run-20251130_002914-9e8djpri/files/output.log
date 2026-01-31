@@ -1,9 +1,0 @@
-Using device: mps
-FAST MODE: Using subset of data.
-Using pre-encoded spikes from /Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/data/cpc_snn_train_spikes.h5
-Starting training for 1 epochs...
-AMP Enabled: True
-Epoch 1/1: 100%|█| 2/2 [00:
-Epoch 1: Train Loss=4.5444 | Val Loss=3.7096
-New best model saved to checkpoints/cpc_fix_v4_reg_z/best.pt
-Training complete.

@@ -16,8 +16,8 @@ class DeltaModulationEncoder(nn.Module):
     """
     def __init__(self, threshold=0.1):
         super().__init__()
-        # Make threshold a learnable parameter
-        self.threshold = nn.Parameter(torch.tensor(float(threshold)))
+        # Buffer for JIT compatibility (not a parameter to be learned via gradient descent here)
+        self.register_buffer('threshold', torch.tensor(float(threshold)))
 
     def forward(self, x):
         """
@@ -27,35 +27,38 @@ class DeltaModulationEncoder(nn.Module):
         Returns:
             spikes (torch.Tensor): Spike tensor of shape (Batch, Channels, Time) with values {-1, 0, 1}.
         """
-        # Ensure threshold is within [0.01, 0.5] to prevent saturation
-        threshold = torch.clamp(self.threshold, min=0.01, max=0.5)
+        return delta_encode_loop(x, self.threshold.item())
+
+# JIT-compiled loop for performance
+@torch.jit.script
+def delta_encode_loop(x: torch.Tensor, threshold: float) -> torch.Tensor:
+    # x: (Batch, Channels, Time)
+    batch, channels, time = x.shape
+    
+    # Pre-allocate output
+    spikes_out = torch.zeros_like(x)
+    
+    # Initialize reconstruction
+    recon = torch.zeros((batch, channels), device=x.device, dtype=x.dtype)
+    
+    # Clamp threshold
+    thr = max(threshold, 0.01) # Simple safety check
+    
+    for t in range(time):
+        current_input = x[:, :, t]
+        error = current_input - recon
         
-        # Initialize reconstruction
-        recon = torch.zeros_like(x[:, :, 0])
-        spikes = []
+        pos_spikes = (error > thr).float()
+        neg_spikes = (error < -thr).float()
         
-        # Iterate over time steps
-        for t in range(x.shape[2]):
-            current_input = x[:, :, t]
+        recon += pos_spikes * thr
+        recon -= neg_spikes * thr
+        
+        # In-place update
+        spikes_out[:, :, t] = pos_spikes - neg_spikes
             
-            # Calculate error
-            error = current_input - recon
-            
-            # Generate spikes
-            pos_spikes = (error > threshold).float()
-            neg_spikes = (error < -threshold).float()
-            
-            # Update reconstruction
-            recon += pos_spikes * threshold
-            recon -= neg_spikes * threshold
-            
-            # Combine spikes (1 for pos, -1 for neg)
-            # Note: In rare cases where threshold is 0, both could be true, but threshold > 0 usually.
-            net_spikes = pos_spikes - neg_spikes
-            spikes.append(net_spikes)
-            
-        # Stack along time dimension
-        return torch.stack(spikes, dim=2)
+    return spikes_out
+
 
 class ThresholdCrossingEncoder(nn.Module):
     """

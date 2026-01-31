@@ -54,13 +54,10 @@ def preprocess(args):
         print(f"Encoding spikes with threshold={args.threshold}...")
     
     # 4. Create Output HDF5
-    print(f"Writing to {args.output_path}...")
+    mode = "w" if args.overwrite else "a"
+    print(f"Writing to {args.output_path} (mode='{mode}')...")
     
-    if os.path.exists(args.output_path) and not args.overwrite:
-        print(f"File {args.output_path} exists. Use --overwrite to replace.")
-        return
-
-    with h5py.File(args.output_path, 'w') as out_h5:
+    with h5py.File(args.output_path, mode) as out_h5:
         
         for i, batch in enumerate(tqdm(loader)):
             # Reconstruct on GPU

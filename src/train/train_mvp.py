@@ -47,7 +47,7 @@ def train_one_epoch(model, loader, optimizer, device) -> float:
     total_loss, n_samples = 0.0, 0
     for batch in loader:
         x = pack_ifo_sft(batch).to(device)
-        y = batch["y"].view(-1, 1).to(device)
+        y = batch["label"].view(-1, 1).to(device)
 
         logits = model(x)
         loss = criterion(logits, y)
@@ -69,7 +69,7 @@ def evaluate(model, loader, device) -> float:
     with torch.no_grad():
         for batch in loader:
             x = pack_ifo_sft(batch).to(device)
-            y = batch["y"].view(-1, 1).to(device)
+            y = batch["label"].view(-1, 1).to(device)
             logits = model(x)
             loss = criterion(logits, y)
             bs = x.size(0)

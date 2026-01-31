@@ -88,7 +88,7 @@ def main():
     with torch.no_grad():
         for batch in loader:
             x = pack_ifo_sft(batch).to(device)
-            y = batch["y"].view(-1, 1).to(device)
+            y = batch["label"].view(-1, 1).to(device)
             logits = model(x)
             all_logits.append(logits.cpu().numpy())
             all_labels.append(y.cpu().numpy())
