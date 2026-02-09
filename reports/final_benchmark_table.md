@@ -1,6 +1,6 @@
 # Final Benchmark Table (Phase 2)
 
-Generated: 2026-02-09 12:23:25Z
+Generated: 2026-02-09 21:34:37Z
 Protocol: `evaluate_background --method swapped_pairs --swaps 30`
 
 ## Main Comparison (A/B/C/C+calib/C2/C2+calib/C3/C3+calib)
@@ -18,7 +18,7 @@ Protocol: `evaluate_background --method swapped_pairs --swaps 30`
 
 Notes:
 - `n` is the number of report files found for each variant.
-- Repeats directory: `/Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/reports/repeats`
+- Repeats directory: `reports/repeats`
 
 ## NOHN Check (Generalization Control)
 
@@ -34,3 +34,25 @@ Notes:
 - Operationally:
   - near `FAR=1e-4` prefer uncalibrated scores,
   - near `FAR=1e-5` prefer temperature-calibrated scores.
+
+## Strict OOD Ensemble Check (Train-Early / Test-Late)
+
+Protocol: `evaluate_background --method swapped_pairs --swaps 30` on `test_late` split.
+
+| Variant | n | TPR@1e-3 | TPR@1e-4 | TPR@1e-5 | EVT TPR@1e-4 |
+|---|---:|---:|---:|---:|---:|
+| B: TF2D + tail-aware (single) | 1 | 0.9457 ± 0.0000 | 0.7422 ± 0.0000 | n/a | 0.8416 ± 0.0000 |
+| C3 single checkpoints (seed mean) | 5 | 0.7790 ± 0.2764 | 0.6159 ± 0.2923 | n/a | 0.3162 ± 0.3863 |
+| C3 ensemble (5 checkpoints, score-avg) | 1 | 0.9106 ± 0.0000 | 0.8165 ± 0.0000 | n/a | 0.4706 ± 0.0000 |
+
+## Strict OOD Head-To-Head (Repeated, Final)
+
+Protocol: `test_late`, `swapped_pairs`, `swaps=30`, `repeats=5`.
+Ensemble composition: seeds `41/42/44/45/46` (drop43_add46).
+
+| Variant | n | TPR@1e-4 |
+|---|---:|---:|
+| B: TF2D + tail-aware (single checkpoint, repeated eval) | 5 | 0.2682 ± 0.0204 |
+| C3 ensemble (5 checkpoints, drop43_add46, repeated eval) | 5 | 0.7947 ± 0.0146 |
+
+Delta (`C3 ensemble - B`) on primary KPI `TPR@1e-4`: **+0.5264**.

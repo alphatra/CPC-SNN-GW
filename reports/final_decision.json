@@ -1,0 +1,69 @@
+{
+  "date": "2026-02-09",
+  "primary_kpi": "TPR@1e-4",
+  "id_candidate": {
+    "variant": "C (phase2_tf2d_tail_hn_v1)",
+    "checkpoint": "checkpoints/phase2_tf2d_tail_hn_v1/best.pt"
+  },
+  "ood_candidate": {
+    "variant": "C3 ensemble (5 checkpoints, drop43_add46)",
+    "checkpoints": [
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt"
+    ],
+    "ood_compare_report_dir": "reports/ood_compare_b_vs_c3ens_drop43_add46"
+  },
+  "ood_ensemble_candidate": {
+    "variant": "C3 ensemble (5 checkpoints, drop43_add46)",
+    "checkpoints": [
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt"
+    ]
+  },
+  "strict_ood_snapshot": {
+    "B": {
+      "variant": "B: TF2D + tail-aware",
+      "tpr_at_1e3": 0.9457,
+      "tpr_at_1e4": 0.7422,
+      "tpr_at_1e5": null,
+      "evt_tpr_at_1e4": 0.8416
+    },
+    "C3_single": {
+      "variant": "C3: TF2D + hard-negatives (boost=5)",
+      "tpr_at_1e3": 0.9477,
+      "tpr_at_1e4": 0.8619,
+      "tpr_at_1e5": null,
+      "evt_tpr_at_1e4": 0.0055
+    },
+    "C3_ensemble": {
+      "variant": "C3 ensemble (5 checkpoints, drop43_add46)",
+      "tpr_at_1e3": 0.9282,
+      "tpr_at_1e4": 0.7806,
+      "tpr_at_1e5": null,
+      "evt_tpr_at_1e4": 0.6604
+    }
+  },
+  "ood_head_to_head_repeats": {
+    "protocol": "swapped_pairs, swaps=30, repeats=5, test_late",
+    "B_single": {
+      "mean_tpr_at_1e4": 0.2682,
+      "std_tpr_at_1e4": 0.0204
+    },
+    "C3_ensemble_drop43_add46": {
+      "mean_tpr_at_1e4": 0.7947,
+      "std_tpr_at_1e4": 0.0146
+    },
+    "delta_ensemble_minus_B": 0.5264
+  },
+  "notes": [
+    "OOD-primary candidate is C3 ensemble (drop43_add46).",
+    "Use uncalibrated scores for thresholding near FAR~1e-4.",
+    "Use calibrated score for probability reporting / deeper-tail analysis."
+  ]
+}
