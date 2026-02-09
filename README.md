@@ -1,115 +1,149 @@
 # CPC-SNN Gravitational Waves Detection
 
-## Phase-2 Benchmark Snapshot (2026-02-09)
+Research codebase for low-FAR gravitational-wave event detection using CPC/SNN-style training with a TF2D frontend, tail-aware losses, hard-negative mining, post-hoc calibration, and strict OOD evaluation protocols.
 
-Protocol: `evaluate_background --method swapped_pairs --swaps 30` on full noise pool (`indices_noise.json`) and full signal pool (`indices_signal.json`).
+## What This Repository Contains
 
-| Variant | n (repeats) | TPR@1e-3 | TPR@1e-4 | TPR@1e-5 | EVT TPR@1e-4 |
-|---|---:|---:|---:|---:|---:|
-| A: TF2D base | 1 | 0.3703 ± 0.0000 | 0.0379 ± 0.0000 | 0.0011 ± 0.0000 | 0.0276 ± 0.0000 |
-| B: TF2D + tail-aware | 1 | 0.7111 ± 0.0000 | 0.0381 ± 0.0000 | 0.0018 ± 0.0000 | 0.0024 ± 0.0000 |
-| C: TF2D + tail-aware + hard-negatives | 5 | 0.9694 ± 0.0024 | 0.8401 ± 0.0147 | 0.6962 ± 0.0450 | 0.8615 ± 0.0200 |
-| C + temperature calibration | 5 | 0.9695 ± 0.0007 | 0.8373 ± 0.0144 | 0.7236 ± 0.0244 | 0.8292 ± 0.0108 |
-| C2 (ablation): soft mining (`boost=3`) | 1 | 0.9574 ± 0.0000 | 0.4883 ± 0.0000 | 0.2347 ± 0.0000 | 0.0427 ± 0.0000 |
-| C2 + temperature calibration | 1 | 0.9530 ± 0.0000 | 0.5384 ± 0.0000 | 0.3039 ± 0.0000 | 0.0798 ± 0.0000 |
-| C3 (ablation): balanced mining (`boost=5`) | 5 | 0.9634 ± 0.0011 | 0.7755 ± 0.0141 | 0.4565 ± 0.0661 | 0.5070 ± 0.0155 |
-| C3 + temperature calibration | 5 | 0.9607 ± 0.0019 | 0.7640 ± 0.0222 | 0.4670 ± 0.0991 | 0.6463 ± 0.0314 |
+- End-to-end training for TF2D and SNN/CPC variants.
+- Background evaluation at very low false alarm rates (`TPR@1e-4`, `TPR@1e-5`).
+- Hard-negative mining and ablation support (`boost=3/5/10`).
+- Temperature/isotonic calibration utilities.
+- OOD protocols: train-early/test-late and run-based splits.
+- Reproducibility scripts for final benchmark tables and decision artifacts.
 
-Notes:
-- For A/B currently only one full swapped run is available (`n=1`), so reported std is `0.0000`.
-- C/C+calibration and C3/C3+calibration are averaged over 5 independent swapped-pairs runs from `reports/repeats/`.
+## Current Decision Snapshot (2026-02-09)
 
-## Results (Reports)
+- Primary KPI: **`TPR@1e-4`**.
+- ID benchmark reference candidate: **C (phase2_tf2d_tail_hn_v1)**.
+- OOD-primary candidate: **C3 ensemble (seeds 41/42/44/45/46)**.
+- Strict OOD head-to-head (`repeats=5`):
+  - B (single): `0.2682 ± 0.0204`
+  - C3 ensemble: `0.7947 ± 0.0146`
+  - Delta: `+0.5264`
 
-This benchmark snapshot is documented in:
+Canonical decision artifact:
+- `reports/final_decision.json`
+
+Full table:
 - `reports/final_benchmark_table.md`
 
-Primary raw report files used for the table:
-- `reports/bg_phase2_tf2d_base_swapped30.txt`
-- `reports/bg_phase2_tf2d_tail_swapped30.txt`
-- `reports/bg_phase2_tf2d_tail_hn_v1_swapped30.txt`
-- `reports/bg_phase2_tf2d_tail_hn_v1_swapped30_cal_temp.txt`
-- `reports/bg_phase2_tf2d_tail_hn_v1_swapped30_nohn.txt`
-- `reports/bg_phase2_tf2d_tail_hn_v1_swapped30_nohn_cal_temp.txt`
-- `reports/calib_phase2_tf2d_tail_hn_v1_temp.json`
-- `reports/bg_phase2_tf2d_tail_hn_v2_soft_swapped30.txt`
-- `reports/bg_phase2_tf2d_tail_hn_v2_soft_swapped30_cal_temp.txt`
-- `reports/calib_phase2_tf2d_tail_hn_v2_soft_temp.json`
-- `reports/bg_phase2_tf2d_tail_hn_v3_boost5_swapped30.txt`
-- `reports/bg_phase2_tf2d_tail_hn_v3_boost5_swapped30_cal_temp.txt`
-- `reports/calib_phase2_tf2d_tail_hn_v3_boost5_temp.json`
+## Repository Structure
 
-Repeated-run artifacts (for `mean ± std` on C and C+calibration):
-- `reports/repeats/c_tail_hn_r1.txt`
-- `reports/repeats/c_tail_hn_r2.txt`
-- `reports/repeats/c_tail_hn_r3.txt`
-- `reports/repeats/c_tail_hn_r4.txt`
-- `reports/repeats/c_tail_hn_r5.txt`
-- `reports/repeats/c_tail_hn_caltemp_r1.txt`
-- `reports/repeats/c_tail_hn_caltemp_r2.txt`
-- `reports/repeats/c_tail_hn_caltemp_r3.txt`
-- `reports/repeats/c_tail_hn_caltemp_r4.txt`
-- `reports/repeats/c_tail_hn_caltemp_r5.txt`
-- `reports/repeats/c3_tail_hn_boost5_r{1..5}.txt`
-- `reports/repeats/c3_tail_hn_boost5_caltemp_r{1..5}.txt`
+```text
+.
+├── src/
+│   ├── train/           # training entrypoints
+│   ├── evaluation/      # background eval, calibration, mining
+│   ├── models/          # model definitions and adapters
+│   ├── inference/       # inference helpers
+│   └── data_handling/   # datasets and loading utilities
+├── scripts/             # reproducibility and OOD protocols
+├── tests/               # smoke/integration-style tests
+├── reports/             # curated benchmark outputs and decisions
+└── data/                # local datasets/indices (ignored in git)
+```
 
-Canonical reproduction entrypoint:
-- `./scripts/reproduce_phase2_abccalib.sh`
-- retrain + reproduce: `./scripts/reproduce_phase2_abccalib.sh --with-train`
+## Environment Setup
 
-Strict OOD (train-early / test-late) entrypoint:
-- `./scripts/run_ood_time_protocol.sh`
-- run-based OOD split: `./scripts/run_ood_time_protocol.sh --mode run --run-map <id_to_run.json> --train-runs <runs> --test-runs <runs>`
+Python `>=3.12` is required.
 
-## Strict OOD Snapshot (Latest A/B/C1/C2/C3 + C3 Ensemble Compare)
+### Option A: `uv` (recommended)
 
-Protocol: `evaluate_background --method swapped_pairs --swaps 30` on `reports/ood_time/splits/indices_*_test_late.json`.
+```bash
+uv sync
+```
 
-| Variant | TPR@1e-3 | TPR@1e-4 | EVT TPR@1e-4 |
-|---|---:|---:|---:|
-| A: TF2D base | 0.5771 | 0.2685 | 0.0588 |
-| B: TF2D + tail-aware | 0.9457 | 0.7422 | 0.8416 |
-| C1: TF2D + hard-negatives (`boost=10`) | 0.9306 | 0.4700 | 0.6565 |
-| C1 + temperature calibration | 0.9327 | 0.6221 | 0.3937 |
-| C2: TF2D + hard-negatives (`boost=3`) | 0.8383 | 0.5487 | 0.0000 |
-| C3: TF2D + hard-negatives (`boost=5`) | 0.9477 | 0.8619 | 0.0055 |
-| C3 + temperature calibration | 0.9469 | 0.8479 | 0.0133 |
-| C3 (5-seed mean, independent) | 0.7790 | 0.6159 | 0.3162 |
-| C3 ensemble (5 checkpoints) | 0.9106 | 0.8165 | 0.4706 |
+### Option B: `pip`
 
-Ensemble note:
-- C3 ensemble improves strongly vs single-seed average (`TPR@1e-4: 0.8165` vs `0.6159`), but remains below the frozen single C3 (`0.8619`).
-- Canonical machine-readable decision artifact: `reports/final_decision.json`
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
 
-## Primary KPI
+## Data Prerequisites
 
-Primary KPI is set to **TPR@FPR=1e-4**.
+The main pipeline expects:
 
-Reason:
-- it is low-FAR enough to be meaningful for detection,
-- it remains numerically stable in this evaluation setup,
-- it best separates candidate quality without overfitting to ultra-rare tail artifacts.
+- `data/cpc_snn_train.h5`
+- `data/indices_noise.json`
+- `data/indices_signal.json`
 
-Secondary KPI: `TPR@1e-5` (used for tie-break and operations tuning).
+Typical runtime variables:
 
-## Current Candidate (Frozen)
+```bash
+ROOT=/path/to/CPC-SNN-GravitationalWavesDetection
+H5=$ROOT/data/cpc_snn_train.h5
+N=$ROOT/data/indices_noise.json
+S=$ROOT/data/indices_signal.json
+```
 
-Frozen model candidate (ID benchmark winner):
-- checkpoint: `artifacts/final_candidate_phase2_tf2d_tail_hn_v1/best.pt`
-- calibration: `artifacts/final_candidate_phase2_tf2d_tail_hn_v1/calib_phase2_tf2d_tail_hn_v1_temp.json`
-- commit pin: `artifacts/final_candidate_phase2_tf2d_tail_hn_v1/git_commit.txt`
+## Quick Start
 
-Frozen OOD-robust candidate (train-early/test-late winner):
-- checkpoint: `artifacts/final_candidate_ood_time_tf2d_tail_hn_v3_boost5/best.pt`
-- OOD report: `artifacts/final_candidate_ood_time_tf2d_tail_hn_v3_boost5/ood_eval_swapped30.txt`
-- OOD summary: `artifacts/final_candidate_ood_time_tf2d_tail_hn_v3_boost5/ood_summary.md`
-- manifest: `artifacts/final_candidate_ood_time_tf2d_tail_hn_v3_boost5/manifest.json`
-- freeze decision note: `reports/ood_time/freeze_note.md`
+### 1) Smoke check
 
-Operational policy:
-- for FAR near `1e-4`: prefer **uncalibrated** scores,
-- for FAR near `1e-5` and below: prefer **temperature-calibrated** scores.
+```bash
+bash scripts/smoke_entrypoints.sh
+```
 
-## 1D Track Status
+### 2) Train (example: TF2D + tail-aware + hard-negatives)
 
-The 1D path (SpikingCNN time-series branch) is treated as a **separate bugfix stream** and does not block TF2D publication.
+```bash
+python -m src.train.train_cpc \
+  --run_name phase2_tf2d_tail_hn_v3_boost5_seed41 \
+  --h5_path "$H5" --noise_indices "$N" --signal_indices "$S" \
+  --epochs 20 --batch_size 64 --lr 3e-4 --split_strategy time \
+  --workers 0 --amp --use_tf2d --no_mask \
+  --loss_type focal --focal_gamma 2.0 \
+  --lambda_infonce 0.1 --prediction_steps 6 \
+  --tail_penalty 2.0 --tail_threshold 0.5 \
+  --hard_neg_bce_weight 0.25 \
+  --tail_ranking_weight 0.5 --tail_ranking_margin 0.1 \
+  --tail_hard_frac 0.2 --tail_hard_min 8 --tail_max_pairs 4096 \
+  --hard_negatives_json "$ROOT/data/hard_negatives_union.json" \
+  --hard_negative_boost 5 --hard_negative_max 500
+```
+
+### 3) Evaluate background (swapped pairs)
+
+```bash
+python -m src.evaluation.evaluate_background \
+  --checkpoint "$ROOT/checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt" \
+  --noise_h5 "$H5" --indices_noise "$N" --indices_signal "$S" \
+  --method swapped_pairs --swaps 30 --batch_size 128 --no_mask
+```
+
+### 4) Fit temperature calibration
+
+```bash
+python -m src.evaluation.fit_calibration \
+  --checkpoint_path "$ROOT/checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt" \
+  --h5_path "$H5" --noise_indices "$N" --signal_indices "$S" \
+  --method temperature --holdout_frac 0.2 \
+  --output_json "$ROOT/reports/calib_temp.json"
+```
+
+## Reproducibility Scripts
+
+- Full phase-2 A/B/C/C+calib benchmark:
+  - `scripts/reproduce_phase2_abccalib.sh`
+- Strict OOD protocol (time/run split):
+  - `scripts/run_ood_time_protocol.sh`
+- B vs C3-ensemble repeated OOD comparison:
+  - `scripts/compare_b_vs_c3ens_ood.sh`
+- Regenerate benchmark markdown table:
+  - `scripts/generate_phase2_results_table.py`
+
+## Key Outputs
+
+- Final benchmark table: `reports/final_benchmark_table.md`
+- Final model decision: `reports/final_decision.json`
+- OOD freeze note: `reports/ood_time/freeze_note.md`
+- B vs C3-ensemble summary:
+  - `reports/ood_compare_b_vs_c3ens_drop43_add46/summary.md`
+
+## Notes
+
+- For operating near `FAR ≈ 1e-4`, uncalibrated scores are currently preferred.
+- For probability reporting or deeper tail analysis, use calibrated scores.
+- The 1D track remains a separate repair stream and does not block TF2D conclusions.

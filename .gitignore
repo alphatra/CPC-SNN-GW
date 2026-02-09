@@ -1,18 +1,62 @@
-# Data
-data/
-*.h5
-*.pt
-*.npy
-
-# Logs and Checkpoints
-checkpoints/
-wandb/
-logs/
+# OS / Editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyd
+*.so
+.python-version
 .venv/
+venv/
 .env
-.DS_Store
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Data / model binaries
+data/
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pt
+*.pth
+*.ckpt
+
+# Training / tracking outputs
+checkpoints/
+wandb/
 wandb_archive/
+logs/
+outputs/
+.hydra/
+
+# Local training side-effects
+src/train/checkpoints/
+src/train/runs/
+src/train/wandb/
+src/train/interpolator_pickle/
+
+# Generated artifacts (can be recreated from scripts)
+artifacts/
+
+# Reports: ignore raw generated dumps, keep curated summaries
+reports/**
+!reports/
+!reports/final_benchmark_table.md
+!reports/final_decision.json
+!reports/ood_time/
+!reports/ood_time/freeze_note.md
+!reports/ood_time/summary.md
+!reports/ood_compare_b_vs_c3ens_drop43_add46/
+!reports/ood_compare_b_vs_c3ens_drop43_add46/summary.md
+!reports/ood_compare_b_vs_c3ens_drop43_add46/summary.json
+
+# Misc
+*.log
