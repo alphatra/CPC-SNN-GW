@@ -297,16 +297,6 @@ def generate_glitch(
     
     return ts
 
-    # Or we can just return the signal and let the caller place it.
-    
-    # For simplicity in this pipeline, we will return the signal scaled by antenna pattern.
-    # Time shifting logic is often better handled when adding to the noise buffer.
-    # BUT, to be physically correct with Multi-IFO, the relative delay MATTERS.
-    
-    # Let's apply the time shift to the start_time of the TimeSeries
-    signal.start_time += dt
-    
-    return signal
 
 
 def generate_injection(

@@ -1,0 +1,14 @@
+{
+  "protocol": "test_late swapped_pairs swaps=30 repeats=5",
+  "b": {
+    "n": 5,
+    "tpr_at_1e_4_mean": 0.2682,
+    "tpr_at_1e_4_std": 0.0204
+  },
+  "c3_ensemble_drop43_add46": {
+    "n": 5,
+    "tpr_at_1e_4_mean": 0.7947,
+    "tpr_at_1e_4_std": 0.0146
+  },
+  "delta_ensemble_minus_b": 0.5264
+}

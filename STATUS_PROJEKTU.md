@@ -2,6 +2,46 @@
 
 Dokument ten podsumowuje aktualny stan prac nad projektem, identyfikuje brakujące elementy oraz wyznacza kroki na najbliższą przyszłość.
 
+## Update (2026-02-09): Decyzje po benchmarku OOD
+
+- Zamrożony kandydat główny: `phase2_tf2d_tail_hn_v1` (TF2D + tail-aware + hard-negatives).
+- Zamrożony kandydat OOD-robust: `ood_time_tf2d_tail_b` (najlepszy wynik strict train-early/test-late).
+- `Primary KPI`: **TPR@FPR=1e-4**.
+- `Secondary KPI`: TPR@1e-5 (do strojenia operacyjnego i kalibracji).
+- Dla końcowej ścieżki TF2D:
+  - przy FAR blisko `1e-4` preferowany jest wariant bez kalibracji,
+  - przy FAR blisko `1e-5` preferowany jest wariant z kalibracją temperatury.
+- Ścieżka 1D została wydzielona jako osobny task naprawczy i nie blokuje publikacji wyników TF2D.
+
+## Update (2026-02-09): Results (Reports)
+
+Finalna tabela benchmarków (A/B/C/C+calib):
+- `reports/final_benchmark_table.md`
+
+Pliki źródłowe użyte do wyników:
+- `reports/bg_phase2_tf2d_base_swapped30.txt`
+- `reports/bg_phase2_tf2d_tail_swapped30.txt`
+- `reports/bg_phase2_tf2d_tail_hn_v1_swapped30.txt`
+- `reports/bg_phase2_tf2d_tail_hn_v1_swapped30_cal_temp.txt`
+- `reports/bg_phase2_tf2d_tail_hn_v1_swapped30_nohn.txt`
+- `reports/bg_phase2_tf2d_tail_hn_v1_swapped30_nohn_cal_temp.txt`
+- `reports/calib_phase2_tf2d_tail_hn_v1_temp.json`
+- `artifacts/final_candidate_ood_time_tf2d_tail_b/manifest.json`
+
+Powtórzenia do estymacji `mean ± std`:
+- `reports/repeats/a_base_r1.txt` ... `reports/repeats/a_base_r5.txt`
+- `reports/repeats/b_tail_r1.txt` ... `reports/repeats/b_tail_r5.txt`
+- `reports/repeats/c_tail_hn_r1.txt` ... `reports/repeats/c_tail_hn_r5.txt`
+- `reports/repeats/c_tail_hn_caltemp_r1.txt` ... `reports/repeats/c_tail_hn_caltemp_r5.txt`
+
+Skrypt reprodukcji i formalnego "freeze":
+- `./scripts/reproduce_phase2_abccalib.sh`
+- wariant pełny (z retrainingiem A/B/C): `./scripts/reproduce_phase2_abccalib.sh --with-train`
+
+Skrypt twardego testu OOD (train-early / test-late):
+- `./scripts/run_ood_time_protocol.sh`
+- tryb run-based OOD: `./scripts/run_ood_time_protocol.sh --mode run --run-map <id_to_run.json> --train-runs <runs> --test-runs <runs>`
+
 ## 1. Co zostało zrobione (Completed)
 
 ### A. Pipeline Danych (Data Handling)
@@ -45,51 +85,45 @@ Zakończono gruntowną refaktoryzację modułu generowania i obsługi danych.
 - [x] Weryfikacja detekcji (czy loss skacze na sygnale?) - **Wstępnie zweryfikowane** (skrypt ewaluacji działa).
 
 ### Faza 4: Ewaluacja i Eksperymenty (W toku)
-- [x] Skrypt ewaluacji (`src/evaluation/evaluate_anomaly.py`) - **Zrobione** (liczy ROC/AUC).
-- [ ] Pełny trening modelu (na GPU/MPS) - **W toku** (User uruchomił trening).
-- [ ] Analiza wyników (ROC, AUC) na pełnym zbiorze.
-- [x] Analiza koincydencji (H1 + L1) - **Skrypty gotowe** (`src/evaluation/coincidence_analysis.py`). Wymaga wytrenowania osobnych modeli dla H1 i L1.ugą funkcji straty InfoNCE.
+- [x] Skrypty ewaluacyjne istnieją i działają jako entrypointy:
+  - `src/evaluation/evaluate_snn.py` (ewaluacja klasyfikacji binarnej)
+  - `src/evaluation/evaluate_background.py` (ewaluacja tła / tails / time-slides)
+- [x] Dodano kompatybilność ładowania starszych checkpointów (`src/evaluation/model_loader.py`).
+- [ ] Potrzebny pełny benchmark low-FPR (z większym zbiorem tła) i finalne porównanie wariantów modelu.
 
 ## 2. Czego brakuje (Missing / To Do)
 
 ### A. Pełny Zbiór Danych
-- **Status**: Zakończono generowanie. Posiadamy `cpc_snn_train.h5` z **10,000 próbek**.
-- **Weryfikacja**: Potwierdzono liczbę próbek w pliku.
+- **Status**: Zakończono generowanie. Posiadamy `data/cpc_snn_train.h5` z ~10k+ próbek.
+- **Weryfikacja**: Indeksy `data/indices_noise.json` i `data/indices_signal.json` są spójne z HDF5.
 
 ### B. Trening Modelu (End-to-End)
-- **Status**: Przeprowadzono pomyślny "Smoke Test" (`train_smoke_test.py`).
-- Pipeline działa: Ładowanie danych (z rekonstrukcją ISTFT) -> Model CPC-SNN -> Loss -> Backward pass.
+- **Status**: Główny tor treningowy to `python -m src.train.train_cpc`.
+- **Uwaga**: Stary tor MVP (`src/train/train_mvp.py`, `src/train/eval_mvp.py`) został oznaczony jako **deprecated** i nie jest już ścieżką produkcyjną.
 
 ### C. Ewaluacja i Metryki
-- Brakuje dedykowanego skryptu lub modułu do **ewaluacji modelu**.
-- Potrzebne metryki:
-    - Accuracy (dla klasyfikacji binarnej SNN).
-    - ROC-AUC (krzywa charakterystyki operacyjnej).
-    - Latency (czas reakcji modelu - kluczowe dla SNN).
-    - Confusion Matrix.
+- Skrypty ewaluacyjne są dostępne, ale wymagają finalnej walidacji wyników:
+  - ROC-AUC / PR-AUC,
+  - TPR@FPR (1e-3, 1e-4, 1e-5, 1e-6),
+  - kalibracja (ECE, Brier),
+  - tails i stabilność tła.
 
 ### D. Eksperymenty SNN
-- Należy zweryfikować poprawność działania warstwy SNN (Spiking Neural Network). Czy neurony faktycznie "strzelają"? Czy kodowanie CPC działa zgodnie z założeniami?
+- Nadal do domknięcia: systematyczne porównanie wariantów (`use_tf2d`, `use_sft`, 1D raw/spikes) oraz finalny raport eksperymentów.
 
 ## 3. Następne Kroki (Next Steps)
 
-### Krok 1: Pełny Trening
-Uruchomienie długiego treningu na pełnym zbiorze 10k próbek.
-- Należy zoptymalizować pętlę treningową (np. użycie GPU, `torch.compile`, lub skrócenie sekwencji czasowych).
+### Krok 1: Stabilny benchmark
+Uruchomić jednolity protokół: `train_cpc` -> `evaluate_snn`/`evaluate_background` na tych samych splitach.
 
-### Krok 2: Implementacja Ewaluacji
-Stworzenie skryptu `evaluate.py` lub notebooka, który:
+### Krok 2: Domknięcie metryk low-FPR
+Zwiększyć pulę tła w ewaluacji, aby FPR=1e-4 i niższe były mierzalne bez "Below Resolution".
 
-Stworzenie skryptu `evaluate.py` lub notebooka, który:
-1. Ładuje wytrenowany model.
-2. Przechodzi przez zbiór testowy.
-3. Rysuje krzywą ROC i liczy AUC.
-
-### Krok 4: Tuning Hiperparametrów
+### Krok 3: Tuning
 Eksperymenty z:
-- Architekturą sieci (liczba warstw, neuronów).
-- Parametrami CPC (kroki predykcji, temperatura).
-- Parametrami danych (długość okna STFT, zakres częstotliwości).
+- architekturą (hidden/context dim, head),
+- parametrami CPC (prediction steps, temperature, lambda_infonce),
+- augmentacjami i strategią splitu (`time` vs `random`).
 
 ## 4. Podsumowanie dla Promotora
-Projekt posiada solidne fundamenty w postaci działającego i nowoczesnego pipeline'u danych (Multi-IFO, Hydra). Główny nacisk należy teraz przenieść z inżynierii danych na inżynierię modelu (trening, weryfikacja SNN, wyniki).
+Projekt posiada działający pipeline danych i treningu oraz zestaw checkpointów eksperymentalnych. Aktualny etap to stabilizacja ścieżki eksperymentalnej i domknięcie jakości ewaluacji na niskich FPR.

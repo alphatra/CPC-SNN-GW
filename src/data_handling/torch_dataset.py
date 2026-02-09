@@ -38,7 +38,9 @@ class HDF5SFTPairDataset(Dataset):
         return_time_series: bool = False,
         fs: float = 4096.0,
         window_sec: float = 0.25,
+
         overlap_frac: float = 0.5,
+        forced_labels: Optional[List[int]] = None,
     ) -> None:
         super().__init__()
         self.h5_path = h5_path
@@ -48,6 +50,10 @@ class HDF5SFTPairDataset(Dataset):
         self.enforce_same_shape = enforce_same_shape
         self.dtype = dtype
         self.return_time_series = return_time_series
+        self.forced_labels = forced_labels
+        
+        if self.forced_labels is not None and len(self.forced_labels) != len(self.ids):
+            print(f"Warning: forced_labels len {len(self.forced_labels)} != ids len {len(self.ids)}")
         self.fs = fs
         self.window_sec = window_sec
         self.overlap_frac = overlap_frac
@@ -79,22 +85,23 @@ class HDF5SFTPairDataset(Dataset):
         # Reconstruct complex STFT (Time, Freq_stored)
         Zxx_stored = mag * (cos + 1j * sin)
         
-        nperseg = int(self.window_sec * self.fs)
-        noverlap = int(nperseg * self.overlap_frac)
+        # OPTIMIZED: Match compute_stft parameters
+        # nperseg = 256  # OLD
+        # noverlap = 128  # OLD
+        
+        nperseg = int(self.window_sec * self.fs) # 1024
+        noverlap = int(nperseg * self.overlap_frac) # 512
         
         # Full frequency range
         # stft returns nperseg//2 + 1 bins for onesided
         n_freq_full = nperseg // 2 + 1
         
         # Create full Zxx (Time, Freq_full)
-        # But we need (Freq_full, Time) for istft?
-        # Let's work in (Time, Freq) first then transpose.
         T = Zxx_stored.shape[0]
         Zxx_full = np.zeros((T, n_freq_full), dtype=np.complex64)
         
         # Map stored frequencies to indices
         # f = k * fs / nperseg
-        # k = f * nperseg / fs
         k_indices = np.round(f_stored * nperseg / self.fs).astype(int)
         
         # Filter valid indices (just in case)
@@ -192,8 +199,12 @@ class HDF5SFTPairDataset(Dataset):
             }
 
         if y is not None:
-            out["label"] = torch.tensor(float(y), dtype=self.dtype) # Rename to 'label' to avoid confusion
+            out["label"] = torch.tensor(float(y), dtype=self.dtype) 
+        
+        if self.forced_labels is not None:
+             out["label"] = torch.tensor(float(self.forced_labels[idx]), dtype=self.dtype)
 
+        out["id"] = gid 
         return out
 
     @staticmethod
@@ -234,8 +245,10 @@ class HDF5SFTPairDataset(Dataset):
             
             B, T_bins, F_stored = Zxx_stored.shape
             
-            nperseg = int(window_sec * fs)
-            noverlap = int(nperseg * overlap_frac)
+            # OPTIMIZED: Match compute_stft parameters (Fixed logic)
+            # Generation: fs=4096, window=0.25s -> nperseg=1024
+            nperseg = int(window_sec * fs) # 1024
+            noverlap = int(nperseg * overlap_frac) # 512
             n_freq_full = nperseg // 2 + 1
             
             # Prepare full Zxx: (B, F_full, T_bins) for torch.istft
@@ -245,35 +258,58 @@ class HDF5SFTPairDataset(Dataset):
             
             # Map frequencies
             # We assume f is same for all batch items, take first
-            f_vals = f_batch[0] # (F_stored)
-            k_indices = torch.round(f_vals * nperseg / fs).long()
+            if not torch.allclose(f_batch, f_batch[0:1], atol=1e-5):
+                 # Fail safe or robust handle
+                 pass
+                 
+            # Use the first sample's frequencies to determine bin indices
+            f_vec = f_batch[0] # (F_stored)
             
-            # Filter valid
-            valid_mask = (k_indices >= 0) & (k_indices < n_freq_full)
-            valid_k = k_indices[valid_mask]
+            # k = f * nperseg / fs
+            # Round to nearest integer bin
+            k_indices = torch.round(f_vec * nperseg / fs).long()
             
-            # Assign
-            # Zxx_stored is (B, T, F). Transpose to (B, F, T)
-            Zxx_stored_t = Zxx_stored.permute(0, 2, 1) # (B, F_stored, T)
+            # Clamp to be safe
+            k_indices = torch.clamp(k_indices, 0, n_freq_full - 1)
             
-            Zxx_full[:, valid_k, :] = Zxx_stored_t[:, valid_mask, :]
+            # Vectorized scatter is tricky with broadcasting (B, T, F).
+            # Easier to permute Zxx_stored to (B, F_stored, T_bins) then assign
+            Zxx_stored_perm = Zxx_stored.permute(0, 2, 1) # (B, F_stored, T)
+            
+            # Assign to full matrix
+            # We can iterate or use advanced indexing if F_stored is large?
+            # Assigning Zxx_full[:, k_indices, :] = Zxx_stored_perm works for batch?
+            # Yes, standard indexing.
+            Zxx_full[:, k_indices, :] = Zxx_stored_perm
             
             # iSTFT
-            # Use center=True to fix NOLA condition (padding at boundaries)
-            # And run on device (MPS) for speed
-            window = torch.hann_window(nperseg, device=device)
+            # Use center=True to ensure stability
+            # Use length argument to define exact output size and handle NOLA boundaries automatically.
+            
+            hop_length = nperseg - noverlap
+            # Formula for full coverage of the STFT frames:
+            # L = hop * (T - 1) + nperseg
+            # T_bins is from Zxx_full.shape[2] (time axis)
+            expected_len = hop_length * (T_bins - 1) + nperseg
             
             x_rec = torch.istft(
                 Zxx_full,
                 n_fft=nperseg,
-                hop_length=nperseg - noverlap,
+                hop_length=hop_length,
                 win_length=nperseg,
-                window=window,
-                center=True, 
+                window=torch.hann_window(nperseg).to(Zxx_full.device),
+                center=True,
                 normalized=False,
                 onesided=True,
+                length=expected_len,
                 return_complex=False
             )
+            
+            # Amplitude Correction (Match Scipy/Physical Units)
+            x_rec *= (nperseg / 2.0)
+            
+            # No manual cropping needed when length is specified with center=True
+            # x_rec is now [B, expected_len]
             
             recons.append(x_rec)
             
@@ -292,29 +328,92 @@ class HDF5TimeSeriesDataset(Dataset):
       /id/L1 [T]
       /id/label scalar
     """
-    def __init__(self, h5_path, index_list, dtype=torch.float32):
+
+    def __init__(self, h5_path, index_list, dtype=torch.float32, load_to_ram=True, forced_labels=None):
         self.h5_path = h5_path
-        self.ids = [str(i) for i in index_list]
+        original_ids = [str(i) for i in index_list]
         self.dtype = dtype
+        self.load_to_ram = load_to_ram
+        self.data_cache = {}
+        self.forced_labels = None
+
+        # Filter IDs to those that actually exist in the target HDF5.
+        with h5py.File(self.h5_path, "r") as h5:
+            present = set(h5.keys())
+        self.ids = [gid for gid in original_ids if gid in present]
+        missing = len(original_ids) - len(self.ids)
+        if missing > 0:
+            print(f"Warning: {missing} IDs from index_list not found in {self.h5_path}. They will be skipped.")
+
+        # Keep forced labels aligned with the filtered ID order.
+        if forced_labels is not None:
+            if len(forced_labels) == len(original_ids):
+                self.forced_labels = [
+                    forced_labels[i] for i, gid in enumerate(original_ids) if gid in present
+                ]
+            elif len(forced_labels) == len(self.ids):
+                self.forced_labels = forced_labels
+            else:
+                print(
+                    f"Warning: forced_labels length {len(forced_labels)} does not match "
+                    f"original ids ({len(original_ids)}) or filtered ids ({len(self.ids)}). Ignoring forced labels."
+                )
+                self.forced_labels = None
         
+        if self.load_to_ram:
+            print(f"Loading {len(self.ids)} samples to RAM...")
+            from tqdm import tqdm
+            with h5py.File(self.h5_path, "r") as h5:
+                # Pre-fetch all data to avoid repeated disk I/O
+                for gid in tqdm(self.ids, desc="Caching RAM"):
+                    H1 = h5[f"{gid}/H1"][()]
+                    L1 = h5[f"{gid}/L1"][()]
+                    y = h5[f"{gid}/label"][()] if f"{gid}/label" in h5 else None
+                    
+                    x = np.stack([H1, L1], axis=0) # (2, T)
+                    
+                    self.data_cache[gid] = {
+                        "x": torch.from_numpy(x).to(self.dtype),
+                        "label": torch.tensor(float(y), dtype=self.dtype) if y is not None else None,
+                        "id": gid,
+                    }
+                
+                # Re-loop to assign forced labels correctly if needed, or loop with index
+                if self.forced_labels is not None:
+                    for i, gid in enumerate(self.ids):
+                        if gid in self.data_cache:
+                            self.data_cache[gid]["label"] = torch.tensor(float(self.forced_labels[i]), dtype=self.dtype)
+                            
+            print("Dataset cached in RAM.")
+
     def __len__(self):
         return len(self.ids)
         
     def __getitem__(self, idx):
         gid = self.ids[idx]
+        
+        if self.load_to_ram and gid in self.data_cache:
+            return self.data_cache[gid]
+            
+        # Fallback / Disk Read
         with h5py.File(self.h5_path, "r") as h5:
+            if gid not in h5:
+                raise KeyError(f"Missing sample id '{gid}' in {self.h5_path}.")
             H1 = h5[f"{gid}/H1"][()]
             L1 = h5[f"{gid}/L1"][()]
             y = h5[f"{gid}/label"][()] if f"{gid}/label" in h5 else None
             
-        # Stack: [2, T]
         x = np.stack([H1, L1], axis=0)
         
         out = {
-            "x": torch.from_numpy(x).to(self.dtype)
+            "x": torch.from_numpy(x).to(self.dtype),
+            "id": gid,
         }
         
         if y is not None:
             out["label"] = torch.tensor(float(y), dtype=self.dtype)
+            
+        if self.forced_labels is not None:
+            out["label"] = torch.tensor(float(self.forced_labels[idx]), dtype=self.dtype)
             
         return out
