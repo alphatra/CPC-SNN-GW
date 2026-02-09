@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class DeltaModulationEncoder(nn.Module):
     """
@@ -59,6 +60,25 @@ def delta_encode_loop(x: torch.Tensor, threshold: float) -> torch.Tensor:
             
     return spikes_out
 
+
+class FastDeltaEncoder(nn.Module):
+    def __init__(self, threshold=0.1):
+        super().__init__()
+        self.threshold = threshold
+
+    def forward(self, x):
+        # Approximation of Delta Modulation using differences (vectorized)
+        # Instead of tracking state, we look at local changes
+        diff = x[:, :, 1:] - x[:, :, :-1]
+        
+        # Pad to maintain time dimension
+        diff = F.pad(diff, (1, 0)) 
+        
+        spikes = torch.zeros_like(x)
+        spikes[diff > self.threshold] = 1.0
+        spikes[diff < -self.threshold] = -1.0
+        
+        return spikes
 
 class ThresholdCrossingEncoder(nn.Module):
     """
