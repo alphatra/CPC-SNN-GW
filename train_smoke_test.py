@@ -32,7 +32,8 @@ def smoke_test():
         hidden_dim=32, 
         context_dim=32, 
         prediction_steps=4,
-        delta_threshold=0.1
+        delta_threshold=0.1,
+        use_metal=False
     )
     
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -52,10 +53,13 @@ def smoke_test():
 
         
         # Forward
-        z, c = model(x)
+        logits, c, z = model(x)
+        y = batch["label"].float().view(-1, 1)
         
-        # Loss
-        loss, acc = model.compute_cpc_loss(z, c)
+        # Loss (binary classification smoke check)
+        loss = torch.nn.functional.binary_cross_entropy_with_logits(logits, y)
+        preds = (torch.sigmoid(logits) > 0.5).float()
+        acc = (preds == y).float().mean().item()
         
         # Backward
         optimizer.zero_grad()

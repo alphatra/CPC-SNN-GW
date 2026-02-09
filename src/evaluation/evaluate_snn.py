@@ -6,7 +6,6 @@ Evaluates trained SNN model on noise vs gravitational wave signal classification
 Uses logits/probabilities for ROC-AUC, not CPC-based anomaly scores.
 """
 import torch
-import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import json
 import os
@@ -15,9 +14,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from src.models.cpc_snn import CPCSNN
 from src.data_handling.torch_dataset import HDF5SFTPairDataset
+from src.evaluation.calibration import apply_calibration_to_logits, load_calibration
 from src.evaluation.metrics import compute_tpr_at_fpr, compute_ece, compute_brier_score
+from src.evaluation.model_loader import load_cpcsnn_from_checkpoint
 
 
 def evaluate_snn(args):
@@ -34,22 +34,30 @@ def evaluate_snn(args):
     print(f"Using device: {device}")
     
     # 2. Load Model
-    checkpoint = torch.load(args.checkpoint_path, map_location=device)
-    config = checkpoint.get('config', {})
-    
-    model = CPCSNN(
-        in_channels=config.get('in_channels', 1),
-        hidden_dim=config.get('hidden_dim', 64),
-        context_dim=config.get('context_dim', 64),
-        prediction_steps=config.get('prediction_steps', 6),
-        delta_threshold=config.get('delta_threshold', 0.1),
-        temperature=config.get('temperature', 0.07),
-        beta=config.get('beta', 0.85)
-    ).to(device)
-    
-    model.load_state_dict(checkpoint['model_state_dict'])
-    model.eval()
+    model, checkpoint, model_kwargs, load_report = load_cpcsnn_from_checkpoint(
+        args.checkpoint_path,
+        device,
+        use_metal=args.use_metal,
+    )
     print(f"Loaded model from epoch {checkpoint.get('epoch', 'unknown')}")
+    print(
+        "Model config: "
+        f"in_channels={model_kwargs['in_channels']}, "
+        f"hidden_dim={model_kwargs['hidden_dim']}, "
+        f"context_dim={model_kwargs['context_dim']}, "
+        f"use_tf2d={model_kwargs['use_tf2d']}, "
+        f"predictors={model_kwargs['prediction_steps']}"
+    )
+    if not load_report["strict"]:
+        print(
+            "[Warning] Non-strict checkpoint load "
+            f"(missing={len(load_report['missing_keys'])}, unexpected={len(load_report['unexpected_keys'])})."
+        )
+    if model_kwargs["use_tf2d"]:
+        raise RuntimeError(
+            "Checkpoint was trained with TF2D input. "
+            "Use src/evaluation/evaluate_background.py for TF2D models."
+        )
     
     # 3. Load Test Data
     with open(args.noise_indices, 'r') as f:
@@ -63,8 +71,6 @@ def evaluate_snn(args):
     test_signal = signal_ids[:n_eval]
     
     test_ids = test_noise + test_signal
-    true_labels = [0] * len(test_noise) + [1] * len(test_signal)
-    
     dataset = HDF5SFTPairDataset(
         h5_path=args.h5_path,
         index_list=test_ids,
@@ -102,28 +108,38 @@ def evaluate_snn(args):
     all_probs = np.array(all_probs)
     all_logits = np.array(all_logits)
     all_labels = np.array(all_labels)
+
+    calibrated_probs = None
+    raw_ece = raw_brier = None
+    if args.calibration_json:
+        calibrator = load_calibration(args.calibration_json)
+        calibrated_probs = apply_calibration_to_logits(all_logits, calibrator)
+        raw_ece = compute_ece(all_labels, all_probs)
+        raw_brier = compute_brier_score(all_labels, all_probs)
+        print(f"Loaded calibration: {args.calibration_json} (method={calibrator.method})")
     
     # 5. Compute Metrics
     from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, average_precision_score, confusion_matrix
     
     # Basic metrics
-    roc_auc = roc_auc_score(all_labels, all_probs)
-    pr_auc = average_precision_score(all_labels, all_probs)
+    probs_eval = calibrated_probs if calibrated_probs is not None else all_probs
+    roc_auc = roc_auc_score(all_labels, probs_eval)
+    pr_auc = average_precision_score(all_labels, probs_eval)
     
     # Predictions at 0.5 threshold
-    preds = (all_probs >= 0.5).astype(int)
+    preds = (probs_eval >= 0.5).astype(int)
     acc = accuracy_score(all_labels, preds)
     
     # GW-specific: TPR at extremely low FPR
-    tpr_metrics = compute_tpr_at_fpr(all_labels, all_probs, fpr_thresholds=[1e-3, 1e-4, 1e-5])
+    tpr_metrics = compute_tpr_at_fpr(all_labels, probs_eval, fpr_thresholds=[1e-3, 1e-4, 1e-5])
     
     # Calibration metrics
-    ece = compute_ece(all_labels, all_probs)
-    brier = compute_brier_score(all_labels, all_probs)
+    ece = compute_ece(all_labels, probs_eval)
+    brier = compute_brier_score(all_labels, probs_eval)
     
     # Confusion matrix at optimal threshold (FPR=1e-4)
     optimal_thresh = tpr_metrics[1e-4]['threshold']
-    preds_optimal = (all_probs >= optimal_thresh).astype(int)
+    preds_optimal = (probs_eval >= optimal_thresh).astype(int)
     cm = confusion_matrix(all_labels, preds_optimal)
     
     # Print results
@@ -139,6 +155,8 @@ def evaluate_snn(args):
     print(f"\nCalibration:")
     print(f"  ECE: {ece:.4f} (lower is better)")
     print(f"  Brier Score: {brier:.4f} (lower is better)")
+    if calibrated_probs is not None:
+        print(f"  Raw ECE/Brier (before calibration): {raw_ece:.4f} / {raw_brier:.4f}")
     print(f"\nGW Detection Performance (TPR at low FPR):")
     for fpr_val in sorted(tpr_metrics.keys()):
         metrics = tpr_metrics[fpr_val]
@@ -148,8 +166,8 @@ def evaluate_snn(args):
     print(f"  FN={cm[1,0]:<6} TP={cm[1,1]:<6}")
     
     # Per-class statistics
-    noise_probs = all_probs[all_labels == 0]
-    signal_probs = all_probs[all_labels == 1]
+    noise_probs = probs_eval[all_labels == 0]
+    signal_probs = probs_eval[all_labels == 1]
     
     print(f"\nProbability Distributions:")
     print(f"  Noise: mean={noise_probs.mean():.3f}, std={noise_probs.std():.3f}")
@@ -160,7 +178,7 @@ def evaluate_snn(args):
     axes = axes.flatten()
     
     # ROC Curve
-    fpr, tpr, thresholds = roc_curve(all_labels, all_probs)
+    fpr, tpr, thresholds = roc_curve(all_labels, probs_eval)
     axes[0].plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC (AUC={roc_auc:.3f})')
     axes[0].plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='Random')
     axes[0].set_xlim([0.0, 1.0])
@@ -239,6 +257,10 @@ if __name__ == "__main__":
                         help="Number of samples per class to evaluate")
     parser.add_argument("--output", type=str, default="snn_evaluation.png",
                         help="Output plot filename")
+    parser.add_argument("--use_metal", action="store_true", default=False,
+                        help="Enable Metal fused LIF path for evaluation")
+    parser.add_argument("--calibration_json", type=str, default=None,
+                        help="Optional calibration artifact JSON from fit_calibration.py")
     
     args = parser.parse_args()
     evaluate_snn(args)

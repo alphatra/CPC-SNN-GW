@@ -1,6 +1,7 @@
 import torch
 from torch.utils.cpp_extension import load
 import os
+import tempfile
 
 # Paths
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -15,15 +16,32 @@ else:
     kernel_source = ""
     print(f"Warning: Metal kernel not found at {metal_src}")
 
-# JIT Compile the extension
-# We link against Metal and Foundation frameworks.
-lif_metal = load(
-    name="lif_metal",
-    sources=[mps_src],
-    extra_cflags=["-std=c++17"],
-    extra_ldflags=["-framework", "Metal", "-framework", "Foundation"],
-    verbose=True
-)
+lif_metal = None
+
+def _get_lif_metal():
+    """
+    Lazily compiles and loads the Metal extension.
+    This avoids side effects during module import and keeps eval scripts lightweight.
+    """
+    global lif_metal
+    if lif_metal is not None:
+        return lif_metal
+
+    build_dir = os.environ.get(
+        "TORCH_EXTENSIONS_DIR",
+        os.path.join(tempfile.gettempdir(), "torch_extensions"),
+    )
+    os.makedirs(build_dir, exist_ok=True)
+
+    lif_metal = load(
+        name="lif_metal",
+        sources=[mps_src],
+        extra_cflags=["-std=c++17"],
+        extra_ldflags=["-framework", "Metal", "-framework", "Foundation"],
+        build_directory=build_dir,
+        verbose=False,
+    )
+    return lif_metal
 
 def fused_lif_metal_update(currents: torch.Tensor, beta: float, threshold: float = 1.0) -> torch.Tensor:
     """
@@ -58,4 +76,4 @@ def fused_lif_metal_update(currents: torch.Tensor, beta: float, threshold: float
     else:
         threshold = float(threshold)
         
-    return lif_metal.fused_lif_forward(currents, beta, threshold, kernel_source)
+    return _get_lif_metal().fused_lif_forward(currents, beta, threshold, kernel_source)

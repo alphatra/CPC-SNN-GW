@@ -3,10 +3,12 @@ import torch.profiler
 from src.train.arguments import parse_args
 from src.train.data_setup import setup_dataloaders
 from src.train.trainer import train_model
+from src.utils.repro import set_determinism
 
 def main():
     # 1. Parse Arguments
     args = parse_args()
+    set_determinism(args.seed)
     
     # 2. Device Setup
     if torch.backends.mps.is_available():
@@ -35,7 +37,7 @@ def main():
             profile_memory=True,
             with_stack=True
         ) as prof:
-            train_model(args, train_loader, val_loader, device, use_spikes, use_timeseries, profiler=prof)\
+            train_model(args, train_loader, val_loader, device, use_spikes, use_timeseries, profiler=prof)
 
     else:
         # 5. Run Training

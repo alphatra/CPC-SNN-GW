@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
-from src.models.cpc_snn import CPCSNN
 from src.data_handling.torch_dataset import HDF5SFTPairDataset
+from src.evaluation.model_loader import load_cpcsnn_from_checkpoint
 
 def compute_anomaly_score_trace(model, x, device):
     """
@@ -17,7 +17,7 @@ def compute_anomaly_score_trace(model, x, device):
     model.eval()
     with torch.no_grad():
         # Forward
-        z, c, _ = model(x) # z: (B, T, H), c: (B, T, C)
+        _, c, z = model(x)
         
         batch_size, time_steps, hidden_dim = z.shape
         
@@ -92,7 +92,8 @@ def run_inference(
     noise_indices_path="data/indices_noise.json",
     signal_indices_path="data/indices_signal.json",
     model_path="checkpoints/cpc_snn_noise_model.pth",
-    n_samples=16
+    n_samples=16,
+    use_metal=False
 ):
     if torch.backends.mps.is_available():
         device = torch.device("mps")
@@ -121,16 +122,23 @@ def run_inference(
     loader = DataLoader(dataset, batch_size=n_samples, shuffle=False) # Single batch
     
     # Load Model
-    model = CPCSNN(
-        in_channels=2,
-        hidden_dim=64,
-        context_dim=64,
-        prediction_steps=12,
-        delta_threshold=0.5
-    ).to(device)
-    
-    model.load_state_dict(torch.load(model_path, map_location=device))
-    print("Model loaded.")
+    model, checkpoint, model_kwargs, load_report = load_cpcsnn_from_checkpoint(
+        model_path, device, use_metal=use_metal
+    )
+    if model_kwargs["use_tf2d"]:
+        raise RuntimeError(
+            "inference_anomaly currently supports 1D/time-series checkpoints only. "
+            "For TF2D models use evaluation scripts in src/evaluation."
+        )
+    print(
+        f"Model loaded (epoch={checkpoint.get('epoch', 'unknown')}, "
+        f"prediction_steps={model_kwargs['prediction_steps']})."
+    )
+    if not load_report["strict"]:
+        print(
+            "[Warning] Non-strict checkpoint load "
+            f"(missing={len(load_report['missing_keys'])}, unexpected={len(load_report['unexpected_keys'])})."
+        )
     
     # Inference
     batch = next(iter(loader))
@@ -141,10 +149,13 @@ def run_inference(
     
     # Plotting
     plt.figure(figsize=(15, 10))
+    noise_count = n_samples // 2
+    signal_start = noise_count
+    max_idx = scores_np.shape[0]
     
     # Plot a few Noise samples
     plt.subplot(2, 1, 1)
-    for i in range(4): # First 4 are noise
+    for i in range(min(4, noise_count, max_idx)):
         plt.plot(scores_np[i], label=f"Noise {i}", alpha=0.7)
     plt.title("Anomaly Scores - Noise Samples")
     plt.ylabel("Contrastive Loss")
@@ -153,7 +164,7 @@ def run_inference(
     
     # Plot a few Signal samples
     plt.subplot(2, 1, 2)
-    for i in range(n_samples//2, n_samples//2 + 4): # First 4 signals
+    for i in range(signal_start, min(signal_start + 4, max_idx)):
         plt.plot(scores_np[i], label=f"Signal {i}", alpha=0.7)
     plt.title("Anomaly Scores - Signal Samples")
     plt.ylabel("Contrastive Loss")
@@ -176,7 +187,9 @@ if __name__ == "__main__":
     default_h5 = os.path.join(project_root, "data/cpc_snn_train.h5")
     default_noise = os.path.join(project_root, "data/indices_noise.json")
     default_signal = os.path.join(project_root, "data/indices_signal.json")
-    default_model = os.path.join(project_root, "checkpoints/cpc_snn_noise_model.pth")
+    default_model = os.path.join(project_root, "checkpoints/20251218-225503/best.pt")
+    if not os.path.exists(default_model):
+        default_model = os.path.join(project_root, "checkpoints/cpc_snn_noise_model.pth")
     
     parser = argparse.ArgumentParser()
     parser.add_argument("--h5_path", type=str, default=default_h5)
@@ -184,6 +197,7 @@ if __name__ == "__main__":
     parser.add_argument("--signal_indices", type=str, default=default_signal)
     parser.add_argument("--model_path", type=str, default=default_model)
     parser.add_argument("--n_samples", type=int, default=16)
+    parser.add_argument("--use_metal", action="store_true", default=False)
     
     args = parser.parse_args()
     
@@ -192,5 +206,6 @@ if __name__ == "__main__":
         noise_indices_path=args.noise_indices,
         signal_indices_path=args.signal_indices,
         model_path=args.model_path,
-        n_samples=args.n_samples
+        n_samples=args.n_samples,
+        use_metal=args.use_metal
     )

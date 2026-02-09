@@ -44,6 +44,7 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size")
     parser.add_argument("--lr", type=float, default=3e-4, help="Learning rate")
     parser.add_argument("--workers", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=42, help="Global random seed")
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay")
     parser.add_argument("--grad_clip", type=float, default=1.0, help="Gradient clipping max norm")
     
@@ -65,7 +66,7 @@ def parse_args():
     parser.add_argument("--aug_prob", type=float, default=0.5, help="Probability of applying augmentations")
     parser.add_argument("--force_reconstruct", type=str2bool, default=False, help="Force on-the-fly reconstruction")
     parser.add_argument("--use_sft", action="store_true", default=False, help="Use raw SFT tensors input")
-    parser.add_argument("--use_tf2d", action="store_true", default=True, help="Use 2D Conv Encoder on STFT (B, 6, T, F)")
+    parser.add_argument("--use_tf2d", action="store_true", default=False, help="Use 2D Conv Encoder on STFT (B, 6, T, F)")
     parser.add_argument("--sft_channels", type=int, default=2, help="Number of SFT channels to use (1=H1, 2=H1+L1)")
     parser.add_argument("--no_mask", action="store_true", default=False, help="Disable Mask Channel (Use only Mag/Cos/Sin) for leakage check")
     
@@ -86,8 +87,32 @@ def parse_args():
     parser.add_argument("--focal_gamma", type=float, default=2.0, help="Gamma for Focal Loss")
     parser.add_argument("--tail_penalty", type=float, default=2.0, help="Weight for Noise Tail Penalty (ReLU(p_noise - thr))")
     parser.add_argument("--tail_threshold", type=float, default=0.5, help="Threshold for Noise Tail Penalty")
+    parser.add_argument("--hard_neg_bce_weight", type=float, default=0.25, help="Extra BCE weight on hardest negatives in each batch")
+    parser.add_argument("--tail_ranking_weight", type=float, default=0.5, help="Pairwise ranking loss weight (positives above hardest negatives)")
+    parser.add_argument("--tail_ranking_margin", type=float, default=0.1, help="Margin used in pairwise tail ranking loss")
+    parser.add_argument("--tail_hard_frac", type=float, default=0.2, help="Fraction of negatives considered hard in tail-aware losses")
+    parser.add_argument("--tail_hard_min", type=int, default=8, help="Minimum number of hard negatives per batch")
+    parser.add_argument("--tail_max_pairs", type=int, default=4096, help="Maximum positive-negative pairs in ranking loss")
+
+    # Hard-negative mining / sampling
+    parser.add_argument("--hard_negatives_json", type=str, default=None, help="JSON with hard negative IDs (list[str] or list[{id,score}])")
+    parser.add_argument("--hard_negative_boost", type=float, default=3.0, help="Sampling weight multiplier for hard negatives")
+    parser.add_argument("--hard_negative_max", type=int, default=0, help="Cap hard-negative IDs to top-K (0 = use all)")
+
+    # Realistic non-stationary background augmentation
+    parser.add_argument("--realistic_bg_aug", action="store_true", default=False, help="Enable non-stationary background augmentation (mainly for noise class)")
+    parser.add_argument("--aug_env", type=float, default=0.15, help="Slow envelope modulation strength")
+    parser.add_argument("--aug_drift", type=float, default=0.10, help="Linear drift strength")
+    parser.add_argument("--aug_colored_noise", type=float, default=0.03, help="Additive low-frequency colored noise strength")
+    parser.add_argument("--aug_dropout_prob", type=float, default=0.15, help="Probability of zeroing random time segment")
+    parser.add_argument("--aug_dropout_max_frac", type=float, default=0.10, help="Max dropped segment length as fraction of time axis")
+    parser.add_argument("--aug_glitch_prob", type=float, default=0.20, help="Probability of synthetic glitch injection")
+    parser.add_argument("--aug_glitch_amp", type=float, default=2.5, help="Synthetic glitch amplitude scale")
     
     args = parser.parse_args()
+    
+    if args.use_tf2d and args.use_sft:
+        parser.error("Flags --use_tf2d and --use_sft are mutually exclusive.")
     
     if args.profile:
         print("Profiling enabled for 1 epoch...")

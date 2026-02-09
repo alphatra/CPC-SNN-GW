@@ -61,17 +61,25 @@ Strict OOD (train-early / test-late) entrypoint:
 - `./scripts/run_ood_time_protocol.sh`
 - run-based OOD split: `./scripts/run_ood_time_protocol.sh --mode run --run-map <id_to_run.json> --train-runs <runs> --test-runs <runs>`
 
-## Strict OOD Snapshot (Latest B/C1/C2/C3 Compare)
+## Strict OOD Snapshot (Latest A/B/C1/C2/C3 + C3 Ensemble Compare)
 
 Protocol: `evaluate_background --method swapped_pairs --swaps 30` on `reports/ood_time/splits/indices_*_test_late.json`.
 
 | Variant | TPR@1e-3 | TPR@1e-4 | EVT TPR@1e-4 |
 |---|---:|---:|---:|
-| B: TF2D + tail-aware | 0.6993 | 0.2340 | 0.0157 |
-| C1: TF2D + hard-negatives (`boost=10`) | 0.9427 | 0.7629 | 0.6745 |
+| A: TF2D base | 0.5771 | 0.2685 | 0.0588 |
+| B: TF2D + tail-aware | 0.9457 | 0.7422 | 0.8416 |
+| C1: TF2D + hard-negatives (`boost=10`) | 0.9306 | 0.4700 | 0.6565 |
+| C1 + temperature calibration | 0.9327 | 0.6221 | 0.3937 |
 | C2: TF2D + hard-negatives (`boost=3`) | 0.8383 | 0.5487 | 0.0000 |
 | C3: TF2D + hard-negatives (`boost=5`) | 0.9477 | 0.8619 | 0.0055 |
 | C3 + temperature calibration | 0.9469 | 0.8479 | 0.0133 |
+| C3 (5-seed mean, independent) | 0.7790 | 0.6159 | 0.3162 |
+| C3 ensemble (5 checkpoints) | 0.9106 | 0.8165 | 0.4706 |
+
+Ensemble note:
+- C3 ensemble improves strongly vs single-seed average (`TPR@1e-4: 0.8165` vs `0.6159`), but remains below the frozen single C3 (`0.8619`).
+- Canonical machine-readable decision artifact: `reports/final_decision.json`
 
 ## Primary KPI
 

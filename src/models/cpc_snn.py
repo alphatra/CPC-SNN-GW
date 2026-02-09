@@ -23,10 +23,13 @@ class CPCSNN(nn.Module):
                  use_metal=True,
                  use_continuous_input=True,
                  no_dain=False,
-                 use_tf2d=False):
+                 use_tf2d=False,
+                 use_layernorm_z=True,
+                 use_mlp_head=True,
+                 enable_predictors=True):
         super().__init__()
         
-        self.prediction_steps = prediction_steps
+        self.prediction_steps = int(prediction_steps) if enable_predictors else 0
         self.hidden_dim = hidden_dim
         self.context_dim = context_dim
         self.temperature = temperature
@@ -35,6 +38,8 @@ class CPCSNN(nn.Module):
         self.use_continuous_input = use_continuous_input
         self.no_dain = no_dain
         self.use_tf2d = use_tf2d
+        self.use_layernorm_z = use_layernorm_z
+        self.use_mlp_head = use_mlp_head
         
         # 1. Input Architectures
         if self.use_tf2d:
@@ -64,26 +69,30 @@ class CPCSNN(nn.Module):
             self.feature_extractor = SpikingCNN(in_channels, hidden_dim, beta=beta, use_metal=use_metal)
             
         # 2. Normalization (LayerNorm on Z)
-        self.ln_z = nn.LayerNorm(hidden_dim)
+        self.ln_z = nn.LayerNorm(hidden_dim) if self.use_layernorm_z else nn.Identity()
         
         # 3. Context Network (RSNN)
         self.context_network = RSNN(hidden_dim, context_dim, beta=beta)
         
         # 4. Binary Classifier (Signal vs Noise)
-        # 4. Binary Classifier (Signal vs Noise) - MLP Head (Pooling)
-        self.classifier = nn.Sequential(
-            nn.Linear(context_dim, 64),
-            nn.GELU(),
-            nn.Dropout(0.2),
-            nn.Linear(64, 1)
-        )
+        if self.use_mlp_head:
+            self.classifier = nn.Sequential(
+                nn.Linear(context_dim, 64),
+                nn.GELU(),
+                nn.Dropout(0.2),
+                nn.Linear(64, 1)
+            )
+        else:
+            self.classifier = nn.Linear(context_dim, 1)
         
         # 5. CPC Predictors (InfoNCE)
         # Maps Context -> Future Latent Z (dim: context_dim -> hidden_dim)
         # We need K predictors for K steps
-        self.predictors = nn.ModuleList([
-            nn.Linear(context_dim, hidden_dim) for _ in range(prediction_steps)
-        ])
+        self.predictors = nn.ModuleList()
+        if self.prediction_steps > 0:
+            self.predictors = nn.ModuleList([
+                nn.Linear(context_dim, hidden_dim) for _ in range(self.prediction_steps)
+            ])
         
     def predict_future(self, c):
         """
@@ -94,7 +103,7 @@ class CPCSNN(nn.Module):
             List[torch.Tensor]: List of K tensors, each (B, T, HiddenDim)
         """
         preds = []
-        for k in range(self.prediction_steps):
+        for k in range(len(self.predictors)):
             # W_k(c_t) -> predicts z_{t+k}
             preds.append(self.predictors[k](c))
         return preds
@@ -149,5 +158,4 @@ class CPCSNN(nn.Module):
         logits = self.classifier(c_pooled) # (B, 1)
         
         return logits, c, z
-
 

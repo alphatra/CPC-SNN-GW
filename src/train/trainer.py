@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 import os
+import math
 import numpy as np
 from tqdm import tqdm
 import wandb
@@ -51,7 +52,8 @@ def compute_infonce_loss(preds, z_targets, prediction_steps, device, temperature
     z_targets_norm = torch.nn.functional.normalize(z_targets, dim=-1) # (B, T, H)
     
     valid_steps = 0
-    for k in range(1, prediction_steps + 1):
+    max_steps = min(int(prediction_steps), len(preds))
+    for k in range(1, max_steps + 1):
         # We want P_{t}^{k} to match Z_{t+k}
         
         if T - k <= 0: continue
@@ -108,6 +110,315 @@ def compute_tail_penalty(logits, targets, threshold=0.95):
     # Squared ReLU to aggressively penalize large violations
     penalty = (torch.relu(probs - threshold) ** 2) * noise_mask
     return penalty.mean()
+
+def compute_hard_negative_bce_loss(logits, targets, hard_frac=0.25, hard_min=8):
+    """
+    Extra BCE term only on hardest negative examples in current batch.
+    """
+    logits_flat = logits.view(-1)
+    targets_flat = targets.view(-1)
+    neg_mask = targets_flat < 0.5
+    if neg_mask.sum().item() == 0:
+        return logits_flat.new_tensor(0.0)
+
+    neg_logits = logits_flat[neg_mask]
+    neg_targets = targets_flat[neg_mask]
+    neg_bce = torch.nn.functional.binary_cross_entropy_with_logits(
+        neg_logits, neg_targets, reduction='none'
+    )
+    k = max(int(math.ceil(float(hard_frac) * neg_bce.numel())), int(hard_min))
+    k = min(k, neg_bce.numel())
+    if k <= 0:
+        return logits_flat.new_tensor(0.0)
+    return torch.topk(neg_bce, k=k).values.mean()
+
+def compute_tail_ranking_loss(
+    logits,
+    targets,
+    hard_frac=0.25,
+    hard_min=8,
+    margin=0.0,
+    max_pairs=4096,
+):
+    """
+    Pairwise ranking objective: push positives above hardest negatives.
+    Uses softplus(neg - pos + margin), which emphasizes low-FAR tail separation.
+    """
+    logits_flat = logits.view(-1)
+    targets_flat = targets.view(-1)
+
+    pos = logits_flat[targets_flat > 0.5]
+    neg = logits_flat[targets_flat < 0.5]
+    if pos.numel() == 0 or neg.numel() == 0:
+        return logits_flat.new_tensor(0.0)
+
+    k_neg = max(int(math.ceil(float(hard_frac) * neg.numel())), int(hard_min))
+    k_neg = min(k_neg, neg.numel())
+    if k_neg <= 0:
+        return logits_flat.new_tensor(0.0)
+    hard_neg = torch.topk(neg, k=k_neg).values
+
+    # Keep pair count bounded by selecting the hardest positives (lowest logits).
+    pair_count = pos.numel() * hard_neg.numel()
+    if pair_count > int(max_pairs):
+        n_pos = max(1, int(max_pairs) // max(1, hard_neg.numel()))
+        n_pos = min(n_pos, pos.numel())
+        pos = torch.topk(-pos, k=n_pos).values * -1.0
+
+    pairwise = hard_neg.unsqueeze(0) - pos.unsqueeze(1) + float(margin)
+    return torch.nn.functional.softplus(pairwise).mean()
+
+def compute_batch_objective(model, x, y, args, device, use_spikes):
+    """
+    Shared forward/loss/accuracy computation for train and validation loops.
+    """
+    logits, c, z = model(x, is_encoded=use_spikes)
+
+    if args.train_mode == 'pretrain_cpc':
+        cpc_preds = model.predict_future(c)
+        loss = compute_infonce_loss(cpc_preds, z, args.prediction_steps, device, args.temperature)
+        acc = 0.0
+        parts = {
+            "loss_base": loss.detach(),
+            "loss_tail_penalty": logits.new_tensor(0.0),
+            "loss_hard_neg_bce": logits.new_tensor(0.0),
+            "loss_tail_ranking": logits.new_tensor(0.0),
+            "loss_infonce_aux": logits.new_tensor(0.0),
+        }
+    else:
+        if args.loss_type == 'focal':
+            loss_base = compute_focal_loss(logits, y, args.focal_gamma)
+        else:
+            loss_base = torch.nn.functional.binary_cross_entropy_with_logits(logits, y)
+        loss = loss_base
+
+        loss_tail_penalty = logits.new_tensor(0.0)
+        if args.tail_penalty > 0:
+            loss_tail_penalty = args.tail_penalty * compute_tail_penalty(logits, y, args.tail_threshold)
+            loss = loss + loss_tail_penalty
+
+        loss_hard_neg_bce = logits.new_tensor(0.0)
+        if args.hard_neg_bce_weight > 0:
+            loss_hard_neg_bce = args.hard_neg_bce_weight * compute_hard_negative_bce_loss(
+                logits,
+                y,
+                hard_frac=args.tail_hard_frac,
+                hard_min=args.tail_hard_min,
+            )
+            loss = loss + loss_hard_neg_bce
+
+        loss_tail_ranking = logits.new_tensor(0.0)
+        if args.tail_ranking_weight > 0:
+            loss_tail_ranking = args.tail_ranking_weight * compute_tail_ranking_loss(
+                logits,
+                y,
+                hard_frac=args.tail_hard_frac,
+                hard_min=args.tail_hard_min,
+                margin=args.tail_ranking_margin,
+                max_pairs=args.tail_max_pairs,
+            )
+            loss = loss + loss_tail_ranking
+
+        loss_infonce_aux = logits.new_tensor(0.0)
+        if args.lambda_infonce > 0:
+            cpc_preds = model.predict_future(c)
+            loss_cpc = compute_infonce_loss(cpc_preds, z, args.prediction_steps, device, args.temperature)
+            loss_infonce_aux = args.lambda_infonce * loss_cpc
+            loss = loss + loss_infonce_aux
+
+        probs = torch.sigmoid(logits)
+        preds = (probs > 0.5).float()
+        acc = (preds == y).float().mean().item()
+        parts = {
+            "loss_base": loss_base.detach(),
+            "loss_tail_penalty": loss_tail_penalty.detach(),
+            "loss_hard_neg_bce": loss_hard_neg_bce.detach(),
+            "loss_tail_ranking": loss_tail_ranking.detach(),
+            "loss_infonce_aux": loss_infonce_aux.detach(),
+        }
+
+    return logits, c, z, loss, acc, parts
+
+def prepare_input(
+    batch,
+    args,
+    device,
+    use_spikes,
+    use_timeseries,
+    *,
+    log_recon_stats=False,
+    epoch_idx=None,
+):
+    """
+    Unified input preparation for train/val loops.
+    Returns tensor x ready for model forward.
+    """
+    if use_spikes or use_timeseries:
+        x = batch['x'].to(device, non_blocking=True)
+        if not use_spikes and x.dim() == 4:
+            x = x.to(memory_format=torch.channels_last)
+        return x
+
+    if args.use_tf2d:
+        feat_list = []
+
+        def get_tf_feats(ifo):
+            d = batch[ifo].to(device)  # (B, 4, T, F)
+            slice_idx = 3 if args.no_mask else 4
+            return d[:, 0:slice_idx, :, :]
+
+        if args.channel != "L1":
+            feat_list.append(get_tf_feats("H1"))
+        if args.channel != "H1":
+            feat_list.append(get_tf_feats("L1"))
+
+        x = torch.cat(feat_list, dim=1)
+        mean = x.mean(dim=(2, 3), keepdim=True)
+        std = x.std(dim=(2, 3), keepdim=True)
+        x = (x - mean) / (std + 1e-8)
+        return x
+
+    if args.use_sft:
+        feat_list = []
+
+        def process_ifo(ifo_name):
+            d = batch[ifo_name].to(device)  # (B, 4, T, F)
+            slice_idx = 3 if args.no_mask else 4
+            feats = d[:, 0:slice_idx, :, :]
+            feats = feats.permute(0, 1, 3, 2).reshape(d.shape[0], -1, d.shape[2])
+            return feats
+
+        if args.channel != "L1":
+            feat_list.append(process_ifo("H1"))
+        if args.channel != "H1":
+            feat_list.append(process_ifo("L1"))
+
+        x = torch.cat(feat_list, dim=1)
+        mean = x.mean(dim=2, keepdim=True)
+        std = x.std(dim=2, keepdim=True)
+        x = (x - mean) / (std + 1e-8)
+        return x
+
+    x = HDF5SFTPairDataset.batch_reconstruct_torch(batch, device=device)
+
+    if log_recon_stats:
+        ep = "?" if epoch_idx is None else str(epoch_idx + 1)
+        print(f"\n[Epoch {ep} Batch 0 Stats (Pre-Norm)]")
+        h1 = x[:, 0, :]
+        print(f"H1: Mean={h1.mean().item():.4f}, Std={h1.std().item():.4f}, Max={h1.abs().max().item():.4f}")
+        if x.shape[1] > 1:
+            l1 = x[:, 1, :]
+            print(f"L1: Mean={l1.mean().item():.4f}, Std={l1.std().item():.4f}, Max={l1.abs().max().item():.4f}")
+        print("-" * 30)
+
+    mean = x.mean(dim=2, keepdim=True)
+    std = x.std(dim=2, keepdim=True)
+    x = (x - mean) / (std + 1e-8)
+
+    if args.channel == "H1":
+        x = x[:, 0:1, :]
+    elif args.channel == "L1":
+        x = x[:, 1:2, :]
+    return x
+
+def apply_realistic_background_augment(x, y, args):
+    """
+    Non-stationary background augmentation applied primarily to noise samples (label=0).
+    Supports 1D (B,C,T) and TF2D (B,C,T,F) inputs.
+    """
+    if (not args.realistic_bg_aug) or y is None:
+        return x
+    if x.dim() not in (3, 4):
+        return x
+
+    noise_idx = (y.view(-1) < 0.5).nonzero(as_tuple=True)[0]
+    if noise_idx.numel() == 0:
+        return x
+
+    x_aug = x.clone()
+    x_sel = x_aug[noise_idx]
+    pi2 = 2.0 * torch.pi
+
+    if x_sel.dim() == 3:
+        # x_sel: (Bn, C, T)
+        bn, c, t_len = x_sel.shape
+        if t_len < 8:
+            return x
+        t = torch.linspace(-1.0, 1.0, t_len, device=x.device, dtype=x_sel.dtype).view(1, 1, t_len)
+
+        env_phase = pi2 * torch.rand(bn, 1, 1, device=x.device, dtype=x_sel.dtype)
+        env_freq = 0.5 + 2.0 * torch.rand(bn, 1, 1, device=x.device, dtype=x_sel.dtype)
+        env = 1.0 + args.aug_env * torch.sin(pi2 * env_freq * t + env_phase)
+
+        drift = 1.0 + args.aug_drift * torch.randn(bn, c, 1, device=x.device, dtype=x_sel.dtype) * t
+        x_sel = x_sel * env * drift
+
+        if args.aug_colored_noise > 0:
+            colored = torch.cumsum(torch.randn_like(x_sel), dim=-1)
+            colored = colored / (colored.std(dim=-1, keepdim=True) + 1e-6)
+            x_sel = x_sel + args.aug_colored_noise * colored
+
+        max_drop = max(1, int(args.aug_dropout_max_frac * t_len))
+        max_glitch_w = max(3, t_len // 20)
+        for i in range(bn):
+            if torch.rand(1, device=x.device).item() < args.aug_dropout_prob:
+                w = int(torch.randint(1, max_drop + 1, (1,), device=x.device).item())
+                s = int(torch.randint(0, max(1, t_len - w + 1), (1,), device=x.device).item())
+                x_sel[i, :, s:s + w] = 0.0
+
+            if torch.rand(1, device=x.device).item() < args.aug_glitch_prob:
+                center = int(torch.randint(0, t_len, (1,), device=x.device).item())
+                width = int(torch.randint(2, max_glitch_w + 1, (1,), device=x.device).item())
+                left = max(0, center - width)
+                right = min(t_len, center + width)
+                tt = torch.arange(left, right, device=x.device, dtype=x_sel.dtype)
+                pulse = torch.exp(-0.5 * ((tt - center) / (0.35 * width + 1e-6)) ** 2)
+                amp = args.aug_glitch_amp * (0.5 + torch.rand(1, device=x.device).item())
+                sign = -1.0 if torch.rand(1, device=x.device).item() < 0.5 else 1.0
+                x_sel[i, :, left:right] += sign * amp * pulse.view(1, -1)
+
+    else:
+        # x_sel: (Bn, C, T, F)
+        bn, c, t_len, f_len = x_sel.shape
+        if t_len < 8:
+            return x
+        t = torch.linspace(-1.0, 1.0, t_len, device=x.device, dtype=x_sel.dtype).view(1, 1, t_len, 1)
+
+        env_phase = pi2 * torch.rand(bn, 1, 1, 1, device=x.device, dtype=x_sel.dtype)
+        env_freq = 0.5 + 2.0 * torch.rand(bn, 1, 1, 1, device=x.device, dtype=x_sel.dtype)
+        env = 1.0 + args.aug_env * torch.sin(pi2 * env_freq * t + env_phase)
+
+        drift = 1.0 + args.aug_drift * torch.randn(bn, c, 1, 1, device=x.device, dtype=x_sel.dtype) * t
+        x_sel = x_sel * env * drift
+
+        if args.aug_colored_noise > 0:
+            colored = torch.cumsum(torch.randn_like(x_sel), dim=2)
+            colored = colored / (colored.std(dim=2, keepdim=True) + 1e-6)
+            x_sel = x_sel + args.aug_colored_noise * colored
+
+        max_drop = max(1, int(args.aug_dropout_max_frac * t_len))
+        max_glitch_w = max(3, t_len // 20)
+        for i in range(bn):
+            if torch.rand(1, device=x.device).item() < args.aug_dropout_prob:
+                w = int(torch.randint(1, max_drop + 1, (1,), device=x.device).item())
+                s = int(torch.randint(0, max(1, t_len - w + 1), (1,), device=x.device).item())
+                x_sel[i, :, s:s + w, :] = 0.0
+
+            if torch.rand(1, device=x.device).item() < args.aug_glitch_prob:
+                center = int(torch.randint(0, t_len, (1,), device=x.device).item())
+                width = int(torch.randint(2, max_glitch_w + 1, (1,), device=x.device).item())
+                left = max(0, center - width)
+                right = min(t_len, center + width)
+                tt = torch.arange(left, right, device=x.device, dtype=x_sel.dtype)
+                pulse_t = torch.exp(-0.5 * ((tt - center) / (0.35 * width + 1e-6)) ** 2).view(1, -1, 1)
+                spectral = torch.randn(1, 1, f_len, device=x.device, dtype=x_sel.dtype)
+                spectral = spectral / (spectral.std() + 1e-6)
+                amp = args.aug_glitch_amp * (0.5 + torch.rand(1, device=x.device).item())
+                sign = -1.0 if torch.rand(1, device=x.device).item() < 0.5 else 1.0
+                x_sel[i, :, left:right, :] += sign * amp * pulse_t * spectral
+
+    x_aug[noise_idx] = x_sel
+    return x_aug
 
 def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseries, profiler=None):
     
@@ -291,81 +602,21 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
                      print("\n[Integrity] 'id' key missing in batch.")
             # ----------------------------------
             
-            # Data Prep
-            if use_spikes or use_timeseries:
-                x = batch['x'].to(device, non_blocking=True)
-                if not use_spikes:
-                     x = x.to(memory_format=torch.channels_last)
-            
-            elif args.use_tf2d:
-                # TF2D Input: Stack Mag, Cos, Sin -> (B, 6, T, F)
-                feat_list = []
-                def get_tf_feats(ifo):
-                     d = batch[ifo].to(device) # (B, 4, T, F)
-                     slice_idx = 3 if args.no_mask else 4
-                     return d[:, 0:slice_idx, :, :]
-                
-                if args.channel != "L1": feat_list.append(get_tf_feats("H1"))
-                if args.channel != "H1": feat_list.append(get_tf_feats("L1"))
-                
-                x = torch.cat(feat_list, dim=1) # (B, 6, T, F)
-                
-                # Normalize (Instance Norm per channel over T,F)
-                mean = x.mean(dim=(2,3), keepdim=True)
-                std = x.std(dim=(2,3), keepdim=True)
-                x = (x - mean) / (std + 1e-8)
-
-            elif args.use_sft:
-                # SFT Baseline: Stack Mag, Cos, Sin
-                # H1: (B, 4, T, F) -> Extract 0,1,2
-                feat_list = []
-                
-                # Helper to process IFO
-                def process_ifo(ifo_name):
-                    d = batch[ifo_name].to(device) # (B, 4, T, F)
-                    # Take mag, cos, sin, [mask]
-                    slice_idx = 3 if args.no_mask else 4
-                    feats = d[:, 0:slice_idx, :, :]
-                    # Permute to (B, 3, F, T) -> Flatten (B, 3*F, T)
-                    feats = feats.permute(0, 1, 3, 2).reshape(d.shape[0], -1, d.shape[2])
-                    return feats
-
-                if args.channel != "L1": feat_list.append(process_ifo("H1"))
-                if args.channel != "H1": feat_list.append(process_ifo("L1"))
-                
-                x = torch.cat(feat_list, dim=1) # (B, C_flat, T)
-                
-                # Normalize (Instance Norm per channel)
-                mean = x.mean(dim=2, keepdim=True)
-                std = x.std(dim=2, keepdim=True)
-                x = (x - mean) / (std + 1e-8)
-                
-            else:
-                # GPU Reconstruction
-                x = HDF5SFTPairDataset.batch_reconstruct_torch(batch, device=device)
-                
-                # Validation Logging (First batch of epoch)
-                if batch_idx == 0:
-                     print(f"\n[Epoch {epoch+1} Batch 0 Stats (Pre-Norm)]")
-                     # H1
-                     h1 = x[:, 0, :]
-                     print(f"H1: Mean={h1.mean().item():.4f}, Std={h1.std().item():.4f}, Max={h1.abs().max().item():.4f}")
-                     if x.shape[1] > 1:
-                         l1 = x[:, 1, :]
-                         print(f"L1: Mean={l1.mean().item():.4f}, Std={l1.std().item():.4f}, Max={l1.abs().max().item():.4f}")
-                     print("-" * 30)
-
-                # Normalize (Instance Norm)
-                mean = x.mean(dim=2, keepdim=True)
-                std = x.std(dim=2, keepdim=True)
-                x = (x - mean) / (std + 1e-8)
-            
-            if not args.use_tf2d:
-                if args.channel == "H1" and not args.use_sft: x = x[:, 0:1, :]
-                elif args.channel == "L1" and not args.use_sft: x = x[:, 1:2, :]
+            x = prepare_input(
+                batch,
+                args,
+                device,
+                use_spikes,
+                use_timeseries,
+                log_recon_stats=(batch_idx == 0 and not args.use_tf2d and not args.use_sft and not use_spikes and not use_timeseries),
+                epoch_idx=epoch,
+            )
             
             t_data = time.time() - t0
             t1 = time.time()
+
+            # Label
+            y = batch['label'].to(device).float().view(-1, 1)
             
             # Augmentation
             if model.training and not args.no_aug:
@@ -396,9 +647,10 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
                     scale = 1.0 + (torch.rand(x.size(0), 1, 1, 1, device=device) * 2 - 1) * args.aug_amp
                     if not args.use_tf2d: scale = scale.squeeze(-1) # Handle 1D
                     x = x * scale
-            
-            # Label
-            y = batch['label'].to(device).float().view(-1, 1)
+
+            # Non-stationary background augmentation (primarily noise class).
+            if model.training and args.realistic_bg_aug and not use_spikes:
+                x = apply_realistic_background_augment(x, y, args)
             
             # Sanity Check: Permute Labels in Batch
             if args.sanity_permute_labels:
@@ -411,31 +663,9 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
                 # MPS supports bfloat16 (mostly) or float16
                 dtype = torch.bfloat16 if (device.type == 'mps' or device.type == 'cpu') else torch.float16
                 with torch.autocast(device_type=device.type, dtype=dtype):
-                    logits, c, z = model(x, is_encoded=use_spikes)
-                    
-                    if args.train_mode == 'pretrain_cpc':
-                        cpc_preds = model.predict_future(c)
-                        loss = compute_infonce_loss(cpc_preds, z, args.prediction_steps, device, args.temperature)
-                        acc = 0.0
-                    else:
-                        if args.loss_type == 'focal':
-                            loss = compute_focal_loss(logits, y, args.focal_gamma)
-                        else:
-                            loss = torch.nn.functional.binary_cross_entropy_with_logits(logits, y)
-
-                        # Tail Penalty
-                        if args.tail_penalty > 0:
-                            loss = loss + args.tail_penalty * compute_tail_penalty(logits, y, args.tail_threshold)
-                        
-                        # Multi-Task CPC (Option B)
-                        if args.lambda_infonce > 0:
-                            cpc_preds = model.predict_future(c)
-                            loss_cpc = compute_infonce_loss(cpc_preds, z, args.prediction_steps, device, args.temperature)
-                            loss = loss + args.lambda_infonce * loss_cpc
-                        
-                        probs = torch.sigmoid(logits)
-                        preds = (probs > 0.5).float()
-                        acc = (preds == y).float().mean().item()
+                    logits, c, z, loss, acc, loss_parts = compute_batch_objective(
+                        model, x, y, args, device, use_spikes
+                    )
             
                 if scaler is not None:
                     scaler.scale(loss).backward()
@@ -457,31 +687,9 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
                 
                 scheduler.step()
             else:
-                logits, c, z = model(x, is_encoded=use_spikes)
-                
-                if args.train_mode == 'pretrain_cpc':
-                    cpc_preds = model.predict_future(c)
-                    loss = compute_infonce_loss(cpc_preds, z, args.prediction_steps, device, args.temperature)
-                    acc = 0.0
-                else: 
-                    if args.loss_type == 'focal':
-                        loss = compute_focal_loss(logits, y, args.focal_gamma)
-                    else:
-                        loss = torch.nn.functional.binary_cross_entropy_with_logits(logits, y)
-
-                    # Tail Penalty
-                    if args.tail_penalty > 0:
-                        loss = loss + args.tail_penalty * compute_tail_penalty(logits, y, args.tail_threshold)
-                    
-                    # Multi-Task CPC (Option B)
-                    if args.lambda_infonce > 0:
-                        cpc_preds = model.predict_future(c)
-                        loss_cpc = compute_infonce_loss(cpc_preds, z, args.prediction_steps, device, args.temperature)
-                        loss = loss + args.lambda_infonce * loss_cpc
-                        
-                    probs = torch.sigmoid(logits)
-                    preds = (probs > 0.5).float()
-                    acc = (preds == y).float().mean().item()
+                logits, c, z, loss, acc, loss_parts = compute_batch_objective(
+                    model, x, y, args, device, use_spikes
+                )
                 
                 loss.backward()
                 if args.grad_clip > 0:
@@ -507,7 +715,12 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
                     "rsnn_context_std": c.std().item(),
                     "input_rms": x.pow(2).mean().sqrt().item(),
                     "data_load_time": t_data,
-                    "effective_rank": compute_effective_rank(z)
+                    "effective_rank": compute_effective_rank(z),
+                    "loss/base": float(loss_parts["loss_base"].item()),
+                    "loss/tail_penalty": float(loss_parts["loss_tail_penalty"].item()),
+                    "loss/hard_neg_bce": float(loss_parts["loss_hard_neg_bce"].item()),
+                    "loss/tail_ranking": float(loss_parts["loss_tail_ranking"].item()),
+                    "loss/infonce_aux": float(loss_parts["loss_infonce_aux"].item()),
                 })
             
             if profiler: profiler.step()
@@ -526,84 +739,15 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
         
         with torch.no_grad():
             for batch in val_loader:
-                if use_spikes or use_timeseries:
-                    x = batch['x'].to(device)
-                elif args.use_tf2d:
-                     # TF2D Input: Stack Mag, Cos, Sin -> (B, 6, T, F)
-                     feat_list = []
-                     def get_tf_feats(ifo):
-                          d = batch[ifo].to(device) # (B, 4, T, F)
-                          slice_idx = 3 if args.no_mask else 4
-                          return d[:, 0:slice_idx, :, :]
-                     
-                     if args.channel != "L1": feat_list.append(get_tf_feats("H1"))
-                     if args.channel != "H1": feat_list.append(get_tf_feats("L1"))
-                     
-                     x = torch.cat(feat_list, dim=1) # (B, 6, T, F)
-                     
-                     # Normalize (Instance Norm per channel over T,F)
-                     mean = x.mean(dim=(2,3), keepdim=True)
-                     std = x.std(dim=(2,3), keepdim=True)
-                     x = (x - mean) / (std + 1e-8)
-
-                elif args.use_sft:
-                     # SFT Baseline: Stack Mag, Cos, Sin
-                     # H1: (B, 4, T, F) -> Extract 0,1,2
-                     feat_list = []
-                     
-                     # Helper to process IFO
-                     def process_ifo(ifo_name):
-                         d = batch[ifo_name].to(device) 
-                         feats = d[:, 0:3, :, :]
-                         feats = feats.permute(0, 1, 3, 2).reshape(d.shape[0], -1, d.shape[2])
-                         return feats
- 
-                     if args.channel != "L1": feat_list.append(process_ifo("H1"))
-                     if args.channel != "H1": feat_list.append(process_ifo("L1"))
-                     x = torch.cat(feat_list, dim=1)
-                     # Norm
-                     mean = x.mean(dim=2, keepdim=True)
-                     std = x.std(dim=2, keepdim=True)
-                     x = (x - mean) / (std + 1e-8)
-                else:
-                    x = HDF5SFTPairDataset.batch_reconstruct_torch(batch, device=device)
-                    # Normalize
-                    mean = x.mean(dim=2, keepdim=True)
-                    std = x.std(dim=2, keepdim=True)
-                    x = (x - mean) / (std + 1e-8)
-                    
-                if not args.use_tf2d:
-                    if args.channel == "H1" and not args.use_sft: x = x[:, 0:1, :]
-                    elif args.channel == "L1" and not args.use_sft: x = x[:, 1:2, :]
+                x = prepare_input(batch, args, device, use_spikes, use_timeseries)
                 
                 y = batch['label'].to(device).float().view(-1, 1)
-                logits, c, z = model(x, is_encoded=use_spikes)
-                
-                if args.train_mode == 'pretrain_cpc':
-                     cpc_preds = model.predict_future(c)
-                     loss = compute_infonce_loss(cpc_preds, z, args.prediction_steps, device, args.temperature)
-                     val_loss += loss.item()
-                     # acc is 0
-                     preds = torch.zeros_like(y)
-                else:
-                    if args.loss_type == 'focal':
-                        loss = compute_focal_loss(logits, y, args.focal_gamma)
-                    else:
-                        loss = torch.nn.functional.binary_cross_entropy_with_logits(logits, y)
-
-                    # Tail Penalty
-                    if args.tail_penalty > 0:
-                        loss = loss + args.tail_penalty * compute_tail_penalty(logits, y, args.tail_threshold)
-                    
-                    if args.lambda_infonce > 0:
-                        cpc_preds = model.predict_future(c)
-                        loss_cpc = compute_infonce_loss(cpc_preds, z, args.prediction_steps, device, args.temperature)
-                        loss = loss + args.lambda_infonce * loss_cpc
-                        
-                    val_loss += loss.item()
-                    
-                    preds = (torch.sigmoid(logits) > 0.5).float()
-                    val_acc += (preds == y).float().mean().item()
+                logits, c, z, loss, acc, _ = compute_batch_objective(
+                    model, x, y, args, device, use_spikes
+                )
+                val_loss += loss.item()
+                if args.train_mode != 'pretrain_cpc':
+                    val_acc += acc
                 
                 all_val_logits.append(logits.detach().cpu())
                 all_val_labels.append(y.cpu())

@@ -1,33 +1,13 @@
 import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, Subset
-import matplotlib.pyplot as plt
+from torch.utils.data import DataLoader
 import numpy as np
 import argparse
-import os
 import json
 from tqdm import tqdm
-from scipy import stats
 
-from tqdm import tqdm
-from scipy import stats
-
-from src.train.data_setup import HDF5SFTPairDataset
-from src.models.cpc_snn import CPCSNN
-from src.models.tf_encoder import TFEncoder
-
-def load_model(checkpoint_path, device):
-    """Loads the model and arguments from a checkpoint."""
-    checkpoint = torch.load(checkpoint_path, map_location=device)
-    # Reconstruct arguments from checkpoint if possible, or use defaults + overrides
-    # Ideally, we should save args in checkpoint. Assuming 'args' dict or we just parse logic.
-    # For now, we assume the user provides matching CLI args to instantiate the model structure.
-    # We just load state_dict.
-    
-    # We DO need the exact args used for architecture (use_tf2d, etc).
-    # If not in checkpoint, user MUST provide them.
-    
-    return checkpoint
+from src.data_handling.torch_dataset import HDF5SFTPairDataset
+from src.evaluation.calibration import apply_calibration_to_logits, load_calibration
+from src.evaluation.model_loader import load_cpcsnn_from_checkpoint
 
 def bootstrap_tpr_at_fpr(signal_scores, noise_scores, fpr_levels=[1e-4, 1e-3], n_boot=1000):
     """
@@ -78,14 +58,22 @@ def bootstrap_tpr_at_fpr(signal_scores, noise_scores, fpr_levels=[1e-4, 1e-3], n
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=str, required=True, help="Path to best model checkpoint")
+    parser.add_argument(
+        "--ensemble_checkpoints",
+        type=str,
+        nargs="*",
+        default=None,
+        help="Optional extra checkpoints for ensemble inference (mean of logits)",
+    )
     parser.add_argument("--noise_h5", type=str, default="data/cpc_snn_train.h5", help="Path to H5 with Noise samples")
     parser.add_argument("--indices_noise", type=str, default="data/indices_noise.json")
     parser.add_argument("--indices_signal", type=str, default="data/indices_signal.json")
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--device", type=str, default="mps")
+    parser.add_argument("--use_metal", action="store_true", default=False, help="Enable Metal fused LIF path")
     
     # Architecture args (must match training!)
-    parser.add_argument("--use_tf2d", action="store_true", default=True)
+    parser.add_argument("--use_tf2d", action="store_true", default=False)
     parser.add_argument("--channel", type=str, default=None) # H1 or L1 or None (Both)
     parser.add_argument("--no_mask", action="store_true", default=False, help="Use 6-channel model (trained without mask)")
     parser.add_argument("--ablate_mask", action="store_true", default=False, help="Zero out mask channel for leakage test (keeps 8-channel model)")
@@ -93,6 +81,7 @@ def main():
     parser.add_argument("--context_dim", type=int, default=64, help="Model context dimension")
     parser.add_argument("--prediction_steps", type=int, default=12, help="CPC Prediction steps")
     parser.add_argument("--top_k_noise", type=int, default=50, help="Number of Top Noise samples to save for inspection")
+    parser.add_argument("--calibration_json", type=str, default=None, help="Optional calibration artifact JSON")
     
     # Advanced Eval Strategies
     parser.add_argument("--method", type=str, default="standard", choices=["standard", "swapped_pairs"], help="Eval method")
@@ -103,31 +92,84 @@ def main():
     device = torch.device(args.device)
     
     print(f"Loading Checkpoint: {args.checkpoint}")
-    checkpoint = torch.load(args.checkpoint, map_location=device)
-    state_dict = checkpoint['model_state_dict']
-    
-    # Init Model
-    # Determine In_Channels
-    comps = 3 if args.no_mask else 4
-    in_channels = comps * (1 if args.channel else 2)
-    
-    model = CPCSNN(
-        in_channels=in_channels,
-        hidden_dim=args.hidden_dim, 
-        context_dim=args.context_dim,
-        use_tf2d=args.use_tf2d,
-        prediction_steps=args.prediction_steps
-    ).to(device)
-    
-    # Load Weights
-    # Handle 'module.' prefix if saved from DataParallel, or strict matching
-    try:
-        model.load_state_dict(state_dict)
-    except Exception as e:
-        print(f"Standard load failed, trying loose: {e}")
-        model.load_state_dict(state_dict, strict=False)
-        
-    model.eval()
+    model, checkpoint, model_kwargs, load_report = load_cpcsnn_from_checkpoint(
+        args.checkpoint, device, use_metal=args.use_metal
+    )
+    if not model_kwargs["use_tf2d"]:
+        raise RuntimeError(
+            "Checkpoint is not TF2D-based. Use src/evaluation/evaluate_snn.py for 1D/time-series checkpoints."
+        )
+    if not load_report["strict"]:
+        print(
+            "[Warning] Non-strict checkpoint load "
+            f"(missing={len(load_report['missing_keys'])}, unexpected={len(load_report['unexpected_keys'])})."
+        )
+    print(
+        f"Loaded epoch={checkpoint.get('epoch', 'unknown')} "
+        f"| in_channels={model_kwargs['in_channels']} "
+        f"| use_tf2d={model_kwargs['use_tf2d']}"
+    )
+
+    ensemble_models = [model]
+    extra_ckpts = [p for p in (args.ensemble_checkpoints or []) if p and p != args.checkpoint]
+    for extra_ckpt in extra_ckpts:
+        print(f"Loading Ensemble Checkpoint: {extra_ckpt}")
+        m_i, ckpt_i, kw_i, rep_i = load_cpcsnn_from_checkpoint(
+            extra_ckpt, device, use_metal=args.use_metal
+        )
+        if not kw_i["use_tf2d"]:
+            raise RuntimeError(
+                f"Checkpoint {extra_ckpt} is not TF2D-based. "
+                "Use only TF2D checkpoints in ensemble."
+            )
+        if kw_i["in_channels"] != model_kwargs["in_channels"]:
+            raise RuntimeError(
+                f"Checkpoint {extra_ckpt} has in_channels={kw_i['in_channels']} "
+                f"but primary checkpoint expects {model_kwargs['in_channels']}."
+            )
+        if not rep_i["strict"]:
+            print(
+                "[Warning] Non-strict checkpoint load for ensemble member "
+                f"{extra_ckpt} (missing={len(rep_i['missing_keys'])}, "
+                f"unexpected={len(rep_i['unexpected_keys'])})."
+            )
+        print(
+            f"Loaded epoch={ckpt_i.get('epoch', 'unknown')} "
+            f"| in_channels={kw_i['in_channels']} "
+            f"| use_tf2d={kw_i['use_tf2d']}"
+        )
+        ensemble_models.append(m_i)
+
+    if len(ensemble_models) > 1:
+        print(f"Ensemble enabled. Members: {len(ensemble_models)}")
+
+    def infer_logits(x):
+        if len(ensemble_models) == 1:
+            logits, _, _ = ensemble_models[0](x)
+            return logits
+        logits_sum = None
+        for model_i in ensemble_models:
+            logits_i, _, _ = model_i(x)
+            logits_sum = logits_i if logits_sum is None else (logits_sum + logits_i)
+        return logits_sum / float(len(ensemble_models))
+
+    # Override CLI defaults with values inferred from checkpoint.
+    args.use_tf2d = bool(model_kwargs["use_tf2d"])
+    if args.channel is None and model_kwargs["in_channels"] in (3, 4):
+        # Single-IFO model; default to H1 unless user explicitly chooses otherwise.
+        args.channel = "H1"
+    expected_in = (3 if args.no_mask else 4) * (1 if args.channel else 2)
+    if expected_in != model_kwargs["in_channels"]:
+        alt_no_mask = not args.no_mask
+        alt_expected = (3 if alt_no_mask else 4) * (1 if args.channel else 2)
+        if alt_expected == model_kwargs["in_channels"]:
+            args.no_mask = alt_no_mask
+            print(f"Adjusted --no_mask to {args.no_mask} based on checkpoint in_channels.")
+        else:
+            print(
+                f"[Warning] Input channel mismatch: CLI expects {expected_in}, "
+                f"checkpoint expects {model_kwargs['in_channels']}."
+            )
     
     # Datasets
     print("Loading Data Indices...")
@@ -139,19 +181,11 @@ def main():
     print(f"Total Noise Pool: {len(all_noise)}")
     print(f"Total Signal Pool: {len(all_signal)}")
     
-    # Create Full Datasets (No Split - Eval on All Available for Max Resolution)
-    ds = HDF5SFTPairDataset(
-        args.noise_h5,
-        all_noise + all_signal, # Combine them but we will filter by label or track indices
-        add_mask_channel=not args.no_mask,
-        return_time_series=False
-    )
-    # Wait, simple list:
     ds_noise = HDF5SFTPairDataset(args.noise_h5, all_noise, add_mask_channel=not args.no_mask)
     ds_signal = HDF5SFTPairDataset(args.noise_h5, all_signal, add_mask_channel=not args.no_mask)
     
-    loader_noise = DataLoader(ds_noise, batch_size=args.batch_size, num_workers=4)
-    loader_signal = DataLoader(ds_signal, batch_size=args.batch_size, num_workers=4)
+    loader_noise = DataLoader(ds_noise, batch_size=args.batch_size, num_workers=0)
+    loader_signal = DataLoader(ds_signal, batch_size=args.batch_size, num_workers=0)
     
     # Inference Loop
     noise_probs = []
@@ -189,7 +223,7 @@ def main():
                 std = x.std(dim=(2,3), keepdim=True)
                 x = (x - mean) / (std + 1e-8)
                 
-                logits, _, _ = model(x)
+                logits = infer_logits(x)
                 logits_np = logits.detach().cpu().numpy().flatten()
                 probs = torch.sigmoid(logits).detach().cpu().numpy().flatten()
                 noise_probs.extend(probs)
@@ -276,7 +310,7 @@ def main():
                     std = x.std(dim=(2,3), keepdim=True)
                     x = (x - mean) / (std + 1e-8)
                     
-                    logits, _, _ = model(x)
+                    logits = infer_logits(x)
                     l_np = logits.detach().cpu().numpy().flatten()
                     probs = torch.sigmoid(logits).detach().cpu().numpy().flatten()
                     
@@ -312,7 +346,7 @@ def main():
             std = x.std(dim=(2,3), keepdim=True)
             x = (x - mean) / (std + 1e-8)
             
-            logits, _, _ = model(x)
+            logits = infer_logits(x)
             logits_np = logits.detach().cpu().numpy().flatten()
             probs = torch.sigmoid(logits).detach().cpu().numpy().flatten()
             signal_probs.extend(probs)
@@ -323,6 +357,12 @@ def main():
     signal_probs = np.array(signal_probs)
     noise_logits = np.array(noise_logits_list)
     signal_logits = np.array(signal_logits_list)
+
+    if args.calibration_json:
+        calibrator = load_calibration(args.calibration_json)
+        noise_probs = apply_calibration_to_logits(noise_logits, calibrator)
+        signal_probs = apply_calibration_to_logits(signal_logits, calibrator)
+        print(f"Loaded calibration: {args.calibration_json} (method={calibrator.method})")
 
     print("\n--- Evaluation Results ---")
     print(f"Noise Samples: {len(noise_probs)}")

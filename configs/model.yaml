@@ -1,3 +1,4 @@
+# Deprecated (MVP baseline). Canonical path uses src/train/train_cpc.py CLI flags.
 lr: 1.0e-3
 delta_threshold: 0.1
 weight_decay: 0.0

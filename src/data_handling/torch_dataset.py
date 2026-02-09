@@ -331,11 +331,34 @@ class HDF5TimeSeriesDataset(Dataset):
 
     def __init__(self, h5_path, index_list, dtype=torch.float32, load_to_ram=True, forced_labels=None):
         self.h5_path = h5_path
-        self.ids = [str(i) for i in index_list]
+        original_ids = [str(i) for i in index_list]
         self.dtype = dtype
         self.load_to_ram = load_to_ram
         self.data_cache = {}
-        self.forced_labels = forced_labels
+        self.forced_labels = None
+
+        # Filter IDs to those that actually exist in the target HDF5.
+        with h5py.File(self.h5_path, "r") as h5:
+            present = set(h5.keys())
+        self.ids = [gid for gid in original_ids if gid in present]
+        missing = len(original_ids) - len(self.ids)
+        if missing > 0:
+            print(f"Warning: {missing} IDs from index_list not found in {self.h5_path}. They will be skipped.")
+
+        # Keep forced labels aligned with the filtered ID order.
+        if forced_labels is not None:
+            if len(forced_labels) == len(original_ids):
+                self.forced_labels = [
+                    forced_labels[i] for i, gid in enumerate(original_ids) if gid in present
+                ]
+            elif len(forced_labels) == len(self.ids):
+                self.forced_labels = forced_labels
+            else:
+                print(
+                    f"Warning: forced_labels length {len(forced_labels)} does not match "
+                    f"original ids ({len(original_ids)}) or filtered ids ({len(self.ids)}). Ignoring forced labels."
+                )
+                self.forced_labels = None
         
         if self.load_to_ram:
             print(f"Loading {len(self.ids)} samples to RAM...")
@@ -343,8 +366,6 @@ class HDF5TimeSeriesDataset(Dataset):
             with h5py.File(self.h5_path, "r") as h5:
                 # Pre-fetch all data to avoid repeated disk I/O
                 for gid in tqdm(self.ids, desc="Caching RAM"):
-                    if gid not in h5: continue
-                    
                     H1 = h5[f"{gid}/H1"][()]
                     L1 = h5[f"{gid}/L1"][()]
                     y = h5[f"{gid}/label"][()] if f"{gid}/label" in h5 else None
@@ -353,15 +374,9 @@ class HDF5TimeSeriesDataset(Dataset):
                     
                     self.data_cache[gid] = {
                         "x": torch.from_numpy(x).to(self.dtype),
-                        "label": torch.tensor(float(y), dtype=self.dtype) if y is not None else None
+                        "label": torch.tensor(float(y), dtype=self.dtype) if y is not None else None,
+                        "id": gid,
                     }
-                    if self.forced_labels is not None:
-                        idx_in_list = self.ids.index(gid) # Might be slow if huge list
-                        # Better to iterate by index if list is ordered. self.ids comes from index_list.
-                        # But loop iterates self.ids.
-                        # Assuming self.ids matches self.forced_labels order? Yes.
-                        # Wait, iterate over enumerate(self.ids)
-                        pass
                 
                 # Re-loop to assign forced labels correctly if needed, or loop with index
                 if self.forced_labels is not None:
@@ -382,6 +397,8 @@ class HDF5TimeSeriesDataset(Dataset):
             
         # Fallback / Disk Read
         with h5py.File(self.h5_path, "r") as h5:
+            if gid not in h5:
+                raise KeyError(f"Missing sample id '{gid}' in {self.h5_path}.")
             H1 = h5[f"{gid}/H1"][()]
             L1 = h5[f"{gid}/L1"][()]
             y = h5[f"{gid}/label"][()] if f"{gid}/label" in h5 else None
@@ -389,7 +406,8 @@ class HDF5TimeSeriesDataset(Dataset):
         x = np.stack([H1, L1], axis=0)
         
         out = {
-            "x": torch.from_numpy(x).to(self.dtype)
+            "x": torch.from_numpy(x).to(self.dtype),
+            "id": gid,
         }
         
         if y is not None:

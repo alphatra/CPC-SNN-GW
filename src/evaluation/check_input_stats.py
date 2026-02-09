@@ -47,9 +47,8 @@ def main():
     project_root = os.path.abspath(os.path.join(script_dir, "../../"))
     
     default_h5 = os.path.join(project_root, "data/cpc_snn_train.h5")
-    # Using _OLD as discovered
-    default_noise = os.path.join(project_root, "data/indices_noise_OLD.json")
-    default_signal = os.path.join(project_root, "data/indices_signal_OLD.json")
+    default_noise = os.path.join(project_root, "data/indices_noise.json")
+    default_signal = os.path.join(project_root, "data/indices_signal.json")
     
     parser.add_argument("--h5_path", type=str, default=default_h5)
     parser.add_argument("--noise_indices", type=str, default=default_noise)

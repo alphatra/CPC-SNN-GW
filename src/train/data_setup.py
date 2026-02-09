@@ -1,9 +1,83 @@
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, WeightedRandomSampler
 import json
 import os
 import numpy as np
+import h5py
 from src.data_handling.torch_dataset import HDF5SFTPairDataset
+
+def _load_hard_negative_ids(path, max_count=0):
+    with open(path, "r") as f:
+        payload = json.load(f)
+
+    items = []
+    if isinstance(payload, list):
+        items = payload
+    elif isinstance(payload, dict):
+        # Common wrappers.
+        for key in ("hard_negatives", "items", "data"):
+            if key in payload and isinstance(payload[key], list):
+                items = payload[key]
+                break
+
+    hard_ids = []
+    for rec in items:
+        if isinstance(rec, (str, int)):
+            hard_ids.append(str(rec))
+        elif isinstance(rec, dict) and "id" in rec:
+            hard_ids.append(str(rec["id"]))
+
+    if max_count and max_count > 0:
+        hard_ids = hard_ids[:max_count]
+
+    # Preserve order while dropping duplicates.
+    return list(dict.fromkeys(hard_ids))
+
+def _build_hard_negative_sampler(train_indices, combined_indices, labels, args):
+    if not args.hard_negatives_json:
+        return None
+    if args.hard_negative_boost <= 1.0:
+        print("[HardNeg] hard_negative_boost <= 1.0, sampler disabled.")
+        return None
+    if not os.path.exists(args.hard_negatives_json):
+        print(f"[HardNeg] File not found: {args.hard_negatives_json}. Sampler disabled.")
+        return None
+
+    hard_ids = _load_hard_negative_ids(args.hard_negatives_json, max_count=args.hard_negative_max)
+    if len(hard_ids) == 0:
+        print("[HardNeg] No valid IDs loaded from JSON. Sampler disabled.")
+        return None
+    hard_set = set(hard_ids)
+
+    train_weights = np.ones(len(train_indices), dtype=np.float64)
+    hard_in_train = 0
+    noise_in_train = 0
+
+    for local_idx, global_idx in enumerate(train_indices):
+        lbl = int(labels[global_idx])
+        if lbl != 0:
+            continue
+        noise_in_train += 1
+        sid = str(combined_indices[global_idx])
+        if sid in hard_set:
+            train_weights[local_idx] = float(args.hard_negative_boost)
+            hard_in_train += 1
+
+    if hard_in_train == 0:
+        print("[HardNeg] No hard-negative IDs overlapped with train split. Sampler disabled.")
+        return None
+
+    sampler = WeightedRandomSampler(
+        weights=torch.as_tensor(train_weights, dtype=torch.double),
+        num_samples=len(train_indices),
+        replacement=True,
+    )
+    print(
+        f"[HardNeg] Weighted sampler ON | loaded={len(hard_ids)} | "
+        f"noise_in_train={noise_in_train} | hard_in_train={hard_in_train} | "
+        f"boost={args.hard_negative_boost}"
+    )
+    return sampler
 
 def setup_dataloaders(args, device):
     """
@@ -97,6 +171,30 @@ def setup_dataloaders(args, device):
     # So we disable cache variables if use_sft is True.
     use_spikes = os.path.exists(spikes_path) and not args.force_reconstruct and not args.use_sft and not args.use_tf2d
     use_timeseries = os.path.exists(ts_path) and not args.force_reconstruct and not args.use_sft and not args.use_tf2d
+
+    # Ensure indices/labels are consistent with selected source file.
+    selected_h5 = spikes_path if use_spikes else (ts_path if use_timeseries else args.h5_path)
+    with h5py.File(selected_h5, "r") as h5:
+        available_ids = set(h5.keys())
+    filtered_pairs = [
+        (idx, lbl) for idx, lbl in zip(combined_indices, labels) if str(idx) in available_ids
+    ]
+    missing = len(combined_indices) - len(filtered_pairs)
+    if missing > 0:
+        print(f"Warning: {missing} samples missing in {selected_h5}; filtering them out before split.")
+    if not filtered_pairs:
+        raise RuntimeError(f"No overlapping IDs between provided indices and {selected_h5}")
+    combined_indices, labels = zip(*filtered_pairs)
+    combined_indices = list(combined_indices)
+    labels = list(labels)
+    if not args.sanity_noise_only:
+        n_pos = int(sum(labels))
+        if n_pos == 0 or n_pos == len(labels):
+            raise RuntimeError(
+                "Selected training source has only one class after ID filtering. "
+                f"source={selected_h5}, positives={n_pos}, total={len(labels)}. "
+                "Use --force_reconstruct True or rebuild *_timeseries/_spikes with both noise and signal indices."
+            )
     
     if use_spikes:
         print(f"Using pre-encoded spikes from {spikes_path}")
@@ -152,6 +250,8 @@ def setup_dataloaders(args, device):
     # Log class distribution
     print(f"Train: {sum(train_labels)}/{len(train_labels)} signal samples ({100*sum(train_labels)/len(train_labels):.1f}%)")
     print(f"Val: {sum(val_labels)}/{len(val_labels)} signal samples ({100*sum(val_labels)/len(val_labels):.1f}%)")
+
+    train_sampler = _build_hard_negative_sampler(train_indices, combined_indices, labels, args)
     
     # 6. DataLoader Setup
     loader_kwargs = {
@@ -173,10 +273,21 @@ def setup_dataloaders(args, device):
         multiprocessing_context = None
 
     if multiprocessing_context:
-        train_loader = DataLoader(train_set, shuffle=True, multiprocessing_context=multiprocessing_context, **loader_kwargs)
+        train_loader = DataLoader(
+            train_set,
+            shuffle=(train_sampler is None),
+            sampler=train_sampler,
+            multiprocessing_context=multiprocessing_context,
+            **loader_kwargs,
+        )
         val_loader = DataLoader(val_set, shuffle=False, multiprocessing_context=multiprocessing_context, **loader_kwargs)
     else:
-        train_loader = DataLoader(train_set, shuffle=True, **loader_kwargs)
+        train_loader = DataLoader(
+            train_set,
+            shuffle=(train_sampler is None),
+            sampler=train_sampler,
+            **loader_kwargs,
+        )
         val_loader = DataLoader(val_set, shuffle=False, **loader_kwargs)
         
     return train_loader, val_loader, use_spikes, use_timeseries
