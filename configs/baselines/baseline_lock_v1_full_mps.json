@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "lock_tag": "v1_full_mps",
+  "created_utc": "2026-02-10T21:25:55Z",
+  "host": "MacBook-Pro-Gracjan.local",
+  "user": "gracjanziemianski",
+  "source_report": {
+    "path": "reports/baseline_report_candidate.json",
+    "exists": true,
+    "size_bytes": 5628,
+    "sha256": "d02dab1f303160284f41f83a9b57aab1de93e0866ee3c3c6b1ac76b14e8c9a3c"
+  },
+  "source_decision": {
+    "path": "reports/final_decision.json",
+    "exists": true,
+    "size_bytes": 2311,
+    "sha256": "3e8b700ab1ebdd43df19470e70eb0ac2bde38a89696287ee582a46730525dd72"
+  },
+  "source_report_runtime": {
+    "device": "mps",
+    "batch_size": 16,
+    "max_id_noise": 0,
+    "max_id_signal": 0,
+    "max_ood_noise": 0,
+    "max_ood_signal": 0,
+    "latency_warmup_batches": 5,
+    "latency_measure_batches": 30,
+    "fit_temp_id": true,
+    "fit_temp_ood": true,
+    "seed": 123
+  },
+  "source_report_protocol_tag": "candidate_next_mps",
+  "source_report_task": "baseline_freeze_v0",
+  "primary_kpi": "TPR@1e-4",
+  "primary_metrics_snapshot": {
+    "id_baseline": {
+      "tpr_at_1e-4": 0.8396078431372549,
+      "threshold_at_1e-4": 0.9942153096199036,
+      "actual_fpr_at_1e-4": 0.00019603999215840032,
+      "pauc_norm_max_fpr_1e-4": 0.9197999115642057,
+      "ece_15bins": 0.007287383901404285,
+      "brier": 0.004910235251389644,
+      "sample_latency_ms_p95": 2.3569498571305294
+    },
+    "ood_baseline": {
+      "tpr_at_1e-4": 0.7850980392156863,
+      "threshold_at_1e-4": 0.9990270137786865,
+      "actual_fpr_at_1e-4": 0.0001044932079414838,
+      "pauc_norm_max_fpr_1e-4": 0.884552590159473,
+      "ece_15bins": 0.002326307027407218,
+      "brier": 0.002407443999505667,
+      "sample_latency_ms_p95": 3.4111564076738428
+    }
+  },
+  "checkpoints": [
+    {
+      "path": "checkpoints/phase2_tf2d_tail_hn_v1/best.pt",
+      "exists": true,
+      "size_bytes": 7567903,
+      "sha256": "2a39b2c0da5fd242fe55b7ef28c8af229f7dcae30c8433032ee009b00668b9d5"
+    },
+    {
+      "path": "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt",
+      "exists": true,
+      "size_bytes": 7567903,
+      "sha256": "340e99b84d6d310d0ff6a480dc8e7c92d58fb9309ae5a9a413427f5ffa1dacaa"
+    },
+    {
+      "path": "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt",
+      "exists": true,
+      "size_bytes": 7567903,
+      "sha256": "960185609b3701c45b1dbc6134fd53bf8cb9f81866c3ec39b5c58157f50b3882"
+    },
+    {
+      "path": "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt",
+      "exists": true,
+      "size_bytes": 7567903,
+      "sha256": "cad0d544e866a41c36cb5ad138ca338bcd19a972d4d5dce9cfc2e91d0384b255"
+    },
+    {
+      "path": "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt",
+      "exists": true,
+      "size_bytes": 7567903,
+      "sha256": "546afcd947297f885091d009fe1357f05ecc8540ee9ccb483bdbaa65d3aaf611"
+    },
+    {
+      "path": "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt",
+      "exists": true,
+      "size_bytes": 7567903,
+      "sha256": "3606f0911c43d449334d239640eca6379e57d6afeced50b677bc22afde298307"
+    }
+  ],
+  "decision_snapshot": {
+    "date": "2026-02-09",
+    "primary_kpi": "TPR@1e-4",
+    "id_candidate": {
+      "variant": "C (phase2_tf2d_tail_hn_v1)",
+      "checkpoint": "checkpoints/phase2_tf2d_tail_hn_v1/best.pt"
+    },
+    "ood_candidate": {
+      "variant": "C3 ensemble (5 checkpoints, drop43_add46)",
+      "checkpoints": [
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt",
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt",
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt",
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt",
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt"
+      ],
+      "ood_compare_report_dir": "reports/ood_compare_b_vs_c3ens_drop43_add46"
+    },
+    "ood_ensemble_candidate": {
+      "variant": "C3 ensemble (5 checkpoints, drop43_add46)",
+      "checkpoints": [
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt",
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt",
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt",
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt",
+        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt"
+      ]
+    },
+    "strict_ood_snapshot": {
+      "B": {
+        "variant": "B: TF2D + tail-aware",
+        "tpr_at_1e3": 0.9457,
+        "tpr_at_1e4": 0.7422,
+        "tpr_at_1e5": null,
+        "evt_tpr_at_1e4": 0.8416
+      },
+      "C3_single": {
+        "variant": "C3: TF2D + hard-negatives (boost=5)",
+        "tpr_at_1e3": 0.9477,
+        "tpr_at_1e4": 0.8619,
+        "tpr_at_1e5": null,
+        "evt_tpr_at_1e4": 0.0055
+      },
+      "C3_ensemble": {
+        "variant": "C3 ensemble (5 checkpoints, drop43_add46)",
+        "tpr_at_1e3": 0.9282,
+        "tpr_at_1e4": 0.7806,
+        "tpr_at_1e5": null,
+        "evt_tpr_at_1e4": 0.6604
+      }
+    },
+    "ood_head_to_head_repeats": {
+      "protocol": "swapped_pairs, swaps=30, repeats=5, test_late",
+      "B_single": {
+        "mean_tpr_at_1e4": 0.2682,
+        "std_tpr_at_1e4": 0.0204
+      },
+      "C3_ensemble_drop43_add46": {
+        "mean_tpr_at_1e4": 0.7947,
+        "std_tpr_at_1e4": 0.0146
+      },
+      "delta_ensemble_minus_B": 0.5264
+    },
+    "notes": [
+      "OOD-primary candidate is C3 ensemble (drop43_add46).",
+      "Use uncalibrated scores for thresholding near FAR~1e-4.",
+      "Use calibrated score for probability reporting / deeper-tail analysis."
+    ]
+  },
+  "reproduce_command": "",
+  "notes": "MPS-specific baseline lock."
+}

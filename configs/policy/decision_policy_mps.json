@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "policy_name": "fast_verify_mps_ood_baseline",
+  "backend": "mps",
+  "source_lock": {
+    "path": "configs/baselines/baseline_lock_v1_full_mps.json",
+    "lock_tag": "v1_full_mps",
+    "created_utc": "2026-02-10T21:25:55Z"
+  },
+  "scope": "ood_baseline",
+  "fpr_target": "1e-4",
+  "threshold": {
+    "score_at_target_fpr": 0.9990270137786865,
+    "actual_fpr_at_target": 0.0001044932079414838
+  },
+  "bands": {
+    "confidence_band_abs": 0.003,
+    "verify_min_score": 0.9960270137786865,
+    "fast_accept_min_score": 1.0
+  },
+  "routing_rules": [
+    {
+      "name": "fast_accept",
+      "if": "score >= 1.0000000000 and uncertainty < 0.100000",
+      "action": "fast_path_accept"
+    },
+    {
+      "name": "verify_band",
+      "if": "0.9960270138 <= score < 1.0000000000 or uncertainty >= 0.100000",
+      "action": "verify_path"
+    },
+    {
+      "name": "reject",
+      "if": "score < 0.9960270138",
+      "action": "reject"
+    }
+  ]
+}

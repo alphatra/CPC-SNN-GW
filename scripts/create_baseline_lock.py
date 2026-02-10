@@ -48,6 +48,8 @@ def extract_primary_metrics(report: Dict[str, Any]) -> Dict[str, Dict[str, float
         lat = report.get(scope, {}).get("latency", {})
         out[scope] = {
             "tpr_at_1e-4": float(m.get("tpr_at_1e-4", float("nan"))),
+            "threshold_at_1e-4": float(m.get("threshold_at_1e-4", float("nan"))),
+            "actual_fpr_at_1e-4": float(m.get("actual_fpr_at_1e-4", float("nan"))),
             "pauc_norm_max_fpr_1e-4": float(m.get("pauc_norm_max_fpr_1e-4", float("nan"))),
             "ece_15bins": float(m.get("ece_15bins", float("nan"))),
             "brier": float(m.get("brier", float("nan"))),
@@ -100,4 +102,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

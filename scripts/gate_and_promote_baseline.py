@@ -70,6 +70,9 @@ def main() -> None:
     ap.add_argument("--max-ece-increase-abs", type=float, default=0.01)
     ap.add_argument("--max-brier-increase-abs", type=float, default=0.01)
     ap.add_argument("--max-latency-increase-rel", type=float, default=0.30)
+    ap.add_argument("--nondecreasing-eps-tpr", type=float, default=0.0)
+    ap.add_argument("--nondecreasing-eps-pauc", type=float, default=0.0)
+    ap.add_argument("--enforce-same-device", action="store_true")
     ap.add_argument(
         "--require-nondecreasing-scopes",
         type=str,
@@ -111,9 +114,15 @@ def main() -> None:
         str(args.max_brier_increase_abs),
         "--max-latency-increase-rel",
         str(args.max_latency_increase_rel),
+        "--nondecreasing-eps-tpr",
+        str(args.nondecreasing_eps_tpr),
+        "--nondecreasing-eps-pauc",
+        str(args.nondecreasing_eps_pauc),
         "--require-nondecreasing-scopes",
         args.require_nondecreasing_scopes,
     ]
+    if args.enforce_same_device:
+        gate_cmd.append("--enforce-same-device")
     _run(gate_cmd)
 
     # 2) Promote candidate report(s)

@@ -116,4 +116,11 @@ print(f"[C3-ensemble] repeats={len(c3e)} TPR@1e-4={mu_e:.4f}±{sd_e:.4f}")
 print(f"[delta ensemble-B] {(mu_e - mu_b):+.4f}")
 PY
 
+PYTHONPATH=. python "$ROOT/scripts/bootstrap_compare_b_vs_c3ens.py" \
+  --out-dir "$OUT_DIR" \
+  --n-boot 20000 \
+  --seed 123 \
+  --min-delta 0.0 \
+  --min-p-superiority 0.95
+
 echo "[OK] outputs -> $OUT_DIR"

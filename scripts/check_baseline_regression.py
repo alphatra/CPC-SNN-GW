@@ -141,6 +141,23 @@ def main() -> None:
     ap.add_argument("--max-pauc-drop-abs-id", type=float, default=None)
     ap.add_argument("--max-pauc-drop-abs-ood", type=float, default=None)
     ap.add_argument("--require-nondecreasing-scopes", type=str, default="")
+    ap.add_argument(
+        "--nondecreasing-eps-tpr",
+        type=float,
+        default=0.0,
+        help="Allowed tiny TPR drop for scopes in --require-nondecreasing-scopes.",
+    )
+    ap.add_argument(
+        "--nondecreasing-eps-pauc",
+        type=float,
+        default=0.0,
+        help="Allowed tiny pAUC drop for scopes in --require-nondecreasing-scopes.",
+    )
+    ap.add_argument(
+        "--enforce-same-device",
+        action="store_true",
+        help="Fail if current report runtime.device differs from lock runtime device.",
+    )
     args = ap.parse_args()
 
     if not args.current_report.exists():
@@ -168,6 +185,18 @@ def main() -> None:
     lines.append(f"[info] current report: {args.current_report}")
     lines.append(f"[info] lock: {args.lock}")
     lines.append(f"[info] lock tag: {lock.get('lock_tag', '')}")
+    cur_dev = str(current.get("runtime", {}).get("device", "")).lower()
+    lock_dev = str(lock.get("source_report_runtime", {}).get("device", "")).lower()
+    if cur_dev:
+        lines.append(f"[info] current runtime.device: {cur_dev}")
+    if lock_dev:
+        lines.append(f"[info] lock runtime.device: {lock_dev}")
+    if args.enforce_same_device and cur_dev and lock_dev and cur_dev != lock_dev:
+        lines.append(
+            f"[FAIL] runtime.device mismatch: current={cur_dev} vs lock={lock_dev} "
+            "(use backend-specific lock)"
+        )
+        all_ok = False
 
     scopes_no_drop = {
         s.strip() for s in args.require_nondecreasing_scopes.split(",") if s.strip()
@@ -187,8 +216,8 @@ def main() -> None:
             args.max_pauc_drop_abs_ood,
         )
         if scope in scopes_no_drop:
-            tpr_drop = 0.0
-            pauc_drop = 0.0
+            tpr_drop = max(0.0, float(args.nondecreasing_eps_tpr))
+            pauc_drop = max(0.0, float(args.nondecreasing_eps_pauc))
         ok, msgs = check_scope(
             scope_name=scope,
             cur=current,

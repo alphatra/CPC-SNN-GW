@@ -38,13 +38,39 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve backend-specific lock (MPS-only)
+        id: lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEVICE="$(python - <<'PY'
+import json, os
+p=os.environ["CURRENT_REPORT"]
+r=json.loads(open(p).read())
+print(str(r.get("runtime",{}).get("device","")).lower())
+PY
+)"
+          echo "runtime_device=$DEVICE" >> "$GITHUB_OUTPUT"
+          if [[ "$DEVICE" != "mps" ]]; then
+            echo "[error] candidate runtime.device=$DEVICE, expected mps for this workflow."
+            exit 1
+          fi
+          LOCK_PATH="configs/baselines/baseline_lock_v1_full_mps.json"
+          if [[ ! -f "$LOCK_PATH" ]]; then
+            echo "[error] missing MPS lock: $LOCK_PATH"
+            exit 1
+          fi
+          echo "lock_path=$LOCK_PATH" >> "$GITHUB_OUTPUT"
+        env:
+          CURRENT_REPORT: ${{ steps.resolve.outputs.current_report }}
+
       - name: Run regression gate
         env:
           PYTHONPATH: .
         run: |
           python scripts/check_baseline_regression.py \
             --current-report "${{ steps.resolve.outputs.current_report }}" \
-            --lock configs/baselines/baseline_lock_v1_full.json \
+            --lock "${{ steps.lock.outputs.lock_path }}" \
             --max-tpr-drop-abs 0.02 \
             --max-pauc-drop-abs 0.02 \
             --max-tpr-drop-abs-ood 0.005 \
@@ -52,4 +78,24 @@ jobs:
             --max-ece-increase-abs 0.01 \
             --max-brier-increase-abs 0.01 \
             --max-latency-increase-rel 0.30 \
-            --require-nondecreasing-scopes ood_baseline
+            --require-nondecreasing-scopes ood_baseline \
+            --nondecreasing-eps-tpr 0.003 \
+            --nondecreasing-eps-pauc 0.002 \
+            --enforce-same-device
+
+      - name: Bootstrap compare (B vs C3 ensemble) if outputs exist
+        env:
+          PYTHONPATH: .
+        run: |
+          set -euo pipefail
+          OUT_DIR="reports/ood_compare_b_vs_c3ens_drop43_add46"
+          if [[ -f "$OUT_DIR/b_r1.txt" && -f "$OUT_DIR/c3ens_r1.txt" ]]; then
+            python scripts/bootstrap_compare_b_vs_c3ens.py \
+              --out-dir "$OUT_DIR" \
+              --n-boot 20000 \
+              --seed 123 \
+              --min-delta 0.0 \
+              --min-p-superiority 0.95
+          else
+            echo "[info] skipping bootstrap compare; missing repeat logs in $OUT_DIR"
+          fi
