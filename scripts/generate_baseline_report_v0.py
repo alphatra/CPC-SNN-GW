@@ -175,6 +175,7 @@ def run_swapped_noise_scores(
     batch_size: int,
     swaps: int,
     device: torch.device,
+    seed: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     ds_noise = HDF5SFTPairDataset(str(h5_path), list(noise_ids), add_mask_channel=(bundle.in_channels in (4, 8)))
     loader_noise = DataLoader(ds_noise, batch_size=batch_size, num_workers=0)
@@ -197,11 +198,12 @@ def run_swapped_noise_scores(
 
     out_probs: List[np.ndarray] = []
     out_logits: List[np.ndarray] = []
+    rng = np.random.default_rng(seed)
     with torch.no_grad():
         for _ in range(swaps):
             min_shift = max(1, n // 4)
             max_shift = max(2, n - 1)
-            shift = int(np.random.randint(min_shift, max_shift))
+            shift = int(rng.integers(min_shift, max_shift))
             l1_shifted = torch.roll(full_l1, shifts=shift, dims=0)
 
             for i in range(0, n, batch_size):
@@ -386,6 +388,7 @@ def main() -> None:
     ap.add_argument("--max-ood-signal", type=int, default=0)
     ap.add_argument("--latency-warmup-batches", type=int, default=5)
     ap.add_argument("--latency-measure-batches", type=int, default=30)
+    ap.add_argument("--seed", type=int, default=123, help="RNG seed for deterministic swapped-noise protocol.")
     ap.add_argument("--fit-temp-id", action="store_true", help="Fit temperature calibrator for ID scope.")
     ap.add_argument("--fit-temp-ood", action="store_true", help="Fit temperature calibrator for OOD scope.")
     ap.add_argument("--id-cal-noise", type=Path, default=None, help="Noise indices for ID calibration fit.")
@@ -410,6 +413,9 @@ def main() -> None:
     ap.add_argument("--out-json", type=Path, default=Path("reports/baseline_report_v0.json"))
     ap.add_argument("--out-md", type=Path, default=Path("reports/baseline_report_v0.md"))
     args = ap.parse_args()
+    if args.seed is not None:
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
 
     decision = json.loads(args.decision_json.read_text())
     id_ckpt = decision["id_candidate"]["checkpoint"]
@@ -456,7 +462,7 @@ def main() -> None:
     # OOD metrics: swapped noise + late signals
     print("[stage] OOD swapped-noise scores...")
     ood_noise_probs, ood_noise_logits = run_swapped_noise_scores(
-        ood_bundle, args.h5_path, ood_noise_ids, args.batch_size, args.ood_swaps, device
+        ood_bundle, args.h5_path, ood_noise_ids, args.batch_size, args.ood_swaps, device, seed=args.seed
     )
     # keep signals "natural" and late split
     print("[stage] OOD signal scores...")
@@ -540,10 +546,11 @@ def main() -> None:
             "checkpoints": list(ood_bundle.checkpoints),
             "protocol": {
                 "noise_method": "swapped_pairs",
-                "swaps": int(args.ood_swaps),
-                "noise_split": str(args.ood_noise),
-                "signal_split": str(args.ood_signal),
-            },
+            "swaps": int(args.ood_swaps),
+            "seed": int(args.seed) if args.seed is not None else None,
+            "noise_split": str(args.ood_noise),
+            "signal_split": str(args.ood_signal),
+        },
             "n_scores_noise": int(len(ood_noise_probs)),
             "n_scores_signal": int(len(ood_signal_probs)),
             "metrics": ood_metrics,
@@ -566,6 +573,7 @@ def main() -> None:
             "latency_measure_batches": int(args.latency_measure_batches),
             "fit_temp_id": bool(args.fit_temp_id),
             "fit_temp_ood": bool(args.fit_temp_ood),
+            "seed": int(args.seed) if args.seed is not None else None,
         },
     }
 

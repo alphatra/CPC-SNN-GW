@@ -70,6 +70,7 @@ def main():
     parser.add_argument("--indices_signal", type=str, default="data/indices_signal.json")
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--device", type=str, default="mps")
+    parser.add_argument("--seed", type=int, default=None, help="Optional RNG seed for deterministic eval.")
     parser.add_argument("--use_metal", action="store_true", default=False, help="Enable Metal fused LIF path")
     
     # Architecture args (must match training!)
@@ -89,6 +90,10 @@ def main():
     parser.add_argument("--ablate_ifo", type=str, default=None, choices=["H1", "L1"], help="Zero out specific IFO")
     
     args = parser.parse_args()
+    if args.seed is not None:
+        np.random.seed(args.seed)
+        torch.manual_seed(args.seed)
+        print(f"[info] deterministic seed: {args.seed}")
     device = torch.device(args.device)
     
     print(f"Loading Checkpoint: {args.checkpoint}")

@@ -106,6 +106,19 @@ def check_scope(
     return ok, msgs
 
 
+def _resolve_scope_threshold(
+    scope: str,
+    base_value: float,
+    id_value: float | None,
+    ood_value: float | None,
+) -> float:
+    if scope == "id_baseline" and id_value is not None:
+        return float(id_value)
+    if scope == "ood_baseline" and ood_value is not None:
+        return float(ood_value)
+    return float(base_value)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Check baseline regression against lock.")
     ap.add_argument(
@@ -123,6 +136,11 @@ def main() -> None:
     ap.add_argument("--max-ece-increase-abs", type=float, default=0.01)
     ap.add_argument("--max-brier-increase-abs", type=float, default=0.01)
     ap.add_argument("--max-latency-increase-rel", type=float, default=0.30)
+    ap.add_argument("--max-tpr-drop-abs-id", type=float, default=None)
+    ap.add_argument("--max-tpr-drop-abs-ood", type=float, default=None)
+    ap.add_argument("--max-pauc-drop-abs-id", type=float, default=None)
+    ap.add_argument("--max-pauc-drop-abs-ood", type=float, default=None)
+    ap.add_argument("--require-nondecreasing-scopes", type=str, default="")
     args = ap.parse_args()
 
     if not args.current_report.exists():
@@ -151,13 +169,32 @@ def main() -> None:
     lines.append(f"[info] lock: {args.lock}")
     lines.append(f"[info] lock tag: {lock.get('lock_tag', '')}")
 
+    scopes_no_drop = {
+        s.strip() for s in args.require_nondecreasing_scopes.split(",") if s.strip()
+    }
+
     for scope in ("id_baseline", "ood_baseline"):
+        tpr_drop = _resolve_scope_threshold(
+            scope,
+            args.max_tpr_drop_abs,
+            args.max_tpr_drop_abs_id,
+            args.max_tpr_drop_abs_ood,
+        )
+        pauc_drop = _resolve_scope_threshold(
+            scope,
+            args.max_pauc_drop_abs,
+            args.max_pauc_drop_abs_id,
+            args.max_pauc_drop_abs_ood,
+        )
+        if scope in scopes_no_drop:
+            tpr_drop = 0.0
+            pauc_drop = 0.0
         ok, msgs = check_scope(
             scope_name=scope,
             cur=current,
             base=baseline,
-            max_tpr_drop_abs=args.max_tpr_drop_abs,
-            max_pauc_drop_abs=args.max_pauc_drop_abs,
+            max_tpr_drop_abs=tpr_drop,
+            max_pauc_drop_abs=pauc_drop,
             max_ece_increase_abs=args.max_ece_increase_abs,
             max_brier_increase_abs=args.max_brier_increase_abs,
             max_latency_increase_rel=args.max_latency_increase_rel,

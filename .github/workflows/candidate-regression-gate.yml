@@ -47,6 +47,9 @@ jobs:
             --lock configs/baselines/baseline_lock_v1_full.json \
             --max-tpr-drop-abs 0.02 \
             --max-pauc-drop-abs 0.02 \
+            --max-tpr-drop-abs-ood 0.005 \
+            --max-pauc-drop-abs-ood 0.01 \
             --max-ece-increase-abs 0.01 \
             --max-brier-increase-abs 0.01 \
-            --max-latency-increase-rel 0.30
+            --max-latency-increase-rel 0.30 \
+            --require-nondecreasing-scopes ood_baseline

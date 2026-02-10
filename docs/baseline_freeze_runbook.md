@@ -9,6 +9,7 @@ PYTHONPATH=. python -u scripts/generate_baseline_report_v0.py \
   --device cpu \
   --batch-size 16 \
   --ood-swaps 30 \
+  --seed 123 \
   --fit-temp-id \
   --fit-temp-ood \
   --protocol-tag candidate_exp_X \
@@ -29,9 +30,12 @@ PYTHONPATH=. python scripts/check_baseline_regression.py \
   --lock configs/baselines/baseline_lock_v1_full.json \
   --max-tpr-drop-abs 0.02 \
   --max-pauc-drop-abs 0.02 \
+  --max-tpr-drop-abs-ood 0.005 \
+  --max-pauc-drop-abs-ood 0.01 \
   --max-ece-increase-abs 0.01 \
   --max-brier-increase-abs 0.01 \
-  --max-latency-increase-rel 0.30
+  --max-latency-increase-rel 0.30 \
+  --require-nondecreasing-scopes ood_baseline
 ```
 
 Stop here if gate fails.
