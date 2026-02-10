@@ -575,6 +575,11 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
     print(f"AMP Enabled: {use_amp}")
     
     best_val_loss = float('inf')
+    # KPI-first checkpointing for tail-sensitive operation:
+    # primary: TPR@1e-4, tie-break: pAUC(1e-4)
+    best_kpi_tpr = float('-inf')
+    best_kpi_pauc = float('-inf')
+    best_kpi_epoch = -1
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     save_dir = os.path.join("checkpoints", args.run_name or timestamp)
     os.makedirs(save_dir, exist_ok=True)
@@ -1022,6 +1027,13 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
             'optimizer_state_dict': optimizer.state_dict(),
             'scheduler_state_dict': scheduler.state_dict(), # Fix #6
             'loss': avg_val_loss,
+            'metrics': {
+                'val_auc': float(val_roc_auc),
+                'val_pauc_1e4': float(val_pauc_1e4),
+                'val_tpr_1e4': float(val_tpr_1e4),
+                'val_ece': float(val_ece),
+                'val_brier': float(val_brier),
+            },
             'config': vars(args)
         }
         torch.save(checkpoint, os.path.join(save_dir, "latest.pt"))
@@ -1030,6 +1042,28 @@ def train_model(args, train_loader, val_loader, device, use_spikes, use_timeseri
             torch.save(checkpoint, os.path.join(save_dir, "best.pt"))
             print(f"New best model saved to {save_dir}/best.pt")
 
+        is_better_kpi = False
+        if args.train_mode != 'pretrain_cpc':
+            if val_tpr_1e4 > best_kpi_tpr:
+                is_better_kpi = True
+            elif val_tpr_1e4 == best_kpi_tpr and val_pauc_1e4 > best_kpi_pauc:
+                is_better_kpi = True
+
+        if is_better_kpi:
+            best_kpi_tpr = float(val_tpr_1e4)
+            best_kpi_pauc = float(val_pauc_1e4)
+            best_kpi_epoch = int(epoch + 1)
+            torch.save(checkpoint, os.path.join(save_dir, "best_kpi.pt"))
+            print(
+                f"New KPI-best model saved to {save_dir}/best_kpi.pt "
+                f"(epoch={best_kpi_epoch}, TPR@1e-4={best_kpi_tpr:.4f}, pAUC={best_kpi_pauc:.5f})"
+            )
+
     print("Training complete.")
+    if best_kpi_epoch > 0:
+        print(
+            f"[summary] KPI-best checkpoint: epoch={best_kpi_epoch}, "
+            f"TPR@1e-4={best_kpi_tpr:.4f}, pAUC(1e-4)={best_kpi_pauc:.5f}"
+        )
     if not args.no_wandb:
         wandb.finish()

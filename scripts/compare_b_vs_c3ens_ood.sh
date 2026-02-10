@@ -79,6 +79,11 @@ def stats(vals):
 
 b = collect("b_r*.txt")
 c3e = collect("c3ens_r*.txt")
+if not b or not c3e:
+    raise SystemExit(
+        f"[ERROR] Missing inputs in {out}. "
+        f"Found B={len(b)} files, C3={len(c3e)} files."
+    )
 mu_b, sd_b = stats(b)
 mu_e, sd_e = stats(c3e)
 
