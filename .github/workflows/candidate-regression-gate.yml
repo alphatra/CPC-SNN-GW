@@ -1,0 +1,52 @@
+name: Candidate Regression Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+      - phase2-robust-eval
+
+jobs:
+  baseline-regression-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Resolve candidate report path
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f "configs/baselines/baseline_report_candidate.json" ]]; then
+            echo "current_report=configs/baselines/baseline_report_candidate.json" >> "$GITHUB_OUTPUT"
+          elif [[ -f "reports/baseline_report_candidate.json" ]]; then
+            echo "current_report=reports/baseline_report_candidate.json" >> "$GITHUB_OUTPUT"
+          else
+            echo "[error] Missing candidate report."
+            echo "Expected one of:"
+            echo "  - configs/baselines/baseline_report_candidate.json"
+            echo "  - reports/baseline_report_candidate.json"
+            echo "Generate it first via scripts/generate_baseline_report_v0.py."
+            exit 1
+          fi
+
+      - name: Run regression gate
+        env:
+          PYTHONPATH: .
+        run: |
+          python scripts/check_baseline_regression.py \
+            --current-report "${{ steps.resolve.outputs.current_report }}" \
+            --lock configs/baselines/baseline_lock_v1_full.json \
+            --max-tpr-drop-abs 0.02 \
+            --max-pauc-drop-abs 0.02 \
+            --max-ece-increase-abs 0.01 \
+            --max-brier-increase-abs 0.01 \
+            --max-latency-increase-rel 0.30

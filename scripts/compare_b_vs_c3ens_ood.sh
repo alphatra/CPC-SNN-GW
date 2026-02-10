@@ -20,12 +20,36 @@ BATCH_SIZE="${BATCH_SIZE:-128}"
 OUT_DIR="${OUT_DIR:-$ROOT/reports/ood_compare_b_vs_c3ens}"
 DEVICE="${DEVICE:-mps}"
 
+prefer_ckpt() {
+  local p="$1"
+  local d
+  d="$(dirname "$p")"
+  if [[ -f "$d/best_kpi.pt" ]]; then
+    echo "$d/best_kpi.pt"
+  elif [[ -f "$p" ]]; then
+    echo "$p"
+  elif [[ -f "$d/best.pt" ]]; then
+    echo "$d/best.pt"
+  elif [[ -f "$d/latest.pt" ]]; then
+    echo "$d/latest.pt"
+  else
+    echo "$p"
+  fi
+}
+
 CKPT_B="${CKPT_B:-$ROOT/checkpoints/phase2_tf2d_tail/best.pt}"
 CKPT_C3_S1="${CKPT_C3_S1:-$ROOT/checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt}"
 CKPT_C3_S2="${CKPT_C3_S2:-$ROOT/checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt}"
 CKPT_C3_S3="${CKPT_C3_S3:-$ROOT/checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed43/best.pt}"
 CKPT_C3_S4="${CKPT_C3_S4:-$ROOT/checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt}"
 CKPT_C3_S5="${CKPT_C3_S5:-$ROOT/checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt}"
+
+CKPT_B="$(prefer_ckpt "$CKPT_B")"
+CKPT_C3_S1="$(prefer_ckpt "$CKPT_C3_S1")"
+CKPT_C3_S2="$(prefer_ckpt "$CKPT_C3_S2")"
+CKPT_C3_S3="$(prefer_ckpt "$CKPT_C3_S3")"
+CKPT_C3_S4="$(prefer_ckpt "$CKPT_C3_S4")"
+CKPT_C3_S5="$(prefer_ckpt "$CKPT_C3_S5")"
 
 mkdir -p "$OUT_DIR"
 export OUT_DIR

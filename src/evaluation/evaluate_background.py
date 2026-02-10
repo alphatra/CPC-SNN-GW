@@ -93,8 +93,11 @@ def main():
     
     print(f"Loading Checkpoint: {args.checkpoint}")
     model, checkpoint, model_kwargs, load_report = load_cpcsnn_from_checkpoint(
-        args.checkpoint, device, use_metal=args.use_metal
+        args.checkpoint, device, use_metal=args.use_metal, prefer_kpi=True
     )
+    resolved_ckpt = load_report.get("resolved_checkpoint", args.checkpoint)
+    if resolved_ckpt != args.checkpoint:
+        print(f"[info] checkpoint resolved: {args.checkpoint} -> {resolved_ckpt}")
     if not model_kwargs["use_tf2d"]:
         raise RuntimeError(
             "Checkpoint is not TF2D-based. Use src/evaluation/evaluate_snn.py for 1D/time-series checkpoints."
@@ -115,8 +118,11 @@ def main():
     for extra_ckpt in extra_ckpts:
         print(f"Loading Ensemble Checkpoint: {extra_ckpt}")
         m_i, ckpt_i, kw_i, rep_i = load_cpcsnn_from_checkpoint(
-            extra_ckpt, device, use_metal=args.use_metal
+            extra_ckpt, device, use_metal=args.use_metal, prefer_kpi=True
         )
+        resolved_extra = rep_i.get("resolved_checkpoint", extra_ckpt)
+        if resolved_extra != extra_ckpt:
+            print(f"[info] ensemble checkpoint resolved: {extra_ckpt} -> {resolved_extra}")
         if not kw_i["use_tf2d"]:
             raise RuntimeError(
                 f"Checkpoint {extra_ckpt} is not TF2D-based. "

@@ -61,6 +61,23 @@ HARD_NEG_UNION="${HARD_NEG_UNION:-$ROOT_DIR/data/hard_negatives_union.json}"
 HARD_NEG_SWAPPED="${HARD_NEG_SWAPPED:-$ROOT_DIR/data/hard_negatives_from_swapped_top50.json}"
 HARD_NEG_MINED="${HARD_NEG_MINED:-$ROOT_DIR/data/hard_negatives_tf2d_tail_ids.json}"
 
+prefer_ckpt() {
+  local p="$1"
+  local d
+  d="$(dirname "$p")"
+  if [[ -f "$d/best_kpi.pt" ]]; then
+    echo "$d/best_kpi.pt"
+  elif [[ -f "$p" ]]; then
+    echo "$p"
+  elif [[ -f "$d/best.pt" ]]; then
+    echo "$d/best.pt"
+  elif [[ -f "$d/latest.pt" ]]; then
+    echo "$d/latest.pt"
+  else
+    echo "$p"
+  fi
+}
+
 CKPT_A="$ROOT_DIR/checkpoints/ood_time_tf2d_base/best.pt"
 CKPT_B="$ROOT_DIR/checkpoints/ood_time_tf2d_tail/best.pt"
 CKPT_C="$ROOT_DIR/checkpoints/ood_time_tf2d_tail_hn/best.pt"
@@ -180,6 +197,10 @@ if [[ "$SKIP_TRAIN" -eq 0 ]]; then
     --hard_negatives_json "$HARD_NEG_UNION" \
     --hard_negative_boost 10 --hard_negative_max 3000
 fi
+
+CKPT_A="$(prefer_ckpt "$CKPT_A")"
+CKPT_B="$(prefer_ckpt "$CKPT_B")"
+CKPT_C="$(prefer_ckpt "$CKPT_C")"
 
 require_file "$CKPT_A"
 require_file "$CKPT_B"

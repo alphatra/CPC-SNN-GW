@@ -9,9 +9,17 @@ PYTHONPATH=. python -u scripts/generate_baseline_report_v0.py \
   --device cpu \
   --batch-size 16 \
   --ood-swaps 30 \
+  --fit-temp-id \
+  --fit-temp-ood \
   --protocol-tag candidate_exp_X \
   --out-json reports/baseline_report_candidate.json \
   --out-md reports/baseline_report_candidate.md
+```
+
+Opcjonalnie, jeśli chcesz trzymać kandydata jako artefakt śledzony przez Git (pod CI gate):
+```bash
+mkdir -p configs/baselines
+cp reports/baseline_report_candidate.json configs/baselines/baseline_report_candidate.json
 ```
 
 ## 2. Gate candidate against frozen lock
@@ -61,3 +69,4 @@ git push origin <branch>
 - Never overwrite `v1_full` before the regression gate passes.
 - Keep lock files in `configs/baselines/` (tracked), not in ignored `reports/`.
 - Treat generated reports in `reports/` as ephemeral runtime artifacts.
+- Evaluation should prefer `best_kpi.pt` and fall back to `best.pt` automatically.

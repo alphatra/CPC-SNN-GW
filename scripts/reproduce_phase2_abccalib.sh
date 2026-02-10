@@ -62,6 +62,23 @@ HARD_NEG_MINED="${HARD_NEG_MINED:-$ROOT_DIR/data/hard_negatives_tf2d_tail_ids.js
 
 mkdir -p "$REPORTS_DIR" "$REPEATS_DIR" "$FREEZE_DIR"
 
+prefer_ckpt() {
+  local p="$1"
+  local d
+  d="$(dirname "$p")"
+  if [[ -f "$d/best_kpi.pt" ]]; then
+    echo "$d/best_kpi.pt"
+  elif [[ -f "$p" ]]; then
+    echo "$p"
+  elif [[ -f "$d/best.pt" ]]; then
+    echo "$d/best.pt"
+  elif [[ -f "$d/latest.pt" ]]; then
+    echo "$d/latest.pt"
+  else
+    echo "$p"
+  fi
+}
+
 require_file() {
   local path="$1"
   if [[ ! -f "$path" ]]; then
@@ -208,6 +225,14 @@ JSON
 require_file "$H5"
 require_file "$NOISE_INDICES"
 require_file "$SIGNAL_INDICES"
+
+CKPT_A="$(prefer_ckpt "$CKPT_A")"
+CKPT_B="$(prefer_ckpt "$CKPT_B")"
+CKPT_C="$(prefer_ckpt "$CKPT_C")"
+
+require_file "$CKPT_A"
+require_file "$CKPT_B"
+require_file "$CKPT_C"
 
 if [[ "$WITH_TRAIN" -eq 1 ]]; then
   echo "[Phase2] Training A (TF2D base)..."

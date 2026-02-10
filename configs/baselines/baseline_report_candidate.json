@@ -1,0 +1,91 @@
+{
+  "date_utc": "2026-02-10T13:49:36Z",
+  "task": "baseline_freeze_v0",
+  "protocol_tag": "candidate_exp_X",
+  "primary_kpi": "TPR@1e-4",
+  "id_baseline": {
+    "name": "C (phase2_tf2d_tail_hn_v1)",
+    "checkpoints": [
+      "checkpoints/phase2_tf2d_tail_hn_v1/best.pt"
+    ],
+    "n_scores_noise": 5101,
+    "n_scores_signal": 5100,
+    "metrics": {
+      "tpr_at_1e-4": 0.8396078431372549,
+      "threshold_at_1e-4": 0.9942153096199036,
+      "actual_fpr_at_1e-4": 0.00019603999215840032,
+      "pauc_norm_max_fpr_1e-4": 0.9197999115642057,
+      "pauc_raw_fpr_le_1e-4": 0.0,
+      "ece_15bins": 0.007287390981467967,
+      "brier": 0.004910235409839184,
+      "noise_mean": 0.002133317291736603,
+      "noise_max": 0.9942153096199036,
+      "signal_mean": 0.9832900762557983
+    },
+    "latency": {
+      "batch_size": 16,
+      "n_batches": 30,
+      "batch_latency_ms_p50": 226.68504196917638,
+      "batch_latency_ms_p95": 235.3208413347602,
+      "batch_latency_ms_mean": 226.77689443031946,
+      "sample_latency_ms_p50": 14.167815123073524,
+      "sample_latency_ms_p95": 14.707552583422512,
+      "sample_latency_ms_mean": 14.173555901894966
+    }
+  },
+  "ood_baseline": {
+    "name": "C3 ensemble (5 checkpoints, drop43_add46)",
+    "checkpoints": [
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed41/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt",
+      "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt"
+    ],
+    "protocol": {
+      "noise_method": "swapped_pairs",
+      "swaps": 30,
+      "noise_split": "reports/ood_time/splits/indices_noise_test_late.json",
+      "signal_split": "reports/ood_time/splits/indices_signal_test_late.json"
+    },
+    "n_scores_noise": 38280,
+    "n_scores_signal": 1275,
+    "metrics": {
+      "tpr_at_1e-4": 0.7874509803921569,
+      "threshold_at_1e-4": 0.998982846736908,
+      "actual_fpr_at_1e-4": 0.0001044932079414838,
+      "pauc_norm_max_fpr_1e-4": 0.8859340184621458,
+      "pauc_raw_fpr_le_1e-4": 6.015530559141107e-05,
+      "ece_15bins": 0.0024429655740901635,
+      "brier": 0.0024626478605287018,
+      "noise_mean": 0.0031682420521974564,
+      "noise_max": 0.9993579983711243,
+      "signal_mean": 0.979051947593689
+    },
+    "latency": {
+      "batch_size": 16,
+      "n_batches": 30,
+      "batch_latency_ms_p50": 1158.008687547408,
+      "batch_latency_ms_p95": 1179.1467496950645,
+      "batch_latency_ms_mean": 1159.0091513702646,
+      "sample_latency_ms_p50": 72.375542971713,
+      "sample_latency_ms_p95": 73.69667185594153,
+      "sample_latency_ms_mean": 72.43807196064154
+    }
+  },
+  "paths": {
+    "h5": "data/cpc_snn_train.h5",
+    "indices_noise": "data/indices_noise.json",
+    "indices_signal": "data/indices_signal.json"
+  },
+  "runtime": {
+    "device": "cpu",
+    "batch_size": 16,
+    "max_id_noise": 0,
+    "max_id_signal": 0,
+    "max_ood_noise": 0,
+    "max_ood_signal": 0,
+    "latency_warmup_batches": 5,
+    "latency_measure_batches": 30
+  }
+}

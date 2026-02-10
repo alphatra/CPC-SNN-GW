@@ -23,11 +23,28 @@ SKIP_TRAIN="${SKIP_TRAIN:-0}"
 
 mkdir -p "$REPORTS_DIR"
 
+prefer_ckpt() {
+  local p="$1"
+  local d
+  d="$(dirname "$p")"
+  if [[ -f "$d/best_kpi.pt" ]]; then
+    echo "$d/best_kpi.pt"
+  elif [[ -f "$p" ]]; then
+    echo "$p"
+  elif [[ -f "$d/best.pt" ]]; then
+    echo "$d/best.pt"
+  elif [[ -f "$d/latest.pt" ]]; then
+    echo "$d/latest.pt"
+  else
+    echo "$p"
+  fi
+}
+
 declare -a CKPTS=()
 
 for seed in $SEEDS; do
   run_name="phase2_tf2d_tail_hn_v3_boost5_seed${seed}"
-  ckpt="$ROOT/checkpoints/${run_name}/best.pt"
+  ckpt="$(prefer_ckpt "$ROOT/checkpoints/${run_name}/best.pt")"
   CKPTS+=("$ckpt")
 
   if [[ "$SKIP_TRAIN" != "1" ]]; then

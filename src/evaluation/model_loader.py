@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import torch
@@ -73,17 +74,69 @@ def infer_model_kwargs(checkpoint: Dict[str, Any], use_metal: bool = False) -> D
     }
 
 
+def resolve_preferred_checkpoint(
+    checkpoint_path: str,
+    prefer_kpi: bool = True,
+) -> str:
+    """
+    Resolve checkpoint path with preference order:
+      - if directory: best_kpi.pt -> best.pt -> latest.pt
+      - if file:
+          * if prefer_kpi and sibling best_kpi.pt exists, use it
+          * else use requested file
+      - if requested file missing:
+          * try sibling best_kpi.pt -> best.pt -> latest.pt
+    """
+    p = Path(checkpoint_path)
+
+    def _pick_in_dir(d: Path) -> Path | None:
+        candidates = ["best_kpi.pt", "best.pt", "latest.pt"] if prefer_kpi else ["best.pt", "best_kpi.pt", "latest.pt"]
+        for name in candidates:
+            c = d / name
+            if c.exists():
+                return c
+        return None
+
+    if p.is_dir():
+        chosen = _pick_in_dir(p)
+        if chosen is None:
+            raise FileNotFoundError(f"No checkpoint found in directory: {p}")
+        return str(chosen)
+
+    if p.exists():
+        if prefer_kpi:
+            sibling_kpi = p.parent / "best_kpi.pt"
+            if sibling_kpi.exists():
+                return str(sibling_kpi)
+        return str(p)
+
+    # requested file missing: try sibling fallback in same directory
+    chosen = _pick_in_dir(p.parent)
+    if chosen is not None:
+        return str(chosen)
+
+    raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+
+
 def load_cpcsnn_from_checkpoint(
     checkpoint_path: str,
     device: torch.device,
     use_metal: bool = False,
+    prefer_kpi: bool = True,
 ) -> Tuple[CPCSNN, Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    resolved_path = resolve_preferred_checkpoint(checkpoint_path, prefer_kpi=prefer_kpi)
     # Always deserialize checkpoints on CPU first; direct MPS deserialization can be flaky.
-    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+    checkpoint = torch.load(resolved_path, map_location="cpu")
     model_kwargs = infer_model_kwargs(checkpoint, use_metal=use_metal)
 
     model = CPCSNN(**model_kwargs).to(device)
-    load_report: Dict[str, Any] = {"strict": True, "missing_keys": [], "unexpected_keys": []}
+    load_report: Dict[str, Any] = {
+        "strict": True,
+        "missing_keys": [],
+        "unexpected_keys": [],
+        "requested_checkpoint": str(checkpoint_path),
+        "resolved_checkpoint": str(resolved_path),
+    }
 
     try:
         model.load_state_dict(checkpoint["model_state_dict"], strict=True)

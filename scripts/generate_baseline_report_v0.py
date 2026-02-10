@@ -28,6 +28,7 @@ from sklearn.metrics import roc_auc_score, roc_curve
 from torch.utils.data import DataLoader
 
 from src.data_handling.torch_dataset import HDF5SFTPairDataset
+from src.evaluation.calibration import CalibrationArtifact, apply_calibration_to_logits, fit_temperature_scaler
 from src.evaluation.metrics import compute_brier_score, compute_ece
 from src.evaluation.model_loader import load_cpcsnn_from_checkpoint
 
@@ -37,6 +38,14 @@ class ModelBundle:
     checkpoints: List[str]
     models: List[torch.nn.Module]
     in_channels: int
+
+
+@dataclass
+class ScoreOutputs:
+    noise_probs: np.ndarray
+    signal_probs: np.ndarray
+    noise_logits: np.ndarray
+    signal_logits: np.ndarray
 
 
 def load_ids(path: Path) -> List[str]:
@@ -88,9 +97,14 @@ def load_model_bundle(
 ) -> ModelBundle:
     models: List[torch.nn.Module] = []
     in_channels: int | None = None
-    ckpt_list = [str(c) for c in checkpoints]
-    for ckpt in ckpt_list:
-        model, _, kwargs, _ = load_cpcsnn_from_checkpoint(ckpt, device=device, use_metal=use_metal)
+    requested_ckpts = [str(c) for c in checkpoints]
+    resolved_ckpts: List[str] = []
+    for ckpt in requested_ckpts:
+        model, _, kwargs, load_report = load_cpcsnn_from_checkpoint(
+            ckpt, device=device, use_metal=use_metal, prefer_kpi=True
+        )
+        resolved = str(load_report.get("resolved_checkpoint", ckpt))
+        resolved_ckpts.append(resolved)
         if not kwargs["use_tf2d"]:
             raise RuntimeError(f"Checkpoint is not TF2D-compatible: {ckpt}")
         if in_channels is None:
@@ -102,7 +116,7 @@ def load_model_bundle(
         model.eval()
         models.append(model)
     assert in_channels is not None
-    return ModelBundle(checkpoints=ckpt_list, models=models, in_channels=in_channels)
+    return ModelBundle(checkpoints=resolved_ckpts, models=models, in_channels=in_channels)
 
 
 def infer_logits(bundle: ModelBundle, x: torch.Tensor) -> torch.Tensor:
@@ -120,7 +134,7 @@ def run_standard_scores(
     signal_ids: Sequence[str],
     batch_size: int,
     device: torch.device,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> ScoreOutputs:
     ds_noise = HDF5SFTPairDataset(str(h5_path), list(noise_ids), add_mask_channel=(bundle.in_channels in (4, 8)))
     ds_signal = HDF5SFTPairDataset(str(h5_path), list(signal_ids), add_mask_channel=(bundle.in_channels in (4, 8)))
     loader_noise = DataLoader(ds_noise, batch_size=batch_size, num_workers=0)
@@ -128,21 +142,30 @@ def run_standard_scores(
 
     noise_probs: List[np.ndarray] = []
     signal_probs: List[np.ndarray] = []
+    noise_logits: List[np.ndarray] = []
+    signal_logits: List[np.ndarray] = []
 
     with torch.no_grad():
         for batch in loader_noise:
             x = _prepare_input(batch, device=device, in_channels=bundle.in_channels)
             logits = infer_logits(bundle, x)
+            noise_logits.append(logits.detach().cpu().numpy().reshape(-1))
             probs = torch.sigmoid(logits).detach().cpu().numpy().reshape(-1)
             noise_probs.append(probs)
 
         for batch in loader_signal:
             x = _prepare_input(batch, device=device, in_channels=bundle.in_channels)
             logits = infer_logits(bundle, x)
+            signal_logits.append(logits.detach().cpu().numpy().reshape(-1))
             probs = torch.sigmoid(logits).detach().cpu().numpy().reshape(-1)
             signal_probs.append(probs)
 
-    return np.concatenate(noise_probs), np.concatenate(signal_probs)
+    return ScoreOutputs(
+        noise_probs=np.concatenate(noise_probs),
+        signal_probs=np.concatenate(signal_probs),
+        noise_logits=np.concatenate(noise_logits),
+        signal_logits=np.concatenate(signal_logits),
+    )
 
 
 def run_swapped_noise_scores(
@@ -152,7 +175,7 @@ def run_swapped_noise_scores(
     batch_size: int,
     swaps: int,
     device: torch.device,
-) -> np.ndarray:
+) -> tuple[np.ndarray, np.ndarray]:
     ds_noise = HDF5SFTPairDataset(str(h5_path), list(noise_ids), add_mask_channel=(bundle.in_channels in (4, 8)))
     loader_noise = DataLoader(ds_noise, batch_size=batch_size, num_workers=0)
 
@@ -173,6 +196,7 @@ def run_swapped_noise_scores(
     n = full_h1.shape[0]
 
     out_probs: List[np.ndarray] = []
+    out_logits: List[np.ndarray] = []
     with torch.no_grad():
         for _ in range(swaps):
             min_shift = max(1, n // 4)
@@ -188,10 +212,11 @@ def run_swapped_noise_scores(
                 std = x.std(dim=(2, 3), keepdim=True)
                 x = (x - mean) / (std + 1e-8)
                 logits = infer_logits(bundle, x)
+                out_logits.append(logits.detach().cpu().numpy().reshape(-1))
                 probs = torch.sigmoid(logits).detach().cpu().numpy().reshape(-1)
                 out_probs.append(probs)
 
-    return np.concatenate(out_probs)
+    return np.concatenate(out_probs), np.concatenate(out_logits)
 
 
 def compute_detection_metrics(noise_probs: np.ndarray, signal_probs: np.ndarray) -> dict:
@@ -228,6 +253,23 @@ def compute_detection_metrics(noise_probs: np.ndarray, signal_probs: np.ndarray)
         "noise_max": float(noise_probs.max()),
         "signal_mean": float(signal_probs.mean()),
     }
+
+
+def fit_and_apply_temperature(
+    fit_noise_logits: np.ndarray,
+    fit_signal_logits: np.ndarray,
+    eval_noise_logits: np.ndarray,
+    eval_signal_logits: np.ndarray,
+) -> tuple[CalibrationArtifact, np.ndarray, np.ndarray]:
+    fit_logits = np.concatenate([fit_noise_logits, fit_signal_logits]).astype(np.float64)
+    fit_labels = np.concatenate(
+        [np.zeros_like(fit_noise_logits, dtype=np.float64), np.ones_like(fit_signal_logits, dtype=np.float64)]
+    )
+    temperature = fit_temperature_scaler(fit_logits, fit_labels, max_iter=300, lr=0.05)
+    artifact = CalibrationArtifact(method="temperature", temperature=float(temperature))
+    eval_noise_probs_cal = apply_calibration_to_logits(eval_noise_logits, artifact)
+    eval_signal_probs_cal = apply_calibration_to_logits(eval_signal_logits, artifact)
+    return artifact, eval_noise_probs_cal, eval_signal_probs_cal
 
 
 def measure_latency(
@@ -308,6 +350,23 @@ Date: `{report['date_utc']}`
 - OOD: noise via `swapped_pairs` on `test_late` split, signal from `test_late` split.
 - No calibration applied (uncalibrated scores).
 """
+    cal = report.get("calibration", {})
+    if cal:
+        txt += "\n## Temperature Calibration (post-hoc)\n\n"
+        if "id" in cal:
+            cid = cal["id"]
+            txt += (
+                f"- ID temperature: `{cid.get('temperature', 1.0):.6f}`\n"
+                f"  - ECE raw -> cal: `{cid['raw_metrics']['ece_15bins']:.6f}` -> `{cid['calibrated_metrics']['ece_15bins']:.6f}`\n"
+                f"  - Brier raw -> cal: `{cid['raw_metrics']['brier']:.6f}` -> `{cid['calibrated_metrics']['brier']:.6f}`\n"
+            )
+        if "ood" in cal:
+            cood = cal["ood"]
+            txt += (
+                f"- OOD temperature: `{cood.get('temperature', 1.0):.6f}`\n"
+                f"  - ECE raw -> cal: `{cood['raw_metrics']['ece_15bins']:.6f}` -> `{cood['calibrated_metrics']['ece_15bins']:.6f}`\n"
+                f"  - Brier raw -> cal: `{cood['raw_metrics']['brier']:.6f}` -> `{cood['calibrated_metrics']['brier']:.6f}`\n"
+            )
     out_md.write_text(txt, encoding="utf-8")
 
 
@@ -327,6 +386,24 @@ def main() -> None:
     ap.add_argument("--max-ood-signal", type=int, default=0)
     ap.add_argument("--latency-warmup-batches", type=int, default=5)
     ap.add_argument("--latency-measure-batches", type=int, default=30)
+    ap.add_argument("--fit-temp-id", action="store_true", help="Fit temperature calibrator for ID scope.")
+    ap.add_argument("--fit-temp-ood", action="store_true", help="Fit temperature calibrator for OOD scope.")
+    ap.add_argument("--id-cal-noise", type=Path, default=None, help="Noise indices for ID calibration fit.")
+    ap.add_argument("--id-cal-signal", type=Path, default=None, help="Signal indices for ID calibration fit.")
+    ap.add_argument(
+        "--ood-cal-noise",
+        type=Path,
+        default=Path("reports/ood_time/splits/indices_noise_train_early.json"),
+        help="Noise indices for OOD calibration fit.",
+    )
+    ap.add_argument(
+        "--ood-cal-signal",
+        type=Path,
+        default=Path("reports/ood_time/splits/indices_signal_train_early.json"),
+        help="Signal indices for OOD calibration fit.",
+    )
+    ap.add_argument("--id-cal-out", type=Path, default=Path("configs/calibration/id_temperature.json"))
+    ap.add_argument("--ood-cal-out", type=Path, default=Path("configs/calibration/ood_temperature.json"))
     ap.add_argument("--protocol-tag", type=str, default="full")
     ap.add_argument("--device", type=str, default="mps")
     ap.add_argument("--use-metal", action="store_true", default=False)
@@ -360,10 +437,10 @@ def main() -> None:
 
     # ID metrics
     print("[stage] ID scores...")
-    id_noise_probs, id_signal_probs = run_standard_scores(
+    id_scores = run_standard_scores(
         id_bundle, args.h5_path, noise_ids, signal_ids, args.batch_size, device
     )
-    id_metrics = compute_detection_metrics(id_noise_probs, id_signal_probs)
+    id_metrics = compute_detection_metrics(id_scores.noise_probs, id_scores.signal_probs)
     print("[stage] ID latency...")
     id_latency = measure_latency(
         id_bundle,
@@ -378,14 +455,15 @@ def main() -> None:
 
     # OOD metrics: swapped noise + late signals
     print("[stage] OOD swapped-noise scores...")
-    ood_noise_probs = run_swapped_noise_scores(
+    ood_noise_probs, ood_noise_logits = run_swapped_noise_scores(
         ood_bundle, args.h5_path, ood_noise_ids, args.batch_size, args.ood_swaps, device
     )
     # keep signals "natural" and late split
     print("[stage] OOD signal scores...")
-    _, ood_signal_probs = run_standard_scores(
+    ood_signal_scores = run_standard_scores(
         ood_bundle, args.h5_path, ood_noise_ids[: min(len(ood_noise_ids), len(ood_signal_ids))], ood_signal_ids, args.batch_size, device
     )
+    ood_signal_probs = ood_signal_scores.signal_probs
     ood_metrics = compute_detection_metrics(ood_noise_probs, ood_signal_probs)
     print("[stage] OOD latency...")
     ood_latency = measure_latency(
@@ -399,6 +477,51 @@ def main() -> None:
         n_measure_batches=args.latency_measure_batches,
     )
 
+    calibration_section: dict = {}
+    if args.fit_temp_id:
+        id_fit_noise = load_ids(args.id_cal_noise) if args.id_cal_noise else noise_ids
+        id_fit_signal = load_ids(args.id_cal_signal) if args.id_cal_signal else signal_ids
+        id_fit_scores = run_standard_scores(id_bundle, args.h5_path, id_fit_noise, id_fit_signal, args.batch_size, device)
+        id_artifact, id_noise_cal, id_signal_cal = fit_and_apply_temperature(
+            fit_noise_logits=id_fit_scores.noise_logits,
+            fit_signal_logits=id_fit_scores.signal_logits,
+            eval_noise_logits=id_scores.noise_logits,
+            eval_signal_logits=id_scores.signal_logits,
+        )
+        args.id_cal_out.parent.mkdir(parents=True, exist_ok=True)
+        args.id_cal_out.write_text(json.dumps(id_artifact.to_dict(), indent=2), encoding="utf-8")
+        calibration_section["id"] = {
+            "method": "temperature",
+            "temperature": float(id_artifact.temperature),
+            "fit_noise_count": int(len(id_fit_scores.noise_logits)),
+            "fit_signal_count": int(len(id_fit_scores.signal_logits)),
+            "artifact_path": str(args.id_cal_out),
+            "raw_metrics": id_metrics,
+            "calibrated_metrics": compute_detection_metrics(id_noise_cal, id_signal_cal),
+        }
+
+    if args.fit_temp_ood:
+        ood_fit_noise = load_ids(args.ood_cal_noise)
+        ood_fit_signal = load_ids(args.ood_cal_signal)
+        ood_fit_scores = run_standard_scores(ood_bundle, args.h5_path, ood_fit_noise, ood_fit_signal, args.batch_size, device)
+        ood_artifact, ood_noise_cal, ood_signal_cal = fit_and_apply_temperature(
+            fit_noise_logits=ood_fit_scores.noise_logits,
+            fit_signal_logits=ood_fit_scores.signal_logits,
+            eval_noise_logits=ood_noise_logits,
+            eval_signal_logits=ood_signal_scores.signal_logits,
+        )
+        args.ood_cal_out.parent.mkdir(parents=True, exist_ok=True)
+        args.ood_cal_out.write_text(json.dumps(ood_artifact.to_dict(), indent=2), encoding="utf-8")
+        calibration_section["ood"] = {
+            "method": "temperature",
+            "temperature": float(ood_artifact.temperature),
+            "fit_noise_count": int(len(ood_fit_scores.noise_logits)),
+            "fit_signal_count": int(len(ood_fit_scores.signal_logits)),
+            "artifact_path": str(args.ood_cal_out),
+            "raw_metrics": ood_metrics,
+            "calibrated_metrics": compute_detection_metrics(ood_noise_cal, ood_signal_cal),
+        }
+
     report = {
         "date_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "task": "baseline_freeze_v0",
@@ -406,15 +529,15 @@ def main() -> None:
         "primary_kpi": "TPR@1e-4",
         "id_baseline": {
             "name": decision["id_candidate"]["variant"],
-            "checkpoints": [id_ckpt],
-            "n_scores_noise": int(len(id_noise_probs)),
-            "n_scores_signal": int(len(id_signal_probs)),
+            "checkpoints": list(id_bundle.checkpoints),
+            "n_scores_noise": int(len(id_scores.noise_probs)),
+            "n_scores_signal": int(len(id_scores.signal_probs)),
             "metrics": id_metrics,
             "latency": id_latency,
         },
         "ood_baseline": {
             "name": decision["ood_candidate"]["variant"],
-            "checkpoints": list(ood_ckpts),
+            "checkpoints": list(ood_bundle.checkpoints),
             "protocol": {
                 "noise_method": "swapped_pairs",
                 "swaps": int(args.ood_swaps),
@@ -426,6 +549,7 @@ def main() -> None:
             "metrics": ood_metrics,
             "latency": ood_latency,
         },
+        "calibration": calibration_section,
         "paths": {
             "h5": str(args.h5_path),
             "indices_noise": str(args.indices_noise),
@@ -440,6 +564,8 @@ def main() -> None:
             "max_ood_signal": int(args.max_ood_signal),
             "latency_warmup_batches": int(args.latency_warmup_batches),
             "latency_measure_batches": int(args.latency_measure_batches),
+            "fit_temp_id": bool(args.fit_temp_id),
+            "fit_temp_ood": bool(args.fit_temp_ood),
         },
     }
 
