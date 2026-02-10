@@ -40,6 +40,28 @@ PYTHONPATH=. python scripts/check_baseline_regression.py \
 
 Stop here if gate fails.
 
+## 2b. Recommended atomic flow (gate + promote + lock)
+Instead of manual steps 2-4, use one atomic command that updates lock only when gate passes:
+```bash
+PYTHONPATH=. python scripts/gate_and_promote_baseline.py \
+  --current-report reports/baseline_report_candidate.json \
+  --current-md reports/baseline_report_candidate.md \
+  --promoted-report reports/baseline_report_v1_full.json \
+  --promoted-md reports/baseline_report_v1_full.md \
+  --lock configs/baselines/baseline_lock_v1_full.json \
+  --decision reports/final_decision.json \
+  --tag v1_full_updated \
+  --notes "Candidate promoted after passing regression gate." \
+  --max-tpr-drop-abs 0.02 \
+  --max-pauc-drop-abs 0.02 \
+  --max-tpr-drop-abs-ood 0.005 \
+  --max-pauc-drop-abs-ood 0.01 \
+  --max-ece-increase-abs 0.01 \
+  --max-brier-increase-abs 0.01 \
+  --max-latency-increase-rel 0.30 \
+  --require-nondecreasing-scopes ood_baseline
+```
+
 ## 3. Promote candidate to v1_full
 ```bash
 cp reports/baseline_report_candidate.json reports/baseline_report_v1_full.json
