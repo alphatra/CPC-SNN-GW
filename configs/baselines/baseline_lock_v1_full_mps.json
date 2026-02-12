@@ -1,20 +1,20 @@
 {
   "schema_version": 1,
   "lock_tag": "v1_full_mps",
-  "created_utc": "2026-02-10T21:25:55Z",
+  "created_utc": "2026-02-12T18:33:02Z",
   "host": "MacBook-Pro-Gracjan.local",
   "user": "gracjanziemianski",
   "source_report": {
-    "path": "reports/baseline_report_candidate.json",
+    "path": "/Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/reports/baseline_report_v1_full_mps.json",
     "exists": true,
-    "size_bytes": 5628,
-    "sha256": "d02dab1f303160284f41f83a9b57aab1de93e0866ee3c3c6b1ac76b14e8c9a3c"
+    "size_bytes": 5645,
+    "sha256": "aa0a19a687f6a48783fb4cc2159b9d41a69d513c79eead8ebca2bdd349b20672"
   },
   "source_decision": {
-    "path": "reports/final_decision.json",
+    "path": "/Users/gracjanziemianski/Documents/CPC-SNN-GravitationalWavesDetection/configs/decisions/final_decision_candidate_v4_mps.json",
     "exists": true,
-    "size_bytes": 2311,
-    "sha256": "3e8b700ab1ebdd43df19470e70eb0ac2bde38a89696287ee582a46730525dd72"
+    "size_bytes": 2312,
+    "sha256": "2ce7006c5d9aabf3776c1892ef6802a56d0d3a512dc23604a9b706a86df6b68c"
   },
   "source_report_runtime": {
     "device": "mps",
@@ -23,13 +23,13 @@
     "max_id_signal": 0,
     "max_ood_noise": 0,
     "max_ood_signal": 0,
-    "latency_warmup_batches": 5,
-    "latency_measure_batches": 30,
+    "latency_warmup_batches": 30,
+    "latency_measure_batches": 200,
     "fit_temp_id": true,
     "fit_temp_ood": true,
     "seed": 123
   },
-  "source_report_protocol_tag": "candidate_next_mps",
+  "source_report_protocol_tag": "candidate_v4_mps_bestkpi",
   "source_report_task": "baseline_freeze_v0",
   "primary_kpi": "TPR@1e-4",
   "primary_metrics_snapshot": {
@@ -40,16 +40,16 @@
       "pauc_norm_max_fpr_1e-4": 0.9197999115642057,
       "ece_15bins": 0.007287383901404285,
       "brier": 0.004910235251389644,
-      "sample_latency_ms_p95": 2.3569498571305294
+      "sample_latency_ms_p95": 0.8046963506785686
     },
     "ood_baseline": {
-      "tpr_at_1e-4": 0.7850980392156863,
-      "threshold_at_1e-4": 0.9990270137786865,
+      "tpr_at_1e-4": 0.8211764705882353,
+      "threshold_at_1e-4": 0.9967702627182007,
       "actual_fpr_at_1e-4": 0.0001044932079414838,
-      "pauc_norm_max_fpr_1e-4": 0.884552590159473,
-      "ece_15bins": 0.002326307027407218,
-      "brier": 0.002407443999505667,
-      "sample_latency_ms_p95": 3.4111564076738428
+      "pauc_norm_max_fpr_1e-4": 0.9010559661918802,
+      "ece_15bins": 0.0019159720736926585,
+      "brier": 0.002438836847028408,
+      "sample_latency_ms_p95": 3.585449239108129
     }
   },
   "checkpoints": [
@@ -84,10 +84,10 @@
       "sha256": "546afcd947297f885091d009fe1357f05ecc8540ee9ccb483bdbaa65d3aaf611"
     },
     {
-      "path": "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt",
+      "path": "checkpoints/phase2_tf2d_tail_hn_v4_mps_seed46/best_kpi.pt",
       "exists": true,
-      "size_bytes": 7567903,
-      "sha256": "3606f0911c43d449334d239640eca6379e57d6afeced50b677bc22afde298307"
+      "size_bytes": 7576911,
+      "sha256": "ba1be16bede4c761dd3586b1881ce5bacb1cb6daa4f73344a13d203df8983141"
     }
   ],
   "decision_snapshot": {
@@ -104,7 +104,7 @@
         "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt",
         "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt",
         "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt",
-        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt"
+        "checkpoints/phase2_tf2d_tail_hn_v4_mps_seed46/best_kpi.pt"
       ],
       "ood_compare_report_dir": "reports/ood_compare_b_vs_c3ens_drop43_add46"
     },
@@ -115,7 +115,7 @@
         "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed42/best.pt",
         "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed44/best.pt",
         "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed45/best.pt",
-        "checkpoints/phase2_tf2d_tail_hn_v3_boost5_seed46/best.pt"
+        "checkpoints/phase2_tf2d_tail_hn_v4_mps_seed46/best_kpi.pt"
       ]
     },
     "strict_ood_snapshot": {
@@ -160,5 +160,5 @@
     ]
   },
   "reproduce_command": "",
-  "notes": "MPS-specific baseline lock."
+  "notes": "Promote v4 best_kpi candidate on MPS after strict gate pass."
 }
